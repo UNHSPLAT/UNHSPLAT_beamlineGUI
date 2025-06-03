@@ -81,6 +81,7 @@ classdef beamlineGUI < handle
             pause(1);
             obj.hMonitorPlt = beamlineMonitor(obj);
             obj.hMonitorPlt.runSweep();
+            
         end
 
         function readings = updateReadings(obj,~,~,fname)
@@ -675,6 +676,9 @@ classdef beamlineGUI < handle
                 stop(obj.hTimer);
             end
             obj.Hardware.MCPwebCam.shutdown();
+            if isvalid(obj.hMonitorPlt)
+                delete(obj.hMonitorPlt.hFigure);
+            end
             % Delete obj
             delete(obj);
         end
