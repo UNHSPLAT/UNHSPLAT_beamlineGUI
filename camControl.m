@@ -86,10 +86,18 @@ classdef camControl < handle
 
         function shutdown(obj,~,~)
             if obj.Connected
-            close(obj.figmanager.RecordingFigure);
-            close(obj.figmanager.RateGraphFigure);
-            close(obj.figmanager.PreviewFigure);
-            close(obj.uimanager.WebcamUIFigure);
+                if isvalid(obj.figmanager.RecordingFigure)
+                    close(obj.figmanager.RecordingFigure);
+                end
+                if isvalid(obj.figmanager.RateGraphFigure)
+                    close(obj.figmanager.RateGraphFigure);
+                end
+                if isvalid(obj.figmanager.PreviewFigure)
+                     close(obj.figmanager.PreviewFigure);
+                end
+                if isvalid(obj.uimanager.WebcamUIFigure)
+                close(obj.uimanager.WebcamUIFigure);
+                end
             stop(obj.Timer);
             obj.Connected = false;
             obj.lastRead = nan;
