@@ -91,19 +91,28 @@
     % define read functions monitors will call to manipulate instrument output 
     % =======================================================================
     function val = read_srsHVPS(self)
+         if self.Connected
         val = self.measV;
+         end
     end
     
     function val = read_pressure(self)
+
+         if self.Connected
             val = self.readPressure();
+         end
     end
 
      function val = read_pico(self)
+         if self.Connected
             val  = self.read();
+         end
      end
 
      function val = read_keithley(self)
-            val =  self.performScan(1,3);
+         if self.Connected
+            val =  self.performScan(1,1);
+         end
      end
 
      readStruct = struct("leyboldPressure1",@read_pressure,...

@@ -44,8 +44,7 @@ classdef beamlineGUI < handle
         hRunBtn % Handle to run test button
         hCamGUI; % IHandle to cam conctrol init button
         hCamButton %
-        
-        parPool%
+
     end
 
     properties (SetObservable)
@@ -82,8 +81,6 @@ classdef beamlineGUI < handle
             pause(1);
             obj.hMonitorPlt = beamlineMonitor(obj);
             obj.hMonitorPlt.runSweep();
-
-            obj.parPool= parpool();
         end
 
         function readings = updateReadings(obj,~,~,fname)
@@ -132,8 +129,7 @@ classdef beamlineGUI < handle
             if isvalid(obj.hFigure)
                 delete(obj.hFigure);
             end
-            
-            delete(obj.parPool);
+
         end
         
         function setRefreshRate(obj,~,~)
@@ -150,28 +146,15 @@ classdef beamlineGUI < handle
 
         end
 
-        function readHardware(obj)
+        function garbo = readHardware(obj)
+            t1 = now();
+            garbo = structfun(@(x)x.read(),obj.Hardware,'UniformOutput',false);
+            disp(now()-t1);
+            disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
 
-%             hwPools = parpool('Processes');
-            t1 = now()*24*3600;
-            obj.updateReadings();
-%             readList = structfun(@(x)x.read(),obj.Monitors,'UniformOutput',false);
-            disp(now()*24*3600-t1);
-%             disp(readList);
-
-
-            t2 = now()*24*3600;
-            structfun(@(y)y.readIt(),obj.Hardware,'UniformOutput',false);
-            disp(now()*24*3600-t2);
-            obj.seeHardware();
-
-            t2 = now()*24*3600;
-            structfun(@(y)y.readParf(obj.parPool),obj.Hardware,'UniformOutput',false);
-            structfun(@(y)y.evalRead(),obj.Hardware,'UniformOutput',false);
-            disp(now()*24*3600-t2);
-            obj.seeHardware();
-        end
-        function seeHardware(obj)
+            t2 = now();
+            garbo = structfun(@(x)parfeval(@x.read,0),obj.Hardware,'UniformOutput',false);
+            disp(now()-t2);
             disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
         end
     
@@ -572,8 +555,7 @@ classdef beamlineGUI < handle
                 obj.Hardware.MCPwebCam.shutdown();
                 obj.hCamButton.set('String','Start');
             else
-%                 parfeval(obj.parPool,@obj.Hardware.MCPwebCam.run,0,obj.Hardware.MCPwebCam);
-                obj.Hardware.MCPwebCam.run;
+                obj.Hardware.MCPwebCam.run();
                 obj.hCamButton.set('String','Stop');
             end
         end

@@ -14,7 +14,6 @@ classdef camControl < handle
         cam%
         Connected%
         lastRead%
-        Protocol = "USB"%
     end
 
     methods
@@ -77,22 +76,7 @@ classdef camControl < handle
             end
         end
 
-        function val = readIt(obj)
-            if obj.Connected
-                val = obj.lastRead;
-            else
-                val = nan;
-            end
-        end
-
-        function val = readParf(obj,pool) 
-            if obj.Connected
-                val = obj.lastRead;
-            else
-                val = nan;
-            end
-        end
-        function val = evalRead(obj)
+        function val = read(obj);
             if obj.Connected
                 val = obj.lastRead;
             else
