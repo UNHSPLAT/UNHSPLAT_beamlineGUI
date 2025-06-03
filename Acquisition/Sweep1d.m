@@ -1,8 +1,8 @@
-classdef faradayCupSweep < acquisition
-    %FARADAYCUPSWEEP Configures and runs a sweep of Faraday cup current vs selectable voltage supply
+classdef Sweep1d < acquisition
+    %Sweep1d Configures and runs a sweep of Faraday cup current vs selectable voltage supply
 
     properties (Constant)
-        Type string = "Faraday cup Sweep" % Acquisition type identifier string
+        Type string = "Sweep 1D" % Acquisition type identifier string
         MinDefault double = 100 % Default minimum voltage
         MaxDefault double = 300 % Default maximum voltage
         StepsDefault double = 4 % Default number of steps
@@ -12,6 +12,8 @@ classdef faradayCupSweep < acquisition
 
     properties
         PSTag string % String identifying user-selected HVPS
+        resultTag string % String identifying user-selected HVPS
+
         hHVPS % Handle to desired power supply
         hConfFigure % Handle to configuration GUI figure
         hFigure1 % Handle to I-V data plot
@@ -20,6 +22,9 @@ classdef faradayCupSweep < acquisition
         hAxes2 % Handle to I-1/V^2 data axes
         hSupplyText % Handle to sweep supply label
         hSupplyEdit % Handle to sweep supply field
+        hResultText % Handle to Result Readout label
+        hResultEdit % Handle to Result readout field
+        
         hMinText % Handle to minimum voltage label
         hMinEdit % Handle to minimum voltage field
         hStepsText % Handle to number of steps label
@@ -33,6 +38,7 @@ classdef faradayCupSweep < acquisition
         VPoints double % Array of ExB voltage setpoints
         DwellTime double % Dwell time setting
         PSList %
+        resultList %
 
         scanTimer timer%
         scan_mon %
@@ -40,7 +46,7 @@ classdef faradayCupSweep < acquisition
     end
 
     methods
-        function obj = faradayCupSweep(hGUI)
+        function obj = Sweep1d(hGUI)
             %FARADAYCUPVSEXBSWEEP Construct an instance of this class
 
             obj@acquisition(hGUI);
@@ -60,13 +66,29 @@ classdef faradayCupSweep < acquisition
             obj.hConfFigure = figure('MenuBar','none',...
                 'ToolBar','none',...
                 'Resize','off',...
-                'Position',[400,160,300,220],...
+                'Position',[400,160,300,240],...
                 'NumberTitle','off',...
                 'Name','Sweep Config',...
                 'DeleteFcn',@obj.closeGUI);
 
+            % get active and unactive monitors for scanning
+            function tag = get_active(mon)
+                if mon.active
+                    obj.PSList(end+1) = mon.Tag;
+                else
+                    obj.resultList(end+1) = mon.Tag;
+                end
+            end
+
+            obj.PSList = [""];
+            obj.resultList = [""];
+
+            structfun(@get_active,obj.hBeamlineGUI.Monitors);
+
+            
             % Set positions
-            ystart = 190;
+            ystart = 210;
+            ypos = ystart;
             ysize = 20;
             xpos = 150;
             xtextsize = 100;
@@ -77,20 +99,25 @@ classdef faradayCupSweep < acquisition
                 'String','Sweep Supply: ',...
                 'FontSize',9,...
                 'HorizontalAlignment','right');
-
-
-            function tag = get_active(mon)
-                if mon.active
-                    obj.PSList(end+1) = mon.Tag;
-                end
-            end
-            obj.PSList = [""];
-            structfun(@get_active,obj.hBeamlineGUI.Monitors);
             obj.hSupplyEdit = uicontrol(obj.hConfFigure,'Style','popupmenu',...
                 'Position',[xpos,ystart,xeditsize,ysize],...
                 'String',obj.PSList,...
                 'Value',10,...
                 'HorizontalAlignment','right');
+            
+            ypos = ypos-ysize;
+
+            obj.hResultText = uicontrol(obj.hConfFigure,'Style','text',...
+                'Position',[xpos-xtextsize,ypos,xtextsize,ysize],...
+                'String','Plot Value: ',...
+                'FontSize',9,...
+                'HorizontalAlignment','right');
+            obj.hResultEdit = uicontrol(obj.hConfFigure,'Style','popupmenu',...
+                'Position',[xpos,ypos,xeditsize,ysize],...
+                'String',obj.resultList,...
+                'Value',10,...
+                'HorizontalAlignment','right');
+            
             
             % Set positions
             ystart = 155;
@@ -201,6 +228,7 @@ classdef faradayCupSweep < acquisition
     
                 % Retrieve config values
                 psTag = obj.PSList(obj.hSupplyEdit.Value);
+                obj.resultTag = obj.resultList(obj.hResultEdit.Value);
                 minVal = str2double(obj.hMinEdit.String);
                 maxVal = str2double(obj.hMaxEdit.String);
                 stepsVal = str2double(obj.hStepsEdit.String);
@@ -252,7 +280,7 @@ classdef faradayCupSweep < acquisition
 
                 % Create figures and axes
                 obj.hFigure1 = figure('NumberTitle','off',...
-                                      'Name','Faraday Cup Current vs Voltage',...
+                                      'Name','Voltage Sweep',...
                                       'DeleteFcn',@obj.closeGUI);
                 obj.hAxes1 = axes(obj.hFigure1);
 
@@ -291,7 +319,7 @@ classdef faradayCupSweep < acquisition
                 iV=iV+1;
                 if isempty(obj.hFigure1) || ~isvalid(obj.hFigure1)
                     obj.hFigure1 = figure('NumberTitle','off',...
-                        'Name','Faraday Cup Current vs Voltage');
+                        'Name','Voltage sweep');
                     obj.hAxes1 = axes(obj.hFigure1); %#ok<LAXES> Only executed if figure deleted or not instantiated
                 end
 
@@ -323,10 +351,10 @@ classdef faradayCupSweep < acquisition
                         tag = fields{i};
                         obj.scan_mon.(tag)(iV) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
                     end
-                    plot(obj.hAxes1,obj.scan_mon.(psTag)(1:iV),abs(obj.scan_mon.Ifaraday(1:iV)));
-                    set(obj.hAxes1,'YScale','log');
+                    plot(obj.hAxes1,obj.scan_mon.(psTag)(1:iV),abs(obj.scan_mon.(obj.resultTag)(1:iV)));
+                    %set(obj.hAxes1,'YScale','log');
                     xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
-                    ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.Ifaraday.sPrint());
+                    ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
                     if iV<numel(obj.VPoints)
                         scan_step();
                     else
@@ -349,10 +377,6 @@ classdef faradayCupSweep < acquisition
             if isvalid(obj.scanTimer)
                 stop(obj.scanTimer);
                 delete(obj.scanTimer);
-            end
-
-            if isvalid(obj.listo)
-                delete(obj.listo);
             end
 
             % Enable beamline GUI run test button if still valid

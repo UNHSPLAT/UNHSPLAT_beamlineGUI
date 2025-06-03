@@ -38,10 +38,13 @@ classdef beamlineGUI < handle
         
         hAcquisitionText % Handle to acquisition type label
         hAcquisitionEdit % Handle to acquisition type popupmenu
-        AcquisitionList cell = {'Faraday cup sweep','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition types available for selection
+        AcquisitionList cell = {'Sweep 1D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition types available for selection
         Acquisitions = []%
         
         hRunBtn % Handle to run test button
+        hCamGUI; % IHandle to cam conctrol init button
+        hCamButton %
+
     end
 
     properties (SetObservable)
@@ -69,7 +72,7 @@ classdef beamlineGUI < handle
             % obj.createTimer;
             obj.hTimer = timer('Name','readTimer',...
                 'Period',4,...
-                'ExecutionMode','fixedDelay',...
+                'ExecutionMode','fixedRate',...
                 'TimerFcn',@obj.updateReadings,...
                 'ErrorFcn',@obj.restartTimer);
             start(obj.hTimer);
@@ -86,6 +89,7 @@ classdef beamlineGUI < handle
             if isempty(obj.LastRead)
                 obj.LastRead = struct;
             end
+
 
             %Read the stuff from the hardware
             readList = structfun(@(x)x.read(),obj.Monitors,'UniformOutput',false);
@@ -127,8 +131,35 @@ classdef beamlineGUI < handle
             end
 
         end
+        
+        function setRefreshRate(obj,~,~)
+            stop(obj.hTimer);
+            
+            prompt = {'Enter desired rate [S]'};
+            dlgtitle = 'Refresh Rate';
+            dims = [1 35];
+            definput = {'4'};
+            answer = inputdlg(prompt,dlgtitle,dims,definput);
 
+            obj.hTimer.set('period',str2double(answer));
+            start(obj.hTimer);
+
+        end
+
+        function garbo = readHardware(obj)
+            t1 = now();
+            garbo = structfun(@(x)x.read(),obj.Hardware,'UniformOutput',false);
+            disp(now()-t1);
+            disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
+
+            t2 = now();
+            garbo = structfun(@(x)parfeval(@x.read,0),obj.Hardware,'UniformOutput',false);
+            disp(now()-t2);
+            disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
+        end
+    
     end
+
 
     methods (Access = private)
 
@@ -165,7 +196,7 @@ classdef beamlineGUI < handle
             % Create figure
             obj.hFigure = figure('MenuBar','none',...
                 'ToolBar','none',...
-                'Position',[0,0,1200,700],...
+                'Position',[0,0,1250,750],...
                 'NumberTitle','off',...
                 'Name','Beamline GUI',...
                 'DeleteFcn',@obj.closeGUI);
@@ -181,9 +212,17 @@ classdef beamlineGUI < handle
             obj.hCopyTS = uimenu(obj.hEditMenu,'Text','Copy Test Sequence',...
                 'MenuSelectedFcn',@obj.copyTSCallback);
 
+            % add option to set sample rate
+            uimenu(obj.hEditMenu,'Text','Set Sample Rate',...
+                'MenuSelectedFcn',@obj.setRefreshRate);
+            % add option to disable Timer
+            uimenu(obj.hEditMenu,'Text','Disable Timer',...
+                'MenuSelectedFcn',@obj.stopTimer);
+            uimenu(obj.hEditMenu,'Text','Restart Timer',...
+                'MenuSelectedFcn',@obj.restartTimer);
+
             % Turn off dock controls (defaults to on when first uimenu created)
             set(obj.hFigure,'DockControls','off');
-
 
             %===================================================================================
             % Create instrument connection status uicontrol group
@@ -226,7 +265,8 @@ classdef beamlineGUI < handle
 
             colInd = 1;
             xColStart = xstart;
-            obj.hHWConnBtn = uicontrol(obj.hHWConnStatusGrp,'Style','pushbutton',...
+            obj.hHWConnBtn = uicontrol(obj.hHWConnStatusGrp, ...
+                'Style','pushbutton',...
                'Position',[xColStart,ypos,colSize(colInd),ysize],...
                'String','Refresh',...
                'FontSize',12,...
@@ -235,6 +275,31 @@ classdef beamlineGUI < handle
                 'Callback',@obj.HwRefreshCallback);
             ypos = ypos+ysize+ygap;
             obj.hHWConnStatusGrp.Position(4) = ypos+yBorderBuffer;
+            ypos = ypos+ysize+ygap+yBorderBuffer;
+
+            %===================================================================================
+            % Create imaging MCP control group
+            
+            obj.hCamGUI = uipanel(obj.hFigure,...
+                'Title','MCP Cam Control',...
+                'FontWeight','bold',...
+                'FontSize',12,...
+                'Units','pixels',...
+                'Position',[xBorderBuffer,ypos+yBorderBuffer,sum(colSize)+xgap*numel(colSize),10]);
+
+            colInd = 1;
+            xColStart = xstart;
+            obj.hCamButton = uicontrol(obj.hCamGUI, ...
+                'Style','pushbutton',...
+               'Position',[xColStart,ygap,colSize(colInd),ysize],...
+               'String','Start',...
+               'FontSize',12,...
+               'FontWeight','bold',...
+                'HorizontalAlignment','center',...
+                'Callback',@obj.trigCamController);
+%             ypos = ypos+ygap;
+            
+            obj.hCamGUI.Position(4) = ysize+ygap+yBorderBuffer;
             %===================================================================================
             % Create beamline status uicontrol group
             % Set positions for components
@@ -245,7 +310,7 @@ classdef beamlineGUI < handle
             xgap = 15;
             xstart = 10;
 
-            colSize = [180,140,40,60,60];
+            colSize = [180,140,60,60,60];
 
             obj.hStatusGrp = uipanel(obj.hFigure,...
                 'Title','Beamline Status',...
@@ -453,7 +518,7 @@ classdef beamlineGUI < handle
 
             % Create timer object and populate respective obj property
             obj.hTimer = timer('Name','readTimer',...
-                'Period',10,...
+                'Period',4,...
                 'ExecutionMode','fixedRate',...
                 'TimerFcn',@obj.updateReadings,...
                 'ErrorFcn',@obj.restartTimer);
@@ -462,6 +527,8 @@ classdef beamlineGUI < handle
             start(obj.hTimer);
 
         end
+
+
 
         function restartTimer(obj,~,~)
             %RESTARTTIMER Restarts timer if error
@@ -475,6 +542,24 @@ classdef beamlineGUI < handle
             start(obj.hTimer);
 
         end
+
+        function stopTimer(obj,~,~)
+            % Stop timer if still running
+            if strcmp(obj.hTimer.Running,'on')
+                stop(obj.hTimer);
+            end
+        end
+
+        function trigCamController(obj,~,~)
+            if obj.Hardware.MCPwebCam.Connected
+                obj.Hardware.MCPwebCam.shutdown();
+                obj.hCamButton.set('String','Start');
+            else
+                obj.Hardware.MCPwebCam.run();
+                obj.hCamButton.set('String','Stop');
+            end
+        end
+
 
         function copyTSCallback(obj,~,~)
             %COPYTSCALLBACK Copies test sequence to clipboard
@@ -589,11 +674,12 @@ classdef beamlineGUI < handle
             if strcmp(obj.hTimer.Running,'on')
                 stop(obj.hTimer);
             end
-
+            obj.Hardware.MCPwebCam.shutdown();
             % Delete obj
             delete(obj);
-
         end
+
+
 
     end
 

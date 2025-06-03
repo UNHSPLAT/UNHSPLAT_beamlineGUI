@@ -1,3 +1,6 @@
 [submodule "hwlib"]
 	path = hwlib
 	url = https://github.com/UNHSPLAT/UNHSPLAT_hwlib.git
+[submodule "mcp-webcam-analysis"]
+	path = mcp-webcam-analysis
+	url = https://github.com/sgh1009/mcp-webcam-analysis.git

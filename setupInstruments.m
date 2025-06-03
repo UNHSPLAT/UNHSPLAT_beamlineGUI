@@ -51,9 +51,17 @@
 
 
     % Config Power Supplies
-    function self = config_pwrsupply(self)
-        self.setVSet(2);
-    end
+    % add popup window to ask if user wants to zero power supplies or not
+    % way this is implemented, this removes the zeroing completely, which might not be what I want
+%     set_zero_yn = questdlg('Set power supply voltages to 0v?', ...
+%                             'Stanford Research Config');
+     function self = config_pwrsupply(self)
+%         % Handle response
+%         switch set_zero_yn
+%             case 'Yes'
+                self.setVSet(2);
+%         end
+     end
 
     % Generate list of available hardware
     instruments = struct("leyboldPressure1",leyboldCenter2("ASRL7::INSTR"),...
@@ -69,12 +77,60 @@
                          "HvChicane2",srsPS350('GPIB0::12::INSTR',@config_pwrsupply),...
                          "LvMass",keysightE36313A('GPIB0::5::INSTR'),...
                          "keithleyMultimeter1",keithleyDAQ6510('USB0::0x05E6::0x6510::04524689::0::INSTR',...
-                                                               @config_keithleyMultimeter)...
+                                                               @config_keithleyMultimeter),...
+                         "MCPwebCam",camControl()...
                          );
     
     %assign tags to instrument structures
     fields = fieldnames(instruments);
     for i=1:numel(fields)
         instruments.(fields{i}).Tag = fields{i};
+    end
+
+    % =======================================================================
+    % define read functions monitors will call to manipulate instrument output 
+    % =======================================================================
+    function val = read_srsHVPS(self)
+         if self.Connected
+        val = self.measV;
+         end
+    end
+    
+    function val = read_pressure(self)
+
+         if self.Connected
+            val = self.readPressure();
+         end
+    end
+
+     function val = read_pico(self)
+         if self.Connected
+            val  = self.read();
+         end
+     end
+
+     function val = read_keithley(self)
+         if self.Connected
+            val =  self.performScan(1,1);
+         end
+     end
+
+     readStruct = struct("leyboldPressure1",@read_pressure,...
+                         "leyboldPressure2",@read_pressure,...
+                         "leyboldPressure3",@read_pressure,...
+                         "picoFaraday",@read_pico,...
+                         "HvExbn",@read_srsHVPS,...
+                         "HvExbp",@read_srsHVPS,...
+                         "HvEsa",@read_srsHVPS,...
+                         "HvDefl",@read_srsHVPS,...
+                         "HvYsteer",@read_srsHVPS,...
+                         "HvChicane4",@read_srsHVPS,...
+                         "HvChicane2",@read_srsHVPS,...
+                         "keithleyMultimeter1",@read_keithley...
+                         );
+    % assign the read functions to their struct
+    fields = fieldnames(readStruct);
+    for i=1:numel(fields)
+        instruments.(fields{i}).readFunc = readStruct.(fields{i});
     end
 end
