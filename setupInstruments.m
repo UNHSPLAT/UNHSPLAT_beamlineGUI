@@ -92,7 +92,7 @@
     % =======================================================================
     function val = read_srsHVPS(self)
          if self.Connected
-        val = self.measV;
+             val = self.measV;
          end
     end
     
@@ -105,13 +105,13 @@
 
      function val = read_pico(self)
          if self.Connected
-            val  = self.read();
+            val  = self.readDev();
          end
      end
 
      function val = read_keithley(self)
          if self.Connected
-            val =  self.performScan(1,1);
+            val =  self.performScan(1,3);
          end
      end
 

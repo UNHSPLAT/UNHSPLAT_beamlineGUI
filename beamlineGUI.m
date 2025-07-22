@@ -10,7 +10,9 @@ classdef beamlineGUI < handle
         TestOperator string % Test operator string identifier
         GasType string % Gas type string identifier
         AcquisitionType string % Acquisition type string identifier
-        hTimer % Handle to timer used to update beamline status read fields
+        hTimer % Handle to timer used to update beamline monitor read timer
+        hHardwareTimer % Handle to timer used to refresh hardware status
+        
         
         hFigure % Handle to GUI figure
         hStatusGrp % Handle to beamline status uicontrol group
@@ -45,6 +47,8 @@ classdef beamlineGUI < handle
         hCamGUI; % IHandle to cam conctrol init button
         hCamButton %
 
+        parPool
+
     end
 
     properties (SetObservable)
@@ -57,7 +61,7 @@ classdef beamlineGUI < handle
 
             % Make user confirm control power on
             % uiwait(msgbox('Confirm that control power to high voltage rack is turned on.','Control Power Check'));
-
+                
             % Generate a test sequence, test date, and data directory
             obj.genTestSequence;
 
@@ -79,6 +83,7 @@ classdef beamlineGUI < handle
 
             % Generate monitor plot panel
             pause(1);
+
             obj.hMonitorPlt = beamlineMonitor(obj);
             obj.hMonitorPlt.runSweep();
             
@@ -131,20 +136,35 @@ classdef beamlineGUI < handle
                 delete(obj.hFigure);
             end
 
+            structfun(@(x)delete(x),obj.Monitors,'UniformOutput',false);
+            structfun(@(x)delete(x),obj.Hardware,'UniformOutput',false)
         end
         
+        function setSampleRate(obj,~,~)
+            obj.stopTimer()
+
+            prompt = {'Enter desired Sample rate [S]'};
+            dlgtitle = 'Refresh Rate';
+            dims = [1 35];
+            definput = {'4'};
+            answer = inputdlg(prompt,dlgtitle,dims,definput);
+
+            structfun(@(x)x.Timer.set('period',str2double(answer)),obj.Hardware,'UniformOutput',false);
+            obj.restartTimer();
+        end
+
         function setRefreshRate(obj,~,~)
-            stop(obj.hTimer);
-            
-            prompt = {'Enter desired rate [S]'};
+            obj.stopTimer()
+
+            prompt = {'Enter desired Refresh rate [S]'};
             dlgtitle = 'Refresh Rate';
             dims = [1 35];
             definput = {'4'};
             answer = inputdlg(prompt,dlgtitle,dims,definput);
 
             obj.hTimer.set('period',str2double(answer));
-            start(obj.hTimer);
-
+            %obj.hMonitorPlt.ReadingsListener.set('period',str2double(answer));
+            obj.restartTimer();
         end
 
         function garbo = readHardware(obj)
@@ -158,7 +178,44 @@ classdef beamlineGUI < handle
             %disp(now()-t2);
             %disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
         end
-    
+
+        function createTimer(obj)
+            %CREATETIMER Creates timer to periodically update readings from beamline hardware
+
+            % Create timer object and populate respective obj property
+            obj.hTimer = timer('Name','readTimer',...
+                'Period',4,...
+                'ExecutionMode','fixedRate',...
+                'TimerFcn',@obj.updateReadings,...
+                'ErrorFcn',@obj.restartTimer);
+
+            % Start timer
+            start(obj.hTimer);
+
+        end
+
+        function restartTimer(obj,~,~)
+            %RESTARTTIMER Restarts timer if error
+
+            % Stop timer if still running
+            if strcmp(obj.hTimer.Running,'on')
+                stop(obj.hTimer);
+            end
+
+            % Restart timer
+            start(obj.hTimer);
+            
+            structfun(@(x)x.restartTimer(),obj.Hardware,'UniformOutput',false);
+        end
+
+        function stopTimer(obj,~,~)
+            % Stop timer if still running
+            if strcmp(obj.hTimer.Running,'on')
+                stop(obj.hTimer);
+            end
+            
+            structfun(@(x)x.stopTimer(),obj.Hardware,'UniformOutput',false);
+        end
     end
 
 
@@ -215,6 +272,8 @@ classdef beamlineGUI < handle
 
             % add option to set sample rate
             uimenu(obj.hEditMenu,'Text','Set Sample Rate',...
+                'MenuSelectedFcn',@obj.setSampleRate);
+            uimenu(obj.hEditMenu,'Text','Set Refresh Rate',...
                 'MenuSelectedFcn',@obj.setRefreshRate);
             % add option to disable Timer
             uimenu(obj.hEditMenu,'Text','Disable Timer',...
@@ -514,42 +573,7 @@ classdef beamlineGUI < handle
             obj.hTestGrp.Position(4) = ypos+yBorderBuffer;
         end
 
-        function createTimer(obj)
-            %CREATETIMER Creates timer to periodically update readings from beamline hardware
-
-            % Create timer object and populate respective obj property
-            obj.hTimer = timer('Name','readTimer',...
-                'Period',4,...
-                'ExecutionMode','fixedRate',...
-                'TimerFcn',@obj.updateReadings,...
-                'ErrorFcn',@obj.restartTimer);
-
-            % Start timer
-            start(obj.hTimer);
-
-        end
-
-
-
-        function restartTimer(obj,~,~)
-            %RESTARTTIMER Restarts timer if error
-
-            % Stop timer if still running
-            if strcmp(obj.hTimer.Running,'on')
-                stop(obj.hTimer);
-            end
-
-            % Restart timer
-            start(obj.hTimer);
-
-        end
-
-        function stopTimer(obj,~,~)
-            % Stop timer if still running
-            if strcmp(obj.hTimer.Running,'on')
-                stop(obj.hTimer);
-            end
-        end
+        
 
         function trigCamController(obj,~,~)
             if obj.Hardware.MCPwebCam.Connected

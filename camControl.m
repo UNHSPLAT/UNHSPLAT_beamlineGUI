@@ -10,7 +10,7 @@ classdef camControl < handle
         figmanager%
         datamanager%
         uimanager%
-        Timer%
+        Timer=timer%
         cam%
         Connected%
         lastRead%
@@ -22,6 +22,13 @@ classdef camControl < handle
             obj.Connected = false;
             obj.Tag = 'MCPcam';
             obj.lastRead = nan;
+            % initialize timer to execute peakfinding
+            obj.Timer =  timer('Period',.5,... %period
+                      'ExecutionMode','fixedSpacing',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
+                      'BusyMode','queue',... %{drop, error, queue}
+                      'StartDelay',0,...
+                      'TimerFcn',@obj.update ...
+                      );
         end
 
         function run(obj,~,~)
@@ -56,9 +63,9 @@ classdef camControl < handle
             obj.datamanager.setupPreview;
             
             % initialize timer to execute peakfinding
-            obj.Timer =  timer('Period',.5,... %period
+            obj.Timer =  timer('Period',.1,... %period
                       'ExecutionMode','fixedSpacing',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
-                      'BusyMode','queue',... %{drop, error, queue}
+                      'BusyMode','drop',... %{drop, error, queue}
                       'StartDelay',0,...
                       'TimerFcn',@obj.update ...
                       );
@@ -111,6 +118,27 @@ classdef camControl < handle
         function restart(obj,~,~)
             obj.shutdown();
             obj.run();
+        end
+        
+        function restartTimer(obj)
+            %RESTARTTIMER Restarts timer if error
+
+            % Stop timer if still running
+            if strcmp(obj.Timer.Running,'on')
+                stop(obj.Timer);
+            end
+
+            % Restart timer
+            if obj.Connected
+                start(obj.Timer);
+            end
+        end
+
+        function stopTimer(obj)
+            % Stop timer if still running
+            if strcmp(obj.Timer.Running,'on')
+                stop(obj.Timer);
+            end
         end
 
     end
