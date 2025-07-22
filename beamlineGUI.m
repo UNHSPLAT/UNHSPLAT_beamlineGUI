@@ -149,14 +149,14 @@ classdef beamlineGUI < handle
 
         function garbo = readHardware(obj)
             t1 = now();
-            garbo = structfun(@(x)x.read(),obj.Hardware,'UniformOutput',false);
+            structfun(@(x)x.read(),obj.Hardware,'UniformOutput',false);
             disp(now()-t1);
             disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
 
-            t2 = now();
-            garbo = structfun(@(x)parfeval(@x.read,0),obj.Hardware,'UniformOutput',false);
-            disp(now()-t2);
-            disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
+            %t2 = now();
+            %garbo = structfun(@(x)parfeval(@x.read,0),obj.Hardware,'UniformOutput',false);
+            %disp(now()-t2);
+            %disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
         end
     
     end
