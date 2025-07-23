@@ -18,6 +18,7 @@ classdef monitor < handle
         lastRead %
         lock = false%
         monTimer = timer%
+        parentListener
     end
 
     methods
@@ -30,6 +31,11 @@ classdef monitor < handle
                     obj.(props{i})=vals{i};
                 end
             end
+            
+            %if ~strcmp(obj.parent.Type,"local")
+            %obj.parentListener = listener(obj.parent(1),...
+            %                    'lastRead','PostSet',@obj.read);
+            %end
         end
 
         function val = read(obj) 

@@ -4,6 +4,7 @@ classdef beamlineMonitor < acquisition
 
     properties (Constant)
         Type string = "Pressure Monitor" % Acquisition type identifier string
+        ReadingsBufLen = 200 % lengh of readings buffer to hold on to for plot
     end
 
     properties (SetAccess = private)
@@ -49,8 +50,17 @@ classdef beamlineMonitor < acquisition
                 % legend(obj.hAxesP,'Rough Vac','Gas Line','Beamline','Chambe
     
                 % Add listener to update data when new readings are taken by main beamlineGUI
-                obj.ReadingsListener = listener(obj.hBeamlineGUI,...
-                                'LastRead','PostSet',@obj.updateFigures);
+                %obj.ReadingsListener = listener(obj.hBeamlineGUI,...
+                %                'LastRead','PostSet',@obj.updateFigures);
+
+                % Create and start beamline status update timer
+                % obj.createTimer;
+                obj.ReadingsListener = timer('Name','plotTimer',...
+                    'Period',4,...
+                    'ExecutionMode','fixedRate',...
+                    'TimerFcn',@obj.updateFigures...
+                    );
+
                 % Initialize Readings with LastRead from beamlineGUI
                 obj.Readings = obj.hBeamlineGUI.LastRead;
                 % Retrieve config info
@@ -60,6 +70,8 @@ classdef beamlineMonitor < acquisition
     
                 % Save config info
                 save(fullfile(obj.hBeamlineGUI.DataDir,'config.mat'),'operator','gasType','testSequence');
+
+                start(obj.ReadingsListener);
 
             catch MExc
 
@@ -189,6 +201,7 @@ classdef beamlineMonitor < acquisition
 
             % Check that a new timestamp was recorded
             if obj.Readings(end).T ~= obj.hBeamlineGUI.LastRead.T
+                disp("updating");
                 try
                     % Append LastRead to Readings property
                     obj.Readings(end+1) = obj.hBeamlineGUI.LastRead;
@@ -196,7 +209,11 @@ classdef beamlineMonitor < acquisition
                     time = [obj.Readings.dateTime];
                     log_time = time>(max(time)-.01);
                     obj.Readings = obj.Readings(log_time);
-
+        
+                    % Check for readings len and remove readings that exceed buffer
+                    if length(obj.Readings) > obj.ReadingsBufLen
+                        obj.Readings(1) = [];
+                    end
                     % Update pressure monitor
                     obj.plotVals()
 
