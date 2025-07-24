@@ -131,6 +131,7 @@ function monitors = setupMonitors(instruments)
                                      'parent',instruments.HvExbp...
                                      ),...
                  'voltExt',monitor('readFunc',@(x) abs(x.parent.lastRead(1)*4000),...
+                                     'setFunc',@set_srsHVPS,...
                                      'textLabel','Extraction Voltage',...
                                      'unit','V',...
                                      'formatSpec','%.0f',...
@@ -258,20 +259,36 @@ function monitors = setupMonitors(instruments)
     function set_Mass(self,M)
         voltExt = self.siblings(1).lastRead();
         monEXB = self.siblings(2);
-        monXsteer = self.siblings(3);
-        monYsteer = self.siblings(4);
-        x_ratio = 375/10000; %Calibrated x-steer ratio
-        y_ratio = 25/10000; %Calibrated y-steer ratio
+        // monXsteer = self.siblings(3);
+        // monYsteer = self.siblings(4);
+        // x_ratio = 375/10000; %Calibrated x-steer ratio
+        // y_ratio = 25/10000; %Calibrated y-steer ratio
         
-        % set x-steer voltage to nom value
-        monXsteer.set(voltExt*x_ratio);
+        // % set x-steer voltage to nom value
+        // monXsteer.set(voltExt*x_ratio);
 
-        % set y-steer voltage to nom value
-        monYsteer.set(voltExt*y_ratio);
+        // % set y-steer voltage to nom value
+        // monYsteer.set(voltExt*y_ratio);
 
         % set ExB voltage to desired mass
         monEXB.set(calc_C*(voltExt/M)^(1/2))
     end
+
+    function sync_Ext(self,M)
+            voltExt = self.lastRead();
+            monXsteer = self.siblings(3);
+            monYsteer = self.siblings(4);
+            
+            x_ratio = 375/10000; %Calibrated x-steer ratio
+            y_ratio = 25/10000; %Calibrated y-steer ratio
+            
+            % set x-steer voltage to nom value
+            monXsteer.set(voltExt*x_ratio);
+
+            % set y-steer voltage to nom value
+            monYsteer.set(voltExt*y_ratio);
+        end
+    
 
     function set_voltEXB(self,volt)
         disp(volt);
@@ -315,8 +332,7 @@ function monitors = setupMonitors(instruments)
                                                 instruments.keithleyMultimeter1],...
                                      'siblings',[monitors.voltExt,...
                                                 monitors.voltExB,...
-                                                monitors.voltXsteer,...
-                                                monitors.voltYsteer]...
+                                                ]...
                                      );
 
     %assign tags to instrument tag parameters, may just want to have these and the 

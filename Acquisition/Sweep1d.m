@@ -351,7 +351,7 @@ classdef Sweep1d < acquisition
                         tag = fields{i};
                         obj.scan_mon.(tag)(iV) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
                     end
-                    plot(obj.hAxes1,obj.scan_mon.(psTag)(1:iV),abs(obj.scan_mon.(obj.resultTag)(1:iV)));
+                    plot(obj.hAxes1,obj.scan_mon.(psTag)(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
                     %set(obj.hAxes1,'YScale','log');
                     xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
                     ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
