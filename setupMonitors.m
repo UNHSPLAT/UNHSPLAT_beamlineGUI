@@ -259,16 +259,6 @@ function monitors = setupMonitors(instruments)
     function set_Mass(self,M)
         voltExt = self.siblings(1).lastRead();
         monEXB = self.siblings(2);
-        // monXsteer = self.siblings(3);
-        // monYsteer = self.siblings(4);
-        // x_ratio = 375/10000; %Calibrated x-steer ratio
-        // y_ratio = 25/10000; %Calibrated y-steer ratio
-        
-        // % set x-steer voltage to nom value
-        // monXsteer.set(voltExt*x_ratio);
-
-        // % set y-steer voltage to nom value
-        // monYsteer.set(voltExt*y_ratio);
 
         % set ExB voltage to desired mass
         monEXB.set(calc_C*(voltExt/M)^(1/2))
