@@ -61,7 +61,15 @@ classdef beamlineGUI < handle
 
             % Make user confirm control power on
             % uiwait(msgbox('Confirm that control power to high voltage rack is turned on.','Control Power Check'));
-                
+            answer = inputdlg(prompt,dlgtitle,dims,definput);
+
+            % check if any matlab timers are running and delete if they exist
+            if ~isempty(timerfindall)
+                warning('Matlab timers found running, deleting all timers');
+                stop(timerfindall);
+                delete(timerfindall);
+            end
+            
             % Generate a test sequence, test date, and data directory
             obj.genTestSequence;
 
@@ -143,13 +151,21 @@ classdef beamlineGUI < handle
         function setSampleRate(obj,~,~)
             obj.stopTimer()
 
-            prompt = {'Enter desired Sample rate [S]'};
-            dlgtitle = 'Refresh Rate';
-            dims = [1 35];
-            definput = {'4'};
+            prompt = cellfun(@(x)x.Tag, struct2cell(obj.Hardware), 'UniformOutput', false);
+            dlgtitle = 'Instrument Sample Rate';
+            dims = [1 45];
+            definput = cellfun(@(x)char(string(x.Timer.period)), struct2cell(obj.Hardware), 'UniformOutput', false);
             answer = inputdlg(prompt,dlgtitle,dims,definput);
 
-            structfun(@(x)x.Timer.set('period',str2double(answer)),obj.Hardware,'UniformOutput',false);
+            % If user didn't cancel
+            if ~isempty(answer)
+                % Get hardware field names to match with answers
+                hwFields = fieldnames(obj.Hardware);
+                % Update each timer's period
+                for i = 1:numel(answer)
+                    obj.Hardware.(hwFields{i}).Timer.set('period', str2double(answer{i}));
+                end
+            end
             obj.restartTimer();
         end
 
@@ -162,8 +178,9 @@ classdef beamlineGUI < handle
             definput = {'4'};
             answer = inputdlg(prompt,dlgtitle,dims,definput);
 
-            obj.hTimer.set('period',str2double(answer));
-            %obj.hMonitorPlt.ReadingsListener.set('period',str2double(answer));
+            if ~isempty(answer)
+                obj.hTimer.set('period',str2double(answer));
+            end
             obj.restartTimer();
         end
 
@@ -703,6 +720,7 @@ classdef beamlineGUI < handle
             if isvalid(obj.hMonitorPlt)
                 delete(obj.hMonitorPlt.hFigure);
             end
+            obj.delete();
             % Delete obj
             delete(obj);
         end
