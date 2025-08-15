@@ -143,9 +143,6 @@ classdef camControl < handle
 
         function delete(obj)
             % Delete the webcam object
-            if isvalid(obj.cam)
-                clear obj.cam;
-            end
             obj.shutdown();
         end
 

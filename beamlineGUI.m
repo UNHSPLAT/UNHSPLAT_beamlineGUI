@@ -61,8 +61,7 @@ classdef beamlineGUI < handle
 
             % Make user confirm control power on
             % uiwait(msgbox('Confirm that control power to high voltage rack is turned on.','Control Power Check'));
-            answer = inputdlg(prompt,dlgtitle,dims,definput);
-
+            
             % check if any matlab timers are running and delete if they exist
             if ~isempty(timerfindall)
                 warning('Matlab timers found running, deleting all timers');
