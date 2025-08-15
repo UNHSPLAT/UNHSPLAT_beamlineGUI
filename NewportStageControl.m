@@ -31,9 +31,14 @@ classdef NewportStageControl < handle
                       'StartDelay',0,...
                       'TimerFcn',@obj.read ...
                       );
-
-            obj.asmInfo = NET.addAssembly('Newport.XPS.CommandInterface');
-            obj.myxps = CommandInterfaceXPS.XPS();
+            try
+                obj.asmInfo = NET.addAssembly('Newport.XPS.CommandInterface');
+                obj.myxps = CommandInterfaceXPS.XPS();
+            except 
+                warning('Newport Stage not integrated');
+                obj.Connected = false;
+            end
+            
         end
 
         function val = read(obj)
@@ -55,22 +60,24 @@ classdef NewportStageControl < handle
 
         function connectDevice(obj)
             if ~ obj.Connected
-                code=obj.myxps.OpenInstrument(obj.address,5001,1000);
-                if code == 0
-                    obj.Timer.StartDelay = 0.1; % start after a short delay
-                    start(obj.Timer);
-                    for i = 1:length(obj.groups)
-                        gp = obj.groups(i);
-                        code=obj.myxps.GroupInitialize(gp);
-                        if code ~= 0
-                            warning('Failed to initialize group %s: %s', gp, obj.myxps.GetErrorMessage(code));
-                            obj.Connected = false;
-                            return;
+                if ~isempty(obj.myxps)
+                    code=obj.myxps.OpenInstrument(obj.address,5001,1000);
+                    if code == 0
+                        obj.Timer.StartDelay = 0.1; % start after a short delay
+                        start(obj.Timer);
+                        for i = 1:length(obj.groups)
+                            gp = obj.groups(i);
+                            code=obj.myxps.GroupInitialize(gp);
+                            if code ~= 0
+                                warning('Failed to initialize group %s: %s', gp, obj.myxps.GetErrorMessage(code));
+                                obj.Connected = false;
+                                return;
+                            end
                         end
+                        obj.Connected = true;
+                    else
+                        warning('Failed to connect to Newport XPS stage: %s', obj.myxps.GetErrorMessage(code));
                     end
-                    obj.Connected = true;
-                else
-                    warning('Failed to connect to Newport XPS stage: %s', obj.myxps.GetErrorMessage(code));
                 end
             end
         end
