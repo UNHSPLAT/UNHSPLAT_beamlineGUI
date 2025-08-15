@@ -589,8 +589,6 @@ classdef beamlineGUI < handle
             obj.hTestGrp.Position(4) = ypos+yBorderBuffer;
         end
 
-        
-
         function trigCamController(obj,~,~)
             if obj.Hardware.MCPwebCam.Connected
                 obj.Hardware.MCPwebCam.shutdown();
@@ -600,7 +598,6 @@ classdef beamlineGUI < handle
                 obj.hCamButton.set('String','Stop');
             end
         end
-
 
         function copyTSCallback(obj,~,~)
             %COPYTSCALLBACK Copies test sequence to clipboard
