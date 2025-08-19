@@ -79,6 +79,7 @@
                          "MCPwebCam",camControl(),...
                          "newportStage",NewportStageControl('192.168.0.254')...
                          );
+    instruments.newportStage.connectDevice();
     
     %assign tags to instrument structures
     fields = fieldnames(instruments);

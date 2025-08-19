@@ -201,7 +201,7 @@ classdef beamlineMonitor < acquisition
 
             % Check that a new timestamp was recorded
             if obj.Readings(end).T ~= obj.hBeamlineGUI.LastRead.T
-                disp("updating");
+%                 disp("updating");
                 try
                     % Append LastRead to Readings property
                     obj.Readings(end+1) = obj.hBeamlineGUI.LastRead;

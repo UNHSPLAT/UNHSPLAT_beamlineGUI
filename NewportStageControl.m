@@ -22,11 +22,12 @@ classdef NewportStageControl < handle
             % Initialize control
             obj.Connected = false;
             obj.Tag = '3axisNewportStage';
-            obj.lastRead = nan;
+            
             obj.address = address;
             if nargin >1
                 obj.groups = groups;
             end
+            obj.lastRead = zeros(1,length(obj.groups))*nan;
                 
             % initialize timer to grab position data at some cadence
             obj.Timer =  timer('Period',1,... %period
@@ -45,8 +46,8 @@ classdef NewportStageControl < handle
             
         end
 
-        function val = read(obj)
-            obj.lastRead=getAllPositions();
+        function val = read(obj,~,~)
+            obj.lastRead=obj.getAllPositions();
             val = obj.lastRead;
         end
 
@@ -61,12 +62,16 @@ classdef NewportStageControl < handle
         end
 
         function connectDevice(obj)
+            obj.initDevice();
+            obj.home();
+            start(obj.Timer);
+        end
+
+        function initDevice(obj)
             if ~ obj.Connected
                 if ~isempty(obj.myxps)
                     open_code=obj.myxps.OpenInstrument(obj.address,5001,1000);
                     if open_code == 0
-%                         obj.Timer.StartDelay = 0.1; % start after a short delay
-%                         start(obj.Timer);
                         init_codes = NaN(1,length(obj.groups));
                         for i = 1:length(obj.groups)
                             gp = obj.groups(i);
@@ -91,7 +96,7 @@ classdef NewportStageControl < handle
 
         function restart(obj,~,~)
             obj.shutdown();
-            obj.connectDevice();
+            obj.initDevice();
             obj.home();
         end
         
@@ -139,6 +144,7 @@ classdef NewportStageControl < handle
 
         % Set and get position methods
         function setPosition(obj,group,position)
+            run_status = obj.Timer.Running;
             if obj.Connected
                 code = obj.myxps.GroupMoveAbsolute(group,position,1);
                 if code ~= 0
@@ -171,7 +177,6 @@ classdef NewportStageControl < handle
                 positions = zeros(1, length(obj.groups))*nan;
                 for i = 1:length(obj.groups)
                     if obj.group_status(i)
-                        display(obj.groups(i));
                         positions(i) = obj.getPosition(obj.groups(i));
                     end
                 end    
