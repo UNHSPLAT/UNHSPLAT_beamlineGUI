@@ -7,6 +7,7 @@ classdef NewportStageControl < handle
         address string = ""%
         asmInfo %
         groups = ["Group1","Group2","Group3"] % Define the group names for the stage
+        group_status = [0,0,0]
     end
 
     properties (SetObservable) 
@@ -17,13 +18,16 @@ classdef NewportStageControl < handle
     end
 
     methods
-        function obj = NewportStageControl(address)
+        function obj = NewportStageControl(address,groups)
             % Initialize control
             obj.Connected = false;
             obj.Tag = '3axisNewportStage';
             obj.lastRead = nan;
             obj.address = address;
-
+            if nargin >1
+                obj.groups = groups;
+            end
+                
             % initialize timer to grab position data at some cadence
             obj.Timer =  timer('Period',1,... %period
                       'ExecutionMode','fixedSpacing',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
@@ -34,7 +38,7 @@ classdef NewportStageControl < handle
             try
                 obj.asmInfo = NET.addAssembly('Newport.XPS.CommandInterface');
                 obj.myxps = CommandInterfaceXPS.XPS();
-            except 
+            catch 
                 warning('Newport Stage not integrated');
                 obj.Connected = false;
             end
@@ -47,36 +51,39 @@ classdef NewportStageControl < handle
         end
 
         function shutdown(obj,~,~)
-            if obj.Connected
                 if isvalid(obj.myxps)
-                    obj.myxps.Groupkill('Group1');
+                    things = obj.myxps.KillAll();
                     obj.myxps.CloseInstrument;
                 end
                 stop(obj.Timer);
                 obj.Connected = false;
                 obj.lastRead = nan;
-            end
         end
 
         function connectDevice(obj)
             if ~ obj.Connected
                 if ~isempty(obj.myxps)
-                    code=obj.myxps.OpenInstrument(obj.address,5001,1000);
-                    if code == 0
-                        obj.Timer.StartDelay = 0.1; % start after a short delay
-                        start(obj.Timer);
+                    open_code=obj.myxps.OpenInstrument(obj.address,5001,1000);
+                    if open_code == 0
+%                         obj.Timer.StartDelay = 0.1; % start after a short delay
+%                         start(obj.Timer);
+                        init_codes = NaN(1,length(obj.groups));
                         for i = 1:length(obj.groups)
                             gp = obj.groups(i);
                             code=obj.myxps.GroupInitialize(gp);
+                            init_codes(i) = code;
                             if code ~= 0
-                                warning('Failed to initialize group %s: %s', gp, obj.myxps.GetErrorMessage(code));
-                                obj.Connected = false;
-                                return;
+                                fprintf('Failed to initialize group %s\n', gp);
                             end
                         end
-                        obj.Connected = true;
+                        display(init_codes);
+
+                        obj.group_status = ~init_codes;
+                        if ~all(init_codes)
+                            obj.Connected = true;
+                        end
                     else
-                        warning('Failed to connect to Newport XPS stage: %s', obj.myxps.GetErrorMessage(code));
+                        warning('Failed to connect to Newport XPS stage: %s', obj.myxps.GetErrorMessage(open_code));
                     end
                 end
             end
@@ -84,7 +91,8 @@ classdef NewportStageControl < handle
 
         function restart(obj,~,~)
             obj.shutdown();
-            obj.run();
+            obj.connectDevice();
+            obj.home();
         end
         
         function restartTimer(obj)
@@ -115,9 +123,14 @@ classdef NewportStageControl < handle
 
         function home(obj)
             if obj.Connected
-                code = obj.myxps.GroupHome('Group1');
-                if code ~= 0
-                    warning('Failed to home stage: %s', obj.myxps.GetErrorMessage(code));
+                for i = 1:length(obj.groups)
+                    if obj.group_status(i)
+                        [code,err] = obj.myxps.GroupHomeSearch(char(obj.groups(i)));
+                        
+                        if code ~= 0
+                            warning('Failed to home stage: %s', err);
+                        end
+                    end
                 end
             else
                 warning('Device not connected');
@@ -126,44 +139,43 @@ classdef NewportStageControl < handle
 
         % Set and get position methods
         function setPosition(obj,group,position)
-            if obj.myxps.IsDeviceConnected()
-                code = obj.myxps.GroupMoveAbsolute(group,position);
+            if obj.Connected
+                code = obj.myxps.GroupMoveAbsolute(group,position,1);
                 if code ~= 0
-                    warning('Failed to set position: %s', obj.myxps.GetErrorMessage(code));
+                    warning('Failed to set position: %s', code);
                 end
             else
-                obj.Connected = false;
                 warning('Device not connected');
             end
         end
         
-        function val = getPosition(obj,group,nbItems)
-            if obj.myxps.IsDeviceConnected()
-                output = obj.myxps.GroupPositionCurrentGet(group,nbItems);
-                % val,code = obj.myxps.GroupPositionTargetGet('Group1');
-                % allPositions = obj.myxps.getCurrentPosition();
-                val = output(1); 
-                code = output(2);
+        function val = getPosition(obj,group)
+            if obj.Connected
+                % For some reason calling the group position on just the group followed by the pos
+                % prevents error state
+                obj.myxps.GroupPositionCurrentGet(char(group),1);
+                [err,vals,errnum] = obj.myxps.GroupPositionCurrentGet([char(group),'.pos'],1);
+                val = vals.double; 
+                code = err;
                 if code ~= 0
-                    warning('Failed to get position: %s', obj.myxps.GetErrorMessage(code));
+                    fprintf('Failed to get position: %s', errnum);
                 end
             else
-                obj.Connected = false;
-                warning('Device not connected');
                 val = nan;
             end
         end
 
         function positions = getAllPositions(obj)
-            if obj.myxps.IsDeviceConnected()
+            if obj.Connected()
                 % positions = obj.myxps.getCurrentPosition();
-                positions = zeros(1, length(obj.groups));
+                positions = zeros(1, length(obj.groups))*nan;
                 for i = 1:length(obj.groups)
-                    positions(i) = obj.getPosition(obj.groups(i),1);
+                    if obj.group_status(i)
+                        display(obj.groups(i));
+                        positions(i) = obj.getPosition(obj.groups(i));
+                    end
                 end    
             else
-                obj.Connected = false;
-                warning('Device not connected');
                 positions = zeros(1, length(obj.groups))*nan;
             end
         end
