@@ -64,7 +64,6 @@ classdef NewportStageControl < handle
         function connectDevice(obj)
             obj.initDevice();
             obj.home();
-            start(obj.Timer);
         end
 
         function initDevice(obj)
@@ -88,7 +87,7 @@ classdef NewportStageControl < handle
                             obj.Connected = true;
                         end
                     else
-                        warning('Failed to connect to Newport XPS stage: %s', obj.myxps.GetErrorMessage(open_code));
+                        warning('Failed to connect to Newport XPS stage');
                     end
                 end
             end
@@ -133,7 +132,7 @@ classdef NewportStageControl < handle
                         [code,err] = obj.myxps.GroupHomeSearch(char(obj.groups(i)));
                         
                         if code ~= 0
-                            warning('Failed to home stage: %s', err);
+                            warning('Failed to home stage: %s', string(err));
                         end
                     end
                 end
@@ -157,15 +156,28 @@ classdef NewportStageControl < handle
         
         function val = getPosition(obj,group)
             if obj.Connected
-                % For some reason calling the group position on just the group followed by the pos
-                % prevents error state
-                obj.myxps.GroupPositionCurrentGet(char(group),1);
-                [err,vals,errnum] = obj.myxps.GroupPositionCurrentGet([char(group),'.pos'],1);
-                val = vals.double; 
-                code = err;
-                if code ~= 0
-                    fprintf('Failed to get position: %s', errnum);
+                trynum = 0;
+                while trynum <3
+                    try
+                        % For some reason calling the group position on just the group followed by the pos
+                        % prevents error state
+                        [err,vals,errnum] = obj.myxps.GroupPositionCurrentGet(char(group),1);
+%                         [err,vals,errnum] = obj.myxps.GroupPositionCurrentGet([char(group),'.pos'],1);
+                        val = vals.double; 
+                        code = err;
+                        if code ~= 0
+                            fprintf('Failed to get position: Err = %s, Trynum = %d',string(errnum),trynum);
+                            trynum = trynum+1;
+                        else
+                            return
+                        end
+                    catch
+                        fprintf('StageComm Failed, Trynum = %d\n',trynum);
+                        trynum = trynum +1;
+                        val = nan;
+                    end
                 end
+                obj.Connected = false;
             else
                 val = nan;
             end
