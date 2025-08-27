@@ -141,14 +141,6 @@ function monitors = setupMonitors(instruments)
                                      'formatSpec','%.0f',...
                                      'parent',instruments.HvExbp...
                                      ),...
-                 'voltExt',monitor('readFunc',@(x) abs(x.parent.lastRead(1)*4000),...
-                                     'setFunc',@set_srsHVPS,...
-                                     'textLabel','Extraction Voltage',...
-                                     'unit','V',...
-                                     'formatSpec','%.0f',...
-                                     'group','HV',...
-                                     'parent',instruments.keithleyMultimeter1...
-                                     ),...
                  'voltLens',monitor('readFunc',@(x) abs(x.parent.lastRead(2)*1000),...
                                      'textLabel','Lens Voltage',...
                                      'unit','V',...
@@ -239,78 +231,75 @@ function monitors = setupMonitors(instruments)
                                      'parent',instruments.MCPwebCam...
                                      )...
                  );
-    
+
     % =======================================================================
-    % Level 2 monitor read functions
+    % Setup level 2 monitors (Derrive values from sibling monitors)
+    %   - level 2 monitors may utilize sibling monitors to read or set values
+    %   - because these are referential to other monitors assignment order matters
     % =======================================================================
+
+
+    % =======================================================================
+    % Ext voltage
+    % =======================================================================
+    function sync_Ext(self,volt)
+            voltExt = self.lastRead();
+            monXsteer = self.siblings(1);
+            monYsteer = self.siblings(2);
+            monDefl = self.siblings(3);
+            
+            %pre 8/27/2025 cal
+%             x_ratio = 375/10000; %Calibrated x-steer ratio
+%             y_ratio = 25/10000; %Calibrated y-steer ratio
+            x_ratio = 251/8043;
+            y_ratio = 15/8043;
+            defl_ratio = 30/8043;
+
+            % set x-steer voltage to nom value
+            monXsteer.set(voltExt*x_ratio);
+            % set y-steer voltage to nom value
+            monYsteer.set(voltExt*y_ratio);
+            % sed default defl settings
+            monDefl.set(voltExt*defl_ratio);
+    end
+
+    monitors.voltExt = monitor('readFunc',@(x) abs(x.parent.lastRead(1)*4000),...
+                                 'setFunc',@sync_Ext,...
+                                 'textLabel','Extraction Voltage',...
+                                 'unit','V',...
+                                 'active',true,...
+                                 'formatSpec','%.0f',...
+                                 'group','HV',...
+                                 'parent',instruments.keithleyMultimeter1,...
+                                 'siblings',[monitors.voltXsteer,monitors.voltYsteer,monitors.voltDefl]...
+                                 );
+
+    % =======================================================================
+    % ExB voltage
+    % =======================================================================
+
     function val = read_voltEXB(self)
         voltExbp = self.siblings(1).lastRead();
         voltExbn = self.siblings(2).lastRead();
         val = voltExbp-voltExbn;
     end
 
-    function C = calc_C()
-        % Reference species location
-        % will be expanded with full calibration data
-        Mcal = 12; 
-        VexbCal = 912;
-        VextCal = 10000;
-        C = VexbCal/(VextCal/Mcal)^(1/2);
-    end
-
-    function val = read_Mass(self)
-        voltExt = self.siblings(1).lastRead();
-        voltEXB = self.siblings(2).lastRead();
-        val = (calc_C*voltExt^(1/2)/voltEXB)^2;
-    end
-
-    % =======================================================================
-    % Level 2 monitor set functions
-    % =======================================================================
-    function set_Mass(self,M)
-        voltExt = self.siblings(1).lastRead();
-        monEXB = self.siblings(2);
-
-        % set ExB voltage to desired mass
-        monEXB.set(calc_C*(voltExt/M)^(1/2))
-    end
-
-    function sync_Ext(self,M)
-            voltExt = self.lastRead();
-            monXsteer = self.siblings(3);
-            monYsteer = self.siblings(4);
-            
-            x_ratio = 375/10000; %Calibrated x-steer ratio
-            y_ratio = 25/10000; %Calibrated y-steer ratio
-            
-            % set x-steer voltage to nom value
-            monXsteer.set(voltExt*x_ratio);
-
-            % set y-steer voltage to nom value
-            monYsteer.set(voltExt*y_ratio);
-        end
-    
-
     function set_voltEXB(self,volt)
-        disp(volt);
-        monVoltExbp = self.siblings(1);
-        monVoltExbn = self.siblings(2);
-        monVoltExbp.set(volt/2);
-        monVoltExbn.set(volt/2);
-
-        % get the siblings ramp timers and locks
-        self.monTimer = self.siblings.monTimer;
-        self.lock = self.siblings.lock;
-        function stop_func(varargin)
-            self.lock = false;
-        end
-        set(self.monTimer,'StopFcn',@stop_func);
+            disp(volt);
+            monVoltExbp = self.siblings(1);
+            monVoltExbn = self.siblings(2);
+            monVoltExbp.set(volt/2);
+            monVoltExbn.set(volt/2);
+    
+            % get the siblings ramp timers and locks
+            self.monTimer = self.siblings.monTimer;
+            self.lock = self.siblings.lock;
+            function stop_func(varargin)
+                self.lock = false;
+            end
+            set(self.monTimer,'StopFcn',@stop_func);
     end
-    % =======================================================================
-    % Setup level 2 monitors (Derrive values from sibling monitors)
-    %   - level 2 monitors may utilize sibling monitors to read or set values
-    %   - because these are referential to other monitors assignment order matters
-    % =======================================================================
+
     monitors.voltExB = monitor('readFunc',@read_voltEXB,...
                                      'setFunc',@set_voltEXB,...
                                      'textLabel','ExB Voltage',...
@@ -321,6 +310,38 @@ function monitors = setupMonitors(instruments)
                                      'parent',[instruments.HvExbp,instruments.HvExbn],...
                                      'siblings',[monitors.voltExbp,monitors.voltExbn]...
                                      );
+
+    % =======================================================================
+    % Target Mass
+    % =======================================================================
+    
+     function C = calc_C()
+            % Reference species location
+            % will be expanded with full calibration data
+            % pre 8/27/25 values
+                    %Mcal = 12; 
+                    %VexbCal = 912;
+                    %VextCal = 10000;
+                    %C = VexbCal/(VextCal/Mcal)^(1/2);
+            % based on observations from 8/26/2025
+            % averaged of N,O,OH, H2O, Ne
+
+            C = 30.7;
+        end
+
+    function val = read_Mass(self)
+        voltExt = self.siblings(1).lastRead();
+        voltEXB = self.siblings(2).lastRead();
+        val = (calc_C*voltExt^(1/2)/voltEXB)^2;
+    end
+
+    function set_Mass(self,M)
+            voltExt = self.siblings(1).lastRead();
+            monEXB = self.siblings(2);
+    
+            % set ExB voltage to desired mass
+            monEXB.set(calc_C*(voltExt/M)^(1/2))
+    end
 
     monitors.M = monitor('readFunc',@read_Mass,...
                                      'setFunc',@set_Mass,...
