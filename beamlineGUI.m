@@ -11,6 +11,7 @@ classdef beamlineGUI < handle
         GasType string % Gas type string identifier
         AcquisitionType string % Acquisition type string identifier
         hTimer % Handle to timer used to update beamline monitor read timer
+        hLogTimer % Handle to timer used to update the beamline status save log
         hHardwareTimer % Handle to timer used to refresh hardware status
         
         
@@ -83,13 +84,7 @@ classdef beamlineGUI < handle
             obj.createGUI;
 
             % Create and start beamline status update timer
-            % obj.createTimer;
-            obj.hTimer = timer('Name','readTimer',...
-                'Period',4,...
-                'ExecutionMode','fixedRate',...
-                'TimerFcn',@obj.updateReadings,...
-                'ErrorFcn',@obj.restartTimer);
-            start(obj.hTimer);
+            obj.createTimer;
 
             % Generate monitor plot panel
             pause(1);
@@ -106,7 +101,6 @@ classdef beamlineGUI < handle
                 obj.LastRead = struct;
             end
 
-
             %Read the stuff from the hardware
             readList = structfun(@(x)x.read(),obj.Monitors,'UniformOutput',false);
 
@@ -119,7 +113,11 @@ classdef beamlineGUI < handle
                 newRead.(lab)=val;
             end
             obj.LastRead=newRead;
-            readings = struct(['r',num2str(round(now*1e6))],obj.LastRead);
+            
+        end
+
+        function updateLog(obj,~,~,fname)
+            readings = obj.LastRead;
 
             if ~exist('fname','var')
                 fname = fullfile(obj.DataDir,['readings_',num2str(obj.TestSequence),'.mat']);
@@ -130,16 +128,13 @@ classdef beamlineGUI < handle
             else
                 save(fname,'-struct','readings');
             end
-
         end
 
         function delete(obj)
             %DELETE Handle class destructor to stop timer and close figure when obj is deleted
 
             % Stop timer if running
-            if strcmp(obj.hTimer.Running,'on')
-                stop(obj.hTimer);
-            end
+            obj.stopTimer();
 
             % Delete figure
             if isvalid(obj.hFigure)
@@ -177,11 +172,26 @@ classdef beamlineGUI < handle
             prompt = {'Enter desired Refresh rate [S]'};
             dlgtitle = 'Refresh Rate';
             dims = [1 35];
-            definput = {'4'};
+            definput = {char(string(obj.hTimer.period))};
             answer = inputdlg(prompt,dlgtitle,dims,definput);
 
             if ~isempty(answer)
                 obj.hTimer.set('period',str2double(answer));
+            end
+            obj.restartTimer();
+        end
+
+        function setLogRate(obj,~,~)
+            obj.stopTimer()
+
+            prompt = {'Enter desired Log rate [S]'};
+            dlgtitle = 'Refresh Rate';
+            dims = [1 35];
+            definput = {char(string(obj.hLogTimer.period))};
+            answer = inputdlg(prompt,dlgtitle,dims,definput);
+
+            if ~isempty(answer)
+                obj.hLogTimer.set('period',str2double(answer));
             end
             obj.restartTimer();
         end
@@ -203,13 +213,21 @@ classdef beamlineGUI < handle
 
             % Create timer object and populate respective obj property
             obj.hTimer = timer('Name','readTimer',...
-                'Period',4,...
+                'Period',2,...
                 'ExecutionMode','fixedRate',...
                 'TimerFcn',@obj.updateReadings,...
                 'ErrorFcn',@obj.restartTimer);
 
             % Start timer
             start(obj.hTimer);
+
+            obj.hLogTimer = timer('Name','readTimer',...
+                'Period',5,...
+                'ExecutionMode','fixedRate',...
+                'TimerFcn',@obj.updateLog,...
+                'ErrorFcn',@obj.restartTimer);
+            start(obj.hLogTimer);
+
 
         end
 
@@ -220,11 +238,23 @@ classdef beamlineGUI < handle
             if strcmp(obj.hTimer.Running,'on')
                 stop(obj.hTimer);
             end
+            
 
             % Restart timer
             start(obj.hTimer);
-            
-            structfun(@(x)x.restartTimer(),obj.Hardware,'UniformOutput',false);
+            function restartFunc(x)
+                x.restartTimer();
+                pause(.1);
+            end
+            structfun(@restartFunc,obj.Hardware,'UniformOutput',false);
+
+            % Stop timer if still running
+            if strcmp(obj.hLogTimer.Running,'on')
+                stop(obj.hLogTimer);
+            end
+           
+            % Restart timer
+            start(obj.hLogTimer);
         end
 
         function stopTimer(obj,~,~)
@@ -234,6 +264,10 @@ classdef beamlineGUI < handle
             end
             
             structfun(@(x)x.stopTimer(),obj.Hardware,'UniformOutput',false);
+
+            if strcmp(obj.hLogTimer.Running,'on')
+                stop(obj.hLogTimer);
+            end
         end
     end
 
@@ -286,7 +320,7 @@ classdef beamlineGUI < handle
             obj.hEditMenu = uimenu(obj.hFigure,'Text','Edit');
 
             % Create copy test sequence menu button
-            obj.hCopyTS = uimenu(obj.hEditMenu,'Text','Copy Test Sequence',...
+            obj.hCopyTS = uimenu(obj.hFileMenu,'Text','Copy Test Sequence',...
                 'MenuSelectedFcn',@obj.copyTSCallback);
 
             % add option to set sample rate
@@ -294,7 +328,9 @@ classdef beamlineGUI < handle
                 'MenuSelectedFcn',@obj.setSampleRate);
             uimenu(obj.hEditMenu,'Text','Set Refresh Rate',...
                 'MenuSelectedFcn',@obj.setRefreshRate);
-            % add option to disable Timer
+            uimenu(obj.hEditMenu,'Text','Set Data Log Rate',...
+                'MenuSelectedFcn',@obj.setLogRate);
+            % add option to dietable Timer
             uimenu(obj.hEditMenu,'Text','Disable Timer',...
                 'MenuSelectedFcn',@obj.stopTimer);
             uimenu(obj.hEditMenu,'Text','Restart Timer',...
@@ -750,6 +786,10 @@ classdef beamlineGUI < handle
             if strcmp(obj.hTimer.Running,'on')
                 stop(obj.hTimer);
             end
+            if strcmp(obj.hLogTimer.Running,'on')
+                stop(obj.hLogTimer);
+            end
+
             obj.Hardware.MCPwebCam.shutdown();
             if isvalid(obj.hMonitorPlt)
                 delete(obj.hMonitorPlt.hFigure);
