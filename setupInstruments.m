@@ -50,8 +50,6 @@
     
      function self = config_newport(self)
         self.myxps.PositionerUserTravelLimitsSet('Group1.Pos',-150,150);
-        self.connectDevice();
-        start(self.Timer);
      end
 
 

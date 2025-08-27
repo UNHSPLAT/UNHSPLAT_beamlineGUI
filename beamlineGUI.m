@@ -47,6 +47,9 @@ classdef beamlineGUI < handle
         hCamGUI; % IHandle to cam conctrol init button
         hCamButton %
 
+        hStageGUI; % IHandle to stage conctrol init button
+        hStageButton %
+
         parPool
 
     end
@@ -351,7 +354,7 @@ classdef beamlineGUI < handle
                 'Callback',@obj.HwRefreshCallback);
             ypos = ypos+ysize+ygap;
             obj.hHWConnStatusGrp.Position(4) = ypos+yBorderBuffer;
-            ypos = ypos+ysize+ygap+yBorderBuffer;
+            ypos = obj.hHWConnStatusGrp.Position(2)+obj.hHWConnStatusGrp.Position(4);
 
             %===================================================================================
             % Create imaging MCP control group
@@ -361,7 +364,7 @@ classdef beamlineGUI < handle
                 'FontWeight','bold',...
                 'FontSize',12,...
                 'Units','pixels',...
-                'Position',[xBorderBuffer,ypos+yBorderBuffer,sum(colSize)+xgap*numel(colSize),10]);
+                'Position',[xBorderBuffer,ypos,sum(colSize)+xgap*numel(colSize),10]);
 
             colInd = 1;
             xColStart = xstart;
@@ -376,6 +379,31 @@ classdef beamlineGUI < handle
 %             ypos = ypos+ygap;
             
             obj.hCamGUI.Position(4) = ysize+ygap+yBorderBuffer;
+            ypos = obj.hCamGUI.Position(2)+obj.hCamGUI.Position(4);
+
+            %===================================================================================
+            % Create position system control group
+            
+            obj.hStageGUI = uipanel(obj.hFigure,...
+                'Title','Newport Stage Control',...
+                'FontWeight','bold',...
+                'FontSize',12,...
+                'Units','pixels',...
+                'Position',[xBorderBuffer,ypos,sum(colSize)+xgap*numel(colSize),10]);
+
+            colInd = 1;
+            xColStart = xstart;
+            obj.hStageButton = uicontrol(obj.hStageGUI, ...
+                'Style','pushbutton',...
+               'Position',[xColStart,ygap,colSize(colInd),ysize],...
+               'String','Start',...
+               'FontSize',12,...
+               'FontWeight','bold',...
+                'HorizontalAlignment','center',...
+                'Callback',@obj.trigStageController);
+%             ypos = ypos+ygap;
+            
+            obj.hStageGUI.Position(4) = ysize+ygap+yBorderBuffer;
             %===================================================================================
             % Create beamline status uicontrol group
             % Set positions for components
@@ -596,6 +624,16 @@ classdef beamlineGUI < handle
             else
                 obj.Hardware.MCPwebCam.run();
                 obj.hCamButton.set('String','Stop');
+            end
+        end
+
+        function trigStageController(obj,~,~)
+            if obj.Hardware.newportStage.Connected
+                obj.Hardware.newportStage.shutdown();
+                obj.hStageButton.set('String','Start');
+            else
+                obj.Hardware.newportStage.run();
+                obj.hStageButton.set('String','Stop');
             end
         end
 

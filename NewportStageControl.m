@@ -63,8 +63,13 @@ classdef NewportStageControl < handle
         end
 
         function connectDevice(obj)
+            
+        end
+
+        function run(obj)
             obj.initDevice();
             obj.home();
+            start(obj.Timer)
         end
 
         function initDevice(obj)
