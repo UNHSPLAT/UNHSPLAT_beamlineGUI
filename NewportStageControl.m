@@ -15,6 +15,7 @@ classdef NewportStageControl < handle
         Connected%
         lastRead%
         myxps
+        funcConfig
     end
 
     methods

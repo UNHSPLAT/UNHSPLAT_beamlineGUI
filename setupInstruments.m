@@ -47,7 +47,12 @@
             hFaraday.devRW(':SYST:LOC');
         end
     end
-
+    
+     function self = config_newport(self)
+        self.myxps.PositionerUserTravelLimitsSet('Group1.Pos',-150,150);
+        self.connectDevice();
+        start(self.Timer);
+     end
 
 
     % Config Power Supplies
@@ -59,7 +64,7 @@
 %         % Handle response
 %         switch set_zero_yn
 %             case 'Yes'
-                self.setVSet(2);
+%                 self.setVSet(2);
 %         end
      end
 
@@ -79,8 +84,9 @@
                          "MCPwebCam",camControl(),...
                          "newportStage",NewportStageControl('192.168.0.254')...
                          );
-    instruments.newportStage.connectDevice();
-    start(instruments.newportStage.Timer);
+
+    config_newport(instruments.newportStage);
+
     %assign tags to instrument structures
     fields = fieldnames(instruments);
     for i=1:numel(fields)
@@ -116,6 +122,11 @@
          end
      end
 
+     function val = read_keysight(self)
+         if self.Connected
+            val =  self.measV;
+         end
+     end
      readStruct = struct("leyboldPressure1",@read_pressure,...
                          "leyboldPressure2",@read_pressure,...
                          "leyboldPressure3",@read_pressure,...
@@ -125,7 +136,8 @@
                          "HvEsa",@read_srsHVPS,...
                          "HvDefl",@read_srsHVPS,...
                          "HvYsteer",@read_srsHVPS,...
-                         "keithleyMultimeter1",@read_keithley...
+                         "keithleyMultimeter1",@read_keithley,...
+                         "LvMass",@read_keysight...
                          );
     % assign the read functions to their struct
     fields = fieldnames(readStruct);
