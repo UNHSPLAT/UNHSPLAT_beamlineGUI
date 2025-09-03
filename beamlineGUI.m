@@ -14,7 +14,6 @@ classdef beamlineGUI < handle
         hLogTimer % Handle to timer used to update the beamline status save log
         hHardwareTimer % Handle to timer used to refresh hardware status
         
-        
         hFigure % Handle to GUI figure
         hStatusGrp % Handle to beamline status uicontrol group
         hTestGrp %
@@ -23,8 +22,11 @@ classdef beamlineGUI < handle
         HWConnStatusListeners %
         hMonitorPlt% Handle to monitor plot generated at startup
 
+        hValveFigure %Handle to valve control figure
+
         hFileMenu % Handle to file top menu dropdown
         hEditMenu % Handle to edit top menu dropdown
+        hToolsMenu % Handle to edit top menu dropdown
         hCopyTS % Handle to copy test sequence menu button
         hSequenceText % Handle to test sequence label
         hSequenceEdit % Handle to test sequence field
@@ -269,6 +271,34 @@ classdef beamlineGUI < handle
                 stop(obj.hLogTimer);
             end
         end
+
+        function valveControlCallback(obj,~,~)
+           vfrac = .4
+           obj.hValveFigure = figure('MenuBar','none',...
+                'ToolBar','none',...
+                'Position',[658 345 976 687],...
+                'NumberTitle','off',...
+                'Name','Valve Control');
+
+           pan_valveControl = uipanel(obj.hValveFigure,...
+                'Title','PowerStrip',...
+                'FontWeight','bold',...
+                'FontSize',12,...
+                'Position',[0,0,1,vfrac] ...
+                );
+
+           displayWebPage('http://192.168.0.110/',pan_valveControl);
+           
+           panSystem = uipanel(obj.hValveFigure,...
+                'Position',[0,vfrac,1,1] ...
+                );
+
+           ax = axes('Parent',panSystem,'units','normalized','position',[0,0,1,1-vfrac]);
+           img  = imread('system_layoutV04.png');
+           imshow(img, 'Parent', ax);
+           set(ax,'handlevisibility','off','visible','off')
+
+        end
     end
 
 
@@ -318,10 +348,16 @@ classdef beamlineGUI < handle
 
             % Create edit menu
             obj.hEditMenu = uimenu(obj.hFigure,'Text','Edit');
+            
+            % Create edit menu
+            obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
 
             % Create copy test sequence menu button
             obj.hCopyTS = uimenu(obj.hFileMenu,'Text','Copy Test Sequence',...
                 'MenuSelectedFcn',@obj.copyTSCallback);
+            
+            uimenu(obj.hToolsMenu,'Text','ValveControl',...
+                'MenuSelectedFcn',@obj.valveControlCallback);
 
             % add option to set sample rate
             uimenu(obj.hEditMenu,'Text','Set Sample Rate',...
@@ -765,6 +801,7 @@ classdef beamlineGUI < handle
                 disp(nam)
                 if any(strcmp(tags,nam))
                     obj.Hardware.(nam).connectDevice();
+                    obj.Hardware.(nam).restartTimer();
                 end
             end
         end
