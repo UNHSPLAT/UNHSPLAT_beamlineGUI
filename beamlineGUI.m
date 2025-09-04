@@ -96,7 +96,7 @@ classdef beamlineGUI < handle
             
         end
 
-        function readings = updateReadings(obj,~,~,fname)
+        function newRead = updateReadings(obj,~,~,fname)
             %UPDATEREADINGS Read and update all beamline status reading fields
             % Gather readings
             if isempty(obj.LastRead)
@@ -273,7 +273,7 @@ classdef beamlineGUI < handle
         end
 
         function valveControlCallback(obj,~,~)
-           vfrac = .4
+           vfrac = .4;
            obj.hValveFigure = figure('MenuBar','none',...
                 'ToolBar','none',...
                 'Position',[658 345 976 687],...
