@@ -49,7 +49,9 @@
     end
     
      function self = config_newport(self)
+        if self.Connected
         self.myxps.PositionerUserTravelLimitsSet('Group1.Pos',-150,150);
+        end
      end
 
     % Generate list of available hardware
