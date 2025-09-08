@@ -7,7 +7,9 @@ classdef SWIPS_GUI < handle
         
         TestSequence double % Unique test sequence identifier number
         TestDate string % Test date derived from TestSequence
-        DataDir string % Data directory derived from TestSequence
+        DataDir string % Dat            % Adjust figure size to fit all panels
+            % Calculate required figure size based on panels
+            
         TestOperator string % Test operator string identifier
         AcquisitionType string % Acquisition type string identifier
         
@@ -16,13 +18,15 @@ classdef SWIPS_GUI < handle
         hHardwareTimer % Handle to timer used to refresh hardware status
         
         hFigure % Handle to GUI figure
-        hStatusGrp % Handle to status uicontrol group
+        hHVStatusGrp % Handle to status uicontrol group
         hTestGrp % Handle to test control group
+        hStatusGrp % Handle to status uicontrol group
         hHWConnStatusGrp % Handle to hardware connection status group
         hHWConnBtn % Handle to hardware connection refresh button
         HWConnStatusListeners % Listeners for hardware connection status
         hMonitorPlt % Handle to monitor plot
         hPosStatusGrp % Handle to position status panel group
+        hInstGrp % Handle to instrument monitors panel
         
         hFileMenu % Handle to file top menu dropdown
         hEditMenu % Handle to edit top menu dropdown
@@ -61,10 +65,10 @@ classdef SWIPS_GUI < handle
             obj.createGUI;
 
             % Create and start status update timer
-            obj.createTimer;
+            % obj.createTimer;
         end
 
-        function newRead = updateReadings(obj,~,~,fname)
+        function newRead = updateReadings(obj,~,~)
             %UPDATEREADINGS Read and update all status reading fields
             if isempty(obj.LastRead)
                 obj.LastRead = struct;
@@ -268,14 +272,12 @@ classdef SWIPS_GUI < handle
             leftMargin = 10; % Left margin for panels
 
             % Column sizes for different elements
-            colSize = [140,140,60,60,60];  % [Label, Value, Units, Set Value, Set Button]
+            colSize = [130,140,60,60,60];  % [Label, Value, Units, Set Value, Set Button]
             panelWidth = sum(colSize)+xgap*numel(colSize);
-
             
-
             % Create HV status panel at the bottom
-            ypos = 20;  % Reset Y position for new panel
-            obj.hStatusGrp = uipanel(obj.hFigure,...
+            ypos = 10;  % Reset Y position for new panel
+            obj.hHVStatusGrp = uipanel(obj.hFigure,...
                 'Title','HVPS',...
                 'FontWeight','bold',...
                 'FontSize',12,...
@@ -292,17 +294,17 @@ classdef SWIPS_GUI < handle
             end
 
             % Adjust panel height to fit all controls
-            obj.hStatusGrp.Position(4) = ypos+20;  % Add some padding at the bottom
+            obj.hHVStatusGrp.Position(4) = ypos+20;  % Add some padding at the bottom
 
             % Initialize position for first panel's controls
-            ypos = 20;  % Initial Y position within panel
+            ypos = 10;  % Initial Y position within panel
    
             obj.hPosStatusGrp = uipanel(obj.hFigure,...
                 'Title','StagePosition',...
                 'FontWeight','bold',...
                 'FontSize',12,...
                 'Units','pixels',...
-                'Position',[leftMargin,obj.hStatusGrp.Position(4)+obj.hStatusGrp.Position(2),panelWidth,100]);
+                'Position',[leftMargin,obj.hHVStatusGrp.Position(4)+obj.hHVStatusGrp.Position(2),panelWidth,100]);
  
             % Create position monitor controls at the bottom
             monitorFields = fieldnames(obj.Monitors);
@@ -320,7 +322,7 @@ classdef SWIPS_GUI < handle
             % Create axes for the image above the controls
             ax = axes('Parent', obj.hPosStatusGrp,...
                      'Units', 'pixels',...
-                     'Position', [50, controlsHeight, panelWidth-60, imageHeight-30]);  % Add padding
+                     'Position', [60, controlsHeight, panelWidth-60, imageHeight-30]);  % Add padding
             
             % Load and display the image
             try
@@ -334,11 +336,64 @@ classdef SWIPS_GUI < handle
             end
             
             obj.hPosStatusGrp.Position(4) = controlsHeight+imageHeight;  % Add some padding at the bottom
+
+            ypos = 10;  % Reset Y position for new panel
+            obj.hStatusGrp = uipanel(obj.hFigure,...
+                'Title','SWIPS',...
+                'FontWeight','bold',...
+                'FontSize',12,...
+                'Units','pixels',...
+                'Position',[leftMargin,obj.hPosStatusGrp.Position(4)+obj.hPosStatusGrp.Position(2),...
+                panelWidth,100]);
+ 
+            % Create position monitor controls at the bottom
+            monitorFields = fieldnames(obj.Monitors);
+            for i = 1:length(monitorFields)
+                monitor = obj.Monitors.(monitorFields{i});
+                if strcmp(monitor.group, 'status')
+                    fprintf('sdfdsf');
+                    guiStatusGrpSet(monitor, obj.hStatusGrp);
+                end
+            end
+
+            obj.hStatusGrp.Position(4) = ypos+20;  
+
+            %% Column 2
+
+            % Define common GUI parameters
+            % Column sizes for different elements
+            colSize = [60,200,60,60,60];  % [Label, Value, Units, Set Value, Set Button]
+            panel2Width = sum(colSize)+xgap*numel(colSize);
+            
+            % Define second column position
+            rightColStart = leftMargin*2 + panelWidth;
+            
+            % Create instrument monitor panel in right column
+            ypos = 10;  % Reset Y position for new panel
+            obj.hInstGrp = uipanel(obj.hFigure,...
+                'Title', 'Instrument Monitors',...
+                'FontWeight', 'bold',...
+                'FontSize', 12,...
+                'Units', 'pixels',...
+                'Position', [rightColStart, 30, panel2Width, 150]);
+                
+            % Add instrument monitors
+            monitorFields = fieldnames(obj.Monitors);
+            for i = 1:length(monitorFields)
+                monitor = obj.Monitors.(monitorFields{i});
+                if strcmp(monitor.group, 'inst')
+                    guiStatusGrpSet(monitor, obj.hInstGrp);
+                end
+            end
+            
+            % Adjust panel height
+            obj.hInstGrp.Position(4) = ypos + 20;  % Add padding
+
             % Function to create monitor controls for a channel
             function guiStatusGrpSet(mon, panel)    
                 % Use specified panel or default to HV status panel
                 if nargin < 2
-                    panel = obj.hStatusGrp;
+                    panel = obj.hHVStatusGrp;
                 end
                 
                 % Label column
@@ -402,7 +457,7 @@ classdef SWIPS_GUI < handle
 
             % Adjust figure size to fit all panels
             % Calculate required figure size based on panels
-            allPanels = [obj.hPosStatusGrp, obj.hStatusGrp];
+            allPanels = [obj.hPosStatusGrp, obj.hHVStatusGrp, obj.hStatusGrp,obj.hInstGrp];
             maxX = 0;
             maxY = 0;
             

@@ -39,9 +39,10 @@ classdef monitor < handle
         end
 
         function val = read(obj) 
-            if all([obj.parent.Connected])
+            % if all([obj.parent.Connected])
+            try
                 val = obj.readFunc(obj);
-            else
+            catch
                 val = nan;
             end
             obj.lastRead = val;
