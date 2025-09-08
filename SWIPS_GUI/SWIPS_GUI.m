@@ -23,7 +23,6 @@ classdef SWIPS_GUI < handle
         HWConnStatusListeners % Listeners for hardware connection status
         hMonitorPlt % Handle to monitor plot
         hPosStatusGrp % Handle to position status panel group
-        hImagePanel % Handle to system image panel
         
         hFileMenu % Handle to file top menu dropdown
         hEditMenu % Handle to edit top menu dropdown
@@ -297,16 +296,15 @@ classdef SWIPS_GUI < handle
 
             % Initialize position for first panel's controls
             ypos = 20;  % Initial Y position within panel
-
-            % Create Position status panel
+   
             obj.hPosStatusGrp = uipanel(obj.hFigure,...
                 'Title','StagePosition',...
                 'FontWeight','bold',...
                 'FontSize',12,...
                 'Units','pixels',...
-                'Position',[leftMargin,obj.hStatusGrp.Position(4)+obj.hStatusGrp.Position(2),panelWidth,150]);
+                'Position',[leftMargin,obj.hStatusGrp.Position(4)+obj.hStatusGrp.Position(2),panelWidth,100]);
  
-            % Create position monitor controls
+            % Create position monitor controls at the bottom
             monitorFields = fieldnames(obj.Monitors);
             for i = 1:length(monitorFields)
                 monitor = obj.Monitors.(monitorFields{i});
@@ -314,23 +312,15 @@ classdef SWIPS_GUI < handle
                     guiStatusGrpSet(monitor, obj.hPosStatusGrp);
                 end
             end
-            % Adjust position panel height
-            obj.hPosStatusGrp.Position(4) = ypos+20;
-
-
-            % Create System Image panel at the top
-            imageHeight = 400;  % Height for the image panel
-            obj.hImagePanel = uipanel(obj.hFigure,...
-                'Title', 'SWIPS',...
-                'FontWeight', 'bold',...
-                'FontSize', 12,...
-                'Units', 'pixels',...
-                'Position', [leftMargin, obj.hPosStatusGrp.Position(4)+obj.hPosStatusGrp.Position(2), panelWidth, imageHeight]);
-
-            % Create axes for the image
-            ax = axes('Parent', obj.hImagePanel,...
-                     'Units', 'normalized',...
-                     'Position', [0.05, 0.05, 0.95, 0.95]);  % Add some padding
+            controlsHeight = ypos + 10;  % Height needed for controls
+            
+            % Create Position status panel with extra height for image
+            imageHeight = 400;  % Height for the image
+            
+            % Create axes for the image above the controls
+            ax = axes('Parent', obj.hPosStatusGrp,...
+                     'Units', 'pixels',...
+                     'Position', [50, controlsHeight, panelWidth-60, imageHeight-30]);  % Add padding
             
             % Load and display the image
             try
@@ -342,7 +332,8 @@ classdef SWIPS_GUI < handle
                      'Parent', ax,...
                      'HorizontalAlignment', 'center');
             end
-
+            
+            obj.hPosStatusGrp.Position(4) = controlsHeight+imageHeight;  % Add some padding at the bottom
             % Function to create monitor controls for a channel
             function guiStatusGrpSet(mon, panel)    
                 % Use specified panel or default to HV status panel
@@ -411,7 +402,7 @@ classdef SWIPS_GUI < handle
 
             % Adjust figure size to fit all panels
             % Calculate required figure size based on panels
-            allPanels = [obj.hImagePanel, obj.hPosStatusGrp, obj.hStatusGrp];
+            allPanels = [obj.hPosStatusGrp, obj.hStatusGrp];
             maxX = 0;
             maxY = 0;
             
