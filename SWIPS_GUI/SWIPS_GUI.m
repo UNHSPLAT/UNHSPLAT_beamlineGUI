@@ -28,10 +28,7 @@ classdef SWIPS_GUI < handle
         hPosStatusGrp % Handle to position status panel group
         hInstGrp % Handle to instrument monitors panel
         
-        hFileMenu % Handle to file top menu dropdown
-        hEditMenu % Handle to edit top menu dropdown
-        hToolsMenu % Handle to tools top menu dropdown
-        hCopyTS % Handle to copy test sequence menu button
+        hRunBtn % Handle to run test button
         hSequenceText % Handle to test sequence label
         hSequenceEdit % Handle to test sequence field
         hDateText % Handle to test date label
@@ -43,8 +40,14 @@ classdef SWIPS_GUI < handle
         
         hAcquisitionText % Handle to acquisition type label
         hAcquisitionEdit % Handle to acquisition type popupmenu
-        AcquisitionList cell = {'Continuous Monitor', 'Single Sweep', 'Time Series'} % Acquisition types available for selection
+        AcquisitionList cell = {'Sweep 1D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition type string identifier
         Acquisitions = [] % Storage for acquisition instances
+        
+        hFileMenu % Handle to file top menu dropdown
+        hEditMenu % Handle to edit top menu dropdown
+        hToolsMenu % Handle to tools top menu dropdown
+        hCopyTS % Handle to copy test sequence menu button
+
     end
 
     properties (SetObservable)
@@ -358,7 +361,8 @@ classdef SWIPS_GUI < handle
 
             obj.hStatusGrp.Position(4) = ypos+20;  
 
-            %% Column 2
+         %===================================================================================
+            % create column 2
 
             % Define common GUI parameters
             % Column sizes for different elements
@@ -388,6 +392,95 @@ classdef SWIPS_GUI < handle
             
             % Adjust panel height
             obj.hInstGrp.Position(4) = ypos + 20;  % Add padding
+   
+            %===================================================================================
+            % Create test control panel in right column
+            obj.hTestGrp = uipanel(obj.hFigure,...
+                'Title', 'Testing',...
+                'FontWeight', 'bold',...
+                'FontSize', 12,...
+                'Units', 'pixels',...
+                'Position', [rightColStart, obj.hInstGrp.Position(4)+obj.hInstGrp.Position(2)+20, 360, 250]);
+
+            % Test panel controls setup
+            testYpos = 10;
+            testXgap = 15;
+            testXstart = 10;
+            testYgap = 15;
+            testColSize = [140, 140];
+
+            % Run Test button
+            obj.hRunBtn = uicontrol(obj.hTestGrp, 'Style', 'pushbutton',...
+                'Position', [testXstart, testYpos, testColSize(1), ysize],...
+                'String', 'RUN TEST',...
+                'FontSize', 16,...
+                'FontWeight', 'bold',...
+                'HorizontalAlignment', 'center',...
+                'Callback', @obj.runTestCallback);
+            testYpos = testYpos + ysize + testYgap;
+
+            % Acquisition Type
+            obj.hAcquisitionText = uicontrol(obj.hTestGrp, 'Style', 'text',...
+                'Position', [testXstart, testYpos, testColSize(1), ysize],...
+                'String', 'Acquisition Type:',...
+                'FontSize', 12,...
+                'FontWeight', 'bold',...
+                'HorizontalAlignment', 'right');
+            obj.hAcquisitionEdit = uicontrol(obj.hTestGrp, 'Style', 'popupmenu',...
+                'Position', [testXstart + testColSize(1) + testXgap, testYpos, testColSize(2), ysize],...
+                'String', [{''}, obj.AcquisitionList],...
+                'FontSize', 11,...
+                'HorizontalAlignment', 'left',...
+                'Callback', @obj.acquisitionCallback);
+            testYpos = testYpos + ysize + testYgap;
+
+            % Test Sequence
+            obj.hSequenceText = uicontrol(obj.hTestGrp, 'Style', 'text',...
+                'Position', [testXstart, testYpos, testColSize(1), ysize],...
+                'String', 'Test Sequence:',...
+                'FontSize', 12,...
+                'FontWeight', 'bold',...
+                'HorizontalAlignment', 'right');
+            obj.hSequenceEdit = uicontrol(obj.hTestGrp, 'Style', 'text',...
+                'Position', [testXstart + testColSize(1) + testXgap, testYpos, testColSize(2), ysize],...
+                'String', num2str(obj.TestSequence),...
+                'FontSize', 12,...
+                'FontWeight', 'bold',...
+                'HorizontalAlignment', 'left');
+            testYpos = testYpos + ysize + testYgap;
+
+            % Test Date
+            obj.hDateText = uicontrol(obj.hTestGrp, 'Style', 'text',...
+                'Position', [testXstart, testYpos, testColSize(1), ysize],...
+                'String', 'Test Date:',...
+                'FontSize', 12,...
+                'FontWeight', 'bold',...
+                'HorizontalAlignment', 'right');
+            obj.hDateEdit = uicontrol(obj.hTestGrp, 'Style', 'text',...
+                'Position', [testXstart + testColSize(1) + testXgap, testYpos, testColSize(2), ysize],...
+                'String', obj.TestDate,...
+                'FontSize', 12,...
+                'FontWeight', 'bold',...
+                'HorizontalAlignment', 'left');
+            testYpos = testYpos + ysize + testYgap;
+
+            % Test Operator
+            obj.hOperatorText = uicontrol(obj.hTestGrp, 'Style', 'text',...
+                'Position', [testXstart, testYpos, testColSize(1), ysize],...
+                'String', 'Test Operator:',...
+                'FontSize', 12,...
+                'FontWeight', 'bold',...
+                'HorizontalAlignment', 'right');
+            obj.hOperatorEdit = uicontrol(obj.hTestGrp, 'Style', 'popupmenu',...
+                'Position', [testXstart + testColSize(1) + testXgap, testYpos, testColSize(2), ysize],...
+                'String', [{''}, obj.OperatorList],...
+                'FontSize', 11,...
+                'HorizontalAlignment', 'left',...
+                'Callback', @obj.operatorCallback);
+            testYpos = testYpos + ysize + testYgap;
+
+            % Adjust test panel height
+            obj.hTestGrp.Position(4) = testYpos + 20;
 
             % Function to create monitor controls for a channel
             function guiStatusGrpSet(mon, panel)    
@@ -504,6 +597,61 @@ classdef SWIPS_GUI < handle
             % Delete the object
             obj.delete();
             delete(obj);
+        end
+        function operatorCallback(obj,src,~)
+            %OPERATORCALLBACK Populate test operator obj property with user selected value
+            
+            % Delete blank popupmenu option
+            obj.popupBlankDelete(src);
+            
+            % Populate obj property with user selection
+            if ~strcmp(src.String{src.Value},"")
+                obj.TestOperator = src.String{src.Value};
+            end
+        end
+
+        function acquisitionCallback(obj,src,~)
+            %ACQUISITIONCALLBACK Populate acquisition type obj property with user selected value
+
+            % Delete blank popupmenu option
+            obj.popupBlankDelete(src);
+
+            % Populate obj property with user selection
+            if ~strcmp(src.String{src.Value},"")
+                obj.AcquisitionType = src.String{src.Value};
+            end
+        end
+
+        function runTestCallback(obj,~,~)
+            %RUNTESTCALLBACK Check for required user input, generate new test sequence, and execute selected acquisition type
+
+            % Throw error if test operator not selected
+            if isempty(obj.TestOperator)
+                errordlg('A test operator must be selected before proceeding!','Don''t be lazy!');
+                return
+            end
+
+            % Throw error if acquisition type not selected
+            if isempty(obj.AcquisitionType)
+                errordlg('An acquisition type must be selected before proceeding!','Don''t be lazy!');
+                return
+            end
+
+            % Generate new test sequence, test date, and data directory
+            obj.genTestSequence;
+
+            % Update GUI test sequence and test date fields
+            set(obj.hSequenceEdit,'String',num2str(obj.TestSequence));
+            set(obj.hDateEdit,'String',obj.TestDate);
+
+            % Find test acquisition class, instantiate, and execute
+            acqPath = which(strrep(obj.AcquisitionType,' ',''));
+            tokes = regexp(acqPath,'\\','split');
+            fcnStr = tokes{end}(1:end-2);
+            hFcn = str2func(fcnStr);
+            myAcq = hFcn(obj);
+            myAcq.runSweep;
+            obj.Acquisitions = myAcq; 
         end
     end
 
