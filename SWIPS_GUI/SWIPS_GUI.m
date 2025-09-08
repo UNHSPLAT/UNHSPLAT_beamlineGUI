@@ -269,7 +269,7 @@ classdef SWIPS_GUI < handle
             leftMargin = 10; % Left margin for panels
 
             % Column sizes for different elements
-            colSize = [180,140,60,60,60];  % [Label, Value, Units, Set Value, Set Button]
+            colSize = [140,140,60,60,60];  % [Label, Value, Units, Set Value, Set Button]
             panelWidth = sum(colSize)+xgap*numel(colSize);
 
             
@@ -298,7 +298,7 @@ classdef SWIPS_GUI < handle
             % Initialize position for first panel's controls
             ypos = 20;  % Initial Y position within panel
 
-                % Create Position status panel
+            % Create Position status panel
             obj.hPosStatusGrp = uipanel(obj.hFigure,...
                 'Title','StagePosition',...
                 'FontWeight','bold',...
@@ -321,7 +321,7 @@ classdef SWIPS_GUI < handle
             % Create System Image panel at the top
             imageHeight = 400;  % Height for the image panel
             obj.hImagePanel = uipanel(obj.hFigure,...
-                'Title', 'SWIPS System',...
+                'Title', 'SWIPS',...
                 'FontWeight', 'bold',...
                 'FontSize', 12,...
                 'Units', 'pixels',...
@@ -330,7 +330,7 @@ classdef SWIPS_GUI < handle
             % Create axes for the image
             ax = axes('Parent', obj.hImagePanel,...
                      'Units', 'normalized',...
-                     'Position', [0.05, 0.05, 0.9, 0.9]);  % Add some padding
+                     'Position', [0.05, 0.05, 0.95, 0.95]);  % Add some padding
             
             % Load and display the image
             try
@@ -409,7 +409,34 @@ classdef SWIPS_GUI < handle
                 ypos = ypos+ysize+ygap;
             end
 
+            % Adjust figure size to fit all panels
+            % Calculate required figure size based on panels
+            allPanels = [obj.hImagePanel, obj.hPosStatusGrp, obj.hStatusGrp];
+            maxX = 0;
+            maxY = 0;
             
+            % Find the rightmost and topmost points of all panels
+            for i = 1:length(allPanels)
+                panel = allPanels(i);
+                panelRight = panel.Position(1) + panel.Position(3);
+                panelTop = panel.Position(2) + panel.Position(4);
+                maxX = max(maxX, panelRight);
+                maxY = max(maxY, panelTop);
+            end
+            
+            % Add margins for the figure size
+            figureMargin = leftMargin;  % pixels of margin around the edges
+            newWidth = maxX + figureMargin;
+            newHeight = maxY + figureMargin;
+            
+            % Get current figure position (to maintain screen location)
+            currentPos = obj.hFigure.Position;
+            
+            % Update figure size while maintaining position
+            obj.hFigure.Position = [currentPos(1), currentPos(2), newWidth, newHeight];
+            
+            % Center the figure on screen
+            movegui(obj.hFigure, 'center');
         end        
         
         function closeGUI(obj,~,~)
