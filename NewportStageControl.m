@@ -147,6 +147,16 @@ classdef NewportStageControl < handle
             end
         end
 
+        function zero(obj)
+            if obj.Connected
+                for i = 1:length(obj.groups)
+                    obj.setPosition(obj.groups(i),0)
+                end
+            else
+                warning('Device not connected');
+            end
+        end 
+
         % Set and get position methods
         function setPosition(obj,group,position)
             run_status = obj.Timer.Running;

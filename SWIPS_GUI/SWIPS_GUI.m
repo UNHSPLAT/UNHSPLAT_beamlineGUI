@@ -68,10 +68,11 @@ classdef SWIPS_GUI < handle
             obj.createGUI;
 
             % Create and start status update timer
-            % obj.createTimer;
+            obj.createTimer;
         end
 
         function newRead = updateReadings(obj,~,~)
+            
             %UPDATEREADINGS Read and update all status reading fields
             if isempty(obj.LastRead)
                 obj.LastRead = struct;
@@ -133,7 +134,9 @@ classdef SWIPS_GUI < handle
             if ~isempty(answer)
                 hwFields = fieldnames(obj.Hardware);
                 for i = 1:numel(answer)
+                    if ~isempty(obj.Hardware.(hwFields{i}).Timer)
                     obj.Hardware.(hwFields{i}).Timer.set('period', str2double(answer{i}));
+                    end
                 end
             end
             obj.restartTimer();
@@ -226,6 +229,12 @@ classdef SWIPS_GUI < handle
                 stop(obj.hLogTimer);
             end
         end
+        function garbo = readHardware(obj)
+            t1 = now();
+            structfun(@(x)x.read(),obj.Hardware,'UniformOutput',false);
+            disp(now()-t1);
+            disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
+        end
     end
 
     methods (Access = private)
@@ -246,10 +255,7 @@ classdef SWIPS_GUI < handle
         
         function gatherHardware(obj)
             % Setup SWIPS hardware and monitors
-            obj.Hardware = struct('Opal_Kelly',SWIPS_OK(),...
-                                'caen_HVPS1',caen_hvps(),...
-                                'newportStage',NewportStageControl('192.168.0.254')...
-                            );
+            obj.Hardware = setupSWIPSInstruments;
             
             % Setup monitors for hardware
             obj.Monitors = setupSWIPSMonitors(obj.Hardware);
@@ -265,6 +271,34 @@ classdef SWIPS_GUI < handle
                 'NumberTitle','off',...
                 'Name','SWIPS Control GUI',...
                 'DeleteFcn',@obj.closeGUI);
+
+
+            %====================================================================================
+            % Create file menu
+            obj.hFileMenu = uimenu(obj.hFigure,'Text','File');
+
+            % Create edit menu
+            obj.hEditMenu = uimenu(obj.hFigure,'Text','Edit');
+            
+            % Create edit menu
+            obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
+
+            % Create copy test sequence menu button
+            uimenu(obj.hFileMenu,'Text','Copy Test Sequence',...
+                'MenuSelectedFcn',@obj.copyTSCallback);
+
+            % add option to set sample rate
+            uimenu(obj.hEditMenu,'Text','Set Sample Rate',...
+                'MenuSelectedFcn',@obj.setSampleRate);
+            uimenu(obj.hEditMenu,'Text','Set Refresh Rate',...
+                'MenuSelectedFcn',@obj.setRefreshRate);
+            uimenu(obj.hEditMenu,'Text','Set Data Log Rate',...
+                'MenuSelectedFcn',@obj.setLogRate);
+            % add option to dietable Timer
+            uimenu(obj.hEditMenu,'Text','Disable Timer',...
+                'MenuSelectedFcn',@obj.stopTimer);
+            uimenu(obj.hEditMenu,'Text','Restart Timer',...
+                'MenuSelectedFcn',@obj.restartTimer);
 
             % Define common GUI parameters
             ysize = 22;    % Height of each control
@@ -589,10 +623,6 @@ classdef SWIPS_GUI < handle
                 stop(obj.hLogTimer);
             end
 
-            % Clean up hardware
-            if isvalid(obj.hMonitorPlt)
-                delete(obj.hMonitorPlt.hFigure);
-            end
             
             % Delete the object
             obj.delete();
