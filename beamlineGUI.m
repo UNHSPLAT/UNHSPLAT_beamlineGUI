@@ -3,7 +3,6 @@ classdef beamlineGUI < labGUI
     
     properties
         % Beamline-specific properties and controls
-        GasType string % Gas type string identifier
         hValveFigure % Handle to valve control figure
         
         hStatusGrp % Handle to beamline status uicontrol group

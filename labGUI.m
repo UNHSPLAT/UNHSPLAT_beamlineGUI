@@ -9,7 +9,7 @@ classdef (Abstract) labGUI < handle
         TestSequence double % Unique test sequence identifier number
         TestDate string % Test date derived from TestSequence
         DataDir string % Data directory derived from TestSequence
-        TestOperator string % Test operator string identifier
+        TestGas string % Test Gas string identifier
         AcquisitionType string % Acquisition type string identifier
         
         % Timers
@@ -23,8 +23,8 @@ classdef (Abstract) labGUI < handle
         hSequenceEdit % Handle to test sequence field
         hDateEdit % Handle to test date field
         
-        % Operator selection
-        hOperatorEdit % Handle to test operator popupmenu
+        % Gas selection
+        hGasEdit % Handle to test Gas popupmenu
         
         % Acquisition control
         hAcquisitionEdit % Handle to acquisition type popupmenu
@@ -35,9 +35,10 @@ classdef (Abstract) labGUI < handle
         %linesize
         ysize = 22;    % Height of each control
         
-        OperatorList cell = {'Operator 1', 'Operator 2', 'Operator 3'} % Test operators available for selection
-        AcquisitionList cell = {'Sweep 1D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition type string identifier
-   
+        GasList cell = {'MTG Gas', 'H', 'He','Ar','Ne'} % Test operators available for selection
+        AcquisitionList cell = {'Sweep 1D','Sweep 2D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition type string identifier
+        gasType string = "" % Test Gas string identifier
+
         % Menus
         hFileMenu % Handle to file top menu dropdown
         hTimerMenu % Handle to Timer top menu dropdown
@@ -353,15 +354,15 @@ classdef (Abstract) labGUI < handle
 
 
             % % Throw error if gas type not selected
-            % if isempty(obj.GasType)
-            %     errordlg('A gas type must be selected before proceeding!','Don''t be lazy!');
-            %     return
-            % end
-            % Throw error if test operator not selected
-            if isempty(obj.TestOperator)
-                errordlg('A test operator must be selected before proceeding!','Don''t be lazy!');
+            if isempty(obj.gasType)
+                errordlg('A gas type must be selected before proceeding!','Don''t be lazy!');
                 return
             end
+            % Throw error if test operator not selected
+            % if isempty(obj.TestOperator)
+            %     errordlg('A test operator must be selected before proceeding!','Don''t be lazy!');
+            %     return
+            % end
 
             % Throw error if acquisition type not selected
             if isempty(obj.AcquisitionType)
@@ -387,14 +388,14 @@ classdef (Abstract) labGUI < handle
         end
         
         function gasCallback(obj,src,~)
-            %GASCALLBACK Populate gas type obj property with user selected value
+            %gasCallback Populate gas type obj property with user selected value
 
             % Delete blank popupmenu option
             obj.popupBlankDelete(src);
 
             % Populate obj property with user selection
             if ~strcmp(src.String{src.Value},"")
-                obj.GasType = src.String{src.Value};
+                obj.gasType = src.String{src.Value};
             end
 
         end
@@ -471,19 +472,19 @@ classdef (Abstract) labGUI < handle
                 'HorizontalAlignment', 'left');
             testYpos = testYpos + obj.ysize + testYgap;
 
-            % Test Operator
+            % Test Gas
             uicontrol(obj.hTestPanel, 'Style', 'text',...
                 'Position', [testXstart, testYpos, testColSize(1), obj.ysize],...
-                'String', 'Test Operator:',...
+                'String', 'Test Gas:',...
                 'FontSize', 12,...
                 'FontWeight', 'bold',...
                 'HorizontalAlignment', 'right');
-            obj.hOperatorEdit = uicontrol(obj.hTestPanel, 'Style', 'popupmenu',...
+            obj.hGasEdit = uicontrol(obj.hTestPanel, 'Style', 'popupmenu',...
                 'Position', [testXstart + testColSize(1) + testXgap, testYpos, testColSize(2), obj.ysize],...
-                'String', [{''}, obj.OperatorList],...
+                'String', [{''}, obj.GasList],...
                 'FontSize', 11,...
                 'HorizontalAlignment', 'left',...
-                'Callback', @obj.operatorCallback);
+                'Callback', @obj.gasCallback);
             testYpos = testYpos + obj.ysize + testYgap;
             % Adjust test panel height
             obj.hTestPanel.Position(4) = testYpos + 20;
