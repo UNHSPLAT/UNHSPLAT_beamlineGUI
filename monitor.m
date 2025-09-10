@@ -17,7 +17,6 @@ classdef monitor < handle
     properties (SetObservable) 
         lastRead %
         lock = false%
-        monTimer = timer%
         parentListener
     end
 
@@ -38,14 +37,16 @@ classdef monitor < handle
                 
                 % Handle both single objects and arrays
                 parents = obj.parent;
-                if ~iscell(parents)
-                    parents = {parents};
-                end
+%                 if ~iscell(parents)
+%                     fprintf(obj.textLabel)
+%                     parents = {parents};
+%                 end
                 
                 % Create a listener for each parent
+                fprintf(obj.textLabel)
                 for i = 1:numel(parents)
                     try
-                        newListener = addlistener(parents{i}, 'lastRead', 'PostSet', @obj.read);
+                        newListener = addlistener(parents(i), 'lastRead', 'PostSet', @obj.read);
                         obj.parentListener(end+1) = newListener;
                     catch ME
                         warning('Failed to create listener for parent %d: %s', i, ME.message);
