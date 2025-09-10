@@ -46,8 +46,8 @@ classdef (Abstract) labGUI < handle
 
         % Panels
         hTestPanel % Handle to test control group
-
     end
+
     methods (Abstract)
         createLayout(obj) % Create the GUI layout
         createHardware(obj) % Initialize hardware connections
@@ -69,10 +69,6 @@ classdef (Abstract) labGUI < handle
             
             % Generate initial test sequence, date, and data directory
             obj.genTestSequence;
-            
-            % Update GUI test sequence and test date fields
-            % set(obj.hSequenceEdit,'String',num2str(obj.TestSequence));
-            % set(obj.hDateEdit,'String',obj.TestDate);
             
             % Create file menu
             obj.hFileMenu = uimenu(obj.hFigure,'Text','File');
@@ -355,6 +351,12 @@ classdef (Abstract) labGUI < handle
         function runTestCallback(obj,~,~)
             %RUNTESTCALLBACK Check for required user input, generate new test sequence, and execute selected acquisition type
 
+
+            % % Throw error if gas type not selected
+            % if isempty(obj.GasType)
+            %     errordlg('A gas type must be selected before proceeding!','Don''t be lazy!');
+            %     return
+            % end
             % Throw error if test operator not selected
             if isempty(obj.TestOperator)
                 errordlg('A test operator must be selected before proceeding!','Don''t be lazy!');
@@ -382,6 +384,19 @@ classdef (Abstract) labGUI < handle
             myAcq = hFcn(obj);
             myAcq.runSweep;
             obj.Acquisitions = myAcq; 
+        end
+        
+        function gasCallback(obj,src,~)
+            %GASCALLBACK Populate gas type obj property with user selected value
+
+            % Delete blank popupmenu option
+            obj.popupBlankDelete(src);
+
+            % Populate obj property with user selection
+            if ~strcmp(src.String{src.Value},"")
+                obj.GasType = src.String{src.Value};
+            end
+
         end
 
         function guiPanelTest(obj,position)

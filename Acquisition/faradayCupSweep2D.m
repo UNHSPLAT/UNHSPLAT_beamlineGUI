@@ -195,8 +195,6 @@ classdef faradayCupSweep2D < acquisition
                 'String',obj.PSList,...
                 'Value',5,...
                 'HorizontalAlignment','right');
-            
-
 
             % Set positions
             ystart = 155;

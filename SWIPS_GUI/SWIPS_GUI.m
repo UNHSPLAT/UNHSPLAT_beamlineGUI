@@ -21,8 +21,6 @@ classdef SWIPS_GUI < labGUI
         function obj = SWIPS_GUI
             %SWIPS_GUI Construct an instance of this class
             obj@labGUI('SWIPS');
-            % Generate a test sequence, test date, and data directory
-            obj.genTestSequence();
 
             % Initialize hardware and monitors
             obj.createHardware();
@@ -56,17 +54,8 @@ classdef SWIPS_GUI < labGUI
             
             % Create main figure window
             obj.hFigure.Position = [0,0,1000,600];
-            %  = figure('MenuBar','none',...
-            %     'ToolBar','none',...
-            %     'Position',[0,0,1000,600],...
-            %     'NumberTitle','off',...
-            %     'Name','SWIPS Control GUI',...
-            %     'DeleteFcn',@obj.closeGUI);
-
-
+            
             %====================================================================================
-
-
             % Define common GUI parameters
             
             ygap = 6;      % Vertical gap between controls

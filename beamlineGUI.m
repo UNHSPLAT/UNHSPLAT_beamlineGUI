@@ -2,248 +2,68 @@ classdef beamlineGUI < labGUI
     %BEAMLINEGUI - Defines a GUI used to interface with the Peabody Scientific beamline in lab 145
     
     properties
-        % Beamline-specific properties
+        % Beamline-specific properties and controls
         GasType string % Gas type string identifier
         hValveFigure % Handle to valve control figure
+        
         hStatusGrp % Handle to beamline status uicontrol group
-        hCamGUI % Handle to cam control init button
+        hCamGUI % Handle to camera control init button
         hCamButton % Handle to camera button
+        hGasText % Handle to gas type label
+        hGasEdit % Handle to gas type popupmenu
     end
-
-    properties (Access = protected)
-        % Override operator, gas, and acquisition lists
-        OperatorList cell = {'Isabella Householder', 'Amanda Wester','Jonathan Bower','Arlo Johnson', 'Daniel Abel','Skylar Vogler'} % Test operators available for selection
-        GasList cell = {'Air','Argon','Nitrogen','Helium','Deuterium','Oxygen','Magic gas'} % Gas types available for selection
-        AcquisitionList cell = {'Sweep 1D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition types available for selection
-    end
-
-    properties (SetObservable)
-        LastRead struct % Last readings from the monitor timer
-    end
-        
-        function createMonitors(obj)
-            % Implementation of abstract method from labGUI
-            % Setup monitors for hardware
-            obj.Monitors = setupMonitors(obj.Hardware);
-        end
-        
-        function createLayout(obj)
-            % Implementation of abstract method from labGUI
-            
-            % Position GUI on primary monitor
-            % Get screen size
-            screenSize = get(0,'ScreenSize');
-            % Center the figure window
-            set(obj.hFigure,'Position',[screenSize(3)/2-500 screenSize(4)/2-300 1000 600]);
-            
-            % Create the monitor plot after a brief pause to allow hardware initialization
-            pause(1);
-            obj.hMonitorPlt = beamlineMonitor(obj);
-            obj.hMonitorPlt.runSweep();
-        endI
-    %BEAMLINEGUI - Defines a GUI used to interface with the Peabody Scientific beamline in lab 145
     
-    properties
-        % Beamline-specific properties
-        GasType string % Gas type string identifier
-        hValveFigure % Handle to valve control figure
-        hStatusGrp % Handle to beamline status uicontrol group
-        hCamGUI % Handle to cam control init button
-        hCamButton % Handle to camera button
-    end
-
     properties (Access = protected)
-        % Override operator, gas, and acquisition lists
-        OperatorList cell = {'Isabella Householder', 'Amanda Wester','Jonathan Bower','Arlo Johnson', 'Daniel Abel','Skylar Vogler'} % Test operators available for selection
-        GasList cell = {'Air','Argon','Nitrogen','Helium','Deuterium','Oxygen','Magic gas'} % Gas types available for selection
-        AcquisitionList cell = {'Sweep 1D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition types available for selection
-    end
-
+        % Override operator, gas, and acquisition lists with beamline-specific options
         hStageGUI; % IHandle to stage conctrol init button
         hStageButton %
 
-        parPool
-
+        hHWConnStatusGrp % Handle to hardware connection status uicontrol group
+        HWConnStatusListeners
+        hHWConnBtn % Handle to hardware connection refresh button
     end
 
     properties (SetObservable)
         LastRead struct % Last readings of beamline timer
     end
     
+    methods (Access = protected)
+        
+    end
+    
     methods
         function obj = beamlineGUI
             %BEAMLINEGUI Construct an instance of this class
 
-            % Make user confirm control power on
-            % uiwait(msgbox('Confirm that control power to high voltage rack is turned on.','Control Power Check'));
-            
-            % check if any matlab timers are running and delete if they exist
+            % Check for and clean up any running timers
             if ~isempty(timerfindall)
                 warning('Matlab timers found running, deleting all timers');
                 stop(timerfindall);
                 delete(timerfindall);
             end
-            
-            % Generate a test sequence, test date, and data directory
-            obj.genTestSequence;
 
-            % Gather and populate required hardware
-            obj.gatherHardware;
-            % obj.Hardware = struct2cell(setupInstruments)
+            obj@labGUI('Beamline GUI');
+            % Initialize hardware and monitors
+            obj.createHardware();
+            obj.createMonitors();
 
-            % Create GUI components
-            obj.createGUI;
+            % Create GUI components and layout
+            obj.createLayout();
 
-            % Create and start beamline status update timer
-            obj.createTimer;
-
-            % Generate monitor plot panel
-            pause(1);
-
-            obj.hMonitorPlt = beamlineMonitor(obj);
-            obj.hMonitorPlt.runSweep();
-            
-        end
-
-        function newRead = updateReadings(obj,~,~,fname)
-            %UPDATEREADINGS Read and update all beamline status reading fields
-            % Gather readings
-            if isempty(obj.LastRead)
-                obj.LastRead = struct;
-            end
-
-            %Read the stuff from the hardware
-            readList = structfun(@(x)x.read(),obj.Monitors,'UniformOutput',false);
-
-            %Share the monitor values with the last reading variable 
-            fields = fieldnames(obj.Monitors);
-            newRead =struct();
-            for i = 1:numel(fields)
-                lab = fields{i};
-                val = obj.Monitors.(fields{i}).lastRead;
-                newRead.(lab)=val;
-            end
-            obj.LastRead=newRead;
-            
-        end
-
-        function updateLog(obj,~,~,fname)
-            readings = obj.updateReadings();
-
-            if ~exist('fname','var')
-                fname = fullfile(obj.DataDir,['readings_',num2str(obj.TestSequence),'.mat']);
-            end
-
-            if isfile(fname)
-                save(fname,'-struct','readings','-append');
-            else
-                save(fname,'-struct','readings');
-            end
-        end
-
-        function delete(obj)
-            %DELETE Handle class destructor to stop timer and close figure when obj is deleted
-
-            % Stop timer if running
-            obj.stopTimer();
-
-            % Delete figure
-            if isvalid(obj.hFigure)
-                delete(obj.hFigure);
-            end
-
-            structfun(@(x)delete(x),obj.Monitors,'UniformOutput',false);
-            structfun(@(x)delete(x),obj.Hardware,'UniformOutput',false)
+            % Create and start status update timer
+            obj.createTimer();
         end
         
-        function setSampleRate(obj,~,~)
-            obj.stopTimer()
-
-            prompt = cellfun(@(x)x.Tag, struct2cell(obj.Hardware), 'UniformOutput', false);
-            dlgtitle = 'Instrument Sample Rate';
-            dims = [1 45];
-            definput = cellfun(@(x)char(string(x.Timer.period)), struct2cell(obj.Hardware), 'UniformOutput', false);
-            answer = inputdlg(prompt,dlgtitle,dims,definput);
-
-            % If user didn't cancel
-            if ~isempty(answer)
-                % Get hardware field names to match with answers
-                hwFields = fieldnames(obj.Hardware);
-                % Update each timer's period
-                for i = 1:numel(answer)
-                    obj.Hardware.(hwFields{i}).Timer.set('period', str2double(answer{i}));
-                end
-            end
-            obj.restartTimer();
+        function createHardware(obj)
+            % Implementation of abstract method from labGUI
+            % Setup beamline hardware
+            obj.Hardware = setupInstruments();
         end
-
-        function setLogRate(obj,~,~)
-            obj.stopTimer()
-
-            prompt = {'Enter desired Log rate [S]'};
-            dlgtitle = 'Refresh Rate';
-            dims = [1 35];
-            definput = {char(string(obj.hLogTimer.period))};
-            answer = inputdlg(prompt,dlgtitle,dims,definput);
-
-            if ~isempty(answer)
-                obj.hLogTimer.set('period',str2double(answer));
-            end
-            obj.restartTimer();
-        end
-
-        function garbo = readHardware(obj)
-            t1 = now();
-            structfun(@(x)x.read(),obj.Hardware,'UniformOutput',false);
-            disp(now()-t1);
-            disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
-
-            %t2 = now();
-            %garbo = structfun(@(x)parfeval(@x.read,0),obj.Hardware,'UniformOutput',false);
-            %disp(now()-t2);
-            %disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
-        end
-
-        function createTimer(obj)
-            %CREATETIMER Creates timer to periodically update readings from beamline hardware
-            
-            % Create and start log timer
-            obj.hLogTimer = timer('Name','readTimer',...
-                'Period',5,...
-                'ExecutionMode','fixedRate',...
-                'TimerFcn',@obj.updateLog,...
-                'ErrorFcn',@obj.restartTimer);
-            start(obj.hLogTimer);
-
-
-        end
-
-        function restartTimer(obj,~,~)
-            %RESTARTTIMER Restarts timer if error
-
-            function restartFunc(x)
-                x.restartTimer();
-                pause(.1);
-            end
-            structfun(@restartFunc,obj.Hardware,'UniformOutput',false);
-
-            % Stop log timer if still running
-            if strcmp(obj.hLogTimer.Running,'on')
-                stop(obj.hLogTimer);
-            end
-           
-            % Restart log timer
-            start(obj.hLogTimer);
-        end
-
-        function stopTimer(obj,~,~)
-            % Stop hardware timers
-            structfun(@(x)x.stopTimer(),obj.Hardware,'UniformOutput',false);
-
-            % Stop log timer if running
-            if strcmp(obj.hLogTimer.Running,'on')
-                stop(obj.hLogTimer);
-            end
+        
+        function createMonitors(obj)
+            % Implementation of abstract method from labGUI
+            % Setup monitors for hardware
+            obj.Monitors = setupMonitors(obj.Hardware);
         end
 
         function valveControlCallback(obj,~,~)
@@ -276,31 +96,9 @@ classdef beamlineGUI < labGUI
     end
 
 
-    methods (Access = private)
-
-        function genTestSequence(obj)
-            %GENTESTSEQUENCE Generates a test sequence, test date, and data directory and populates respective obj properties
-            
-            obj.TestSequence = round(now*1e6);
-            obj.TestDate = datestr(obj.TestSequence/1e6,'mmm dd, yyyy HH:MM:SS');
-            if ~isempty(obj.AcquisitionType)
-                obj.DataDir = fullfile(getenv("USERPROFILE"),"data",strrep(obj.AcquisitionType,' ',''),num2str(obj.TestSequence));
-            else
-                obj.DataDir = fullfile(getenv("USERPROFILE"),"data","General",num2str(obj.TestSequence));
-            end
-            if ~exist(obj.DataDir,'dir')
-                mkdir(obj.DataDir);
-            end
-
-        end
-        
-        function gatherHardware(obj)
-            obj.Hardware = setupInstruments();
-            obj.Monitors = setupMonitors(obj.Hardware);
-        end
-
-        function createGUI(obj)
-            %CREATEGUI Create beamline GUI components
+    methods (Access = public)
+        function createLayout(obj)
+            %CREATEGUI Create main GUI window and menus
 
             %define relative posiiton so we only need to change one number when adding/removing buttons
             yBorderBuffer = 30 ;
@@ -309,43 +107,14 @@ classdef beamlineGUI < labGUI
             xpanelBuffer = 20;
 
             % Create figure
-            obj.hFigure = figure('MenuBar','none',...
-                'ToolBar','none',...
-                'Position',[0,0,1250,750],...
-                'NumberTitle','off',...
-                'Name','Beamline GUI',...
-                'DeleteFcn',@obj.closeGUI);
+            obj.hFigure.Position =[0,0,1250,750]
 
             %====================================================================================
-            % Create file menu
-            obj.hFileMenu = uimenu(obj.hFigure,'Text','File');
-
-            % Create Timer menu
-            obj.hTimerMenu = uimenu(obj.hFigure,'Text','Timer');
-            
-            % Create Timer menu
+            % Create Tools menu
             obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
 
-            % Create copy test sequence menu button
-            obj.hCopyTS = uimenu(obj.hFileMenu,'Text','Copy Test Sequence',...
-                'MenuSelectedFcn',@obj.copyTSCallback);
-            
             uimenu(obj.hToolsMenu,'Text','ValveControl',...
                 'MenuSelectedFcn',@obj.valveControlCallback);
-
-            % add option to set sample rate
-            uimenu(obj.hTimerMenu,'Text','Set Sample Rate',...
-                'MenuSelectedFcn',@obj.setSampleRate);
-            uimenu(obj.hTimerMenu,'Text','Set Data Log Rate',...
-                'MenuSelectedFcn',@obj.setLogRate);
-            % add option to dietable Timer
-            uimenu(obj.hTimerMenu,'Text','Disable Timer',...
-                'MenuSelectedFcn',@obj.stopTimer);
-            uimenu(obj.hTimerMenu,'Text','Restart Timer',...
-                'MenuSelectedFcn',@obj.restartTimer);
-
-            % Turn off dock controls (defaults to on when first uimenu created)
-            set(obj.hFigure,'DockControls','off');
 
             %===================================================================================
             % Create instrument connection status uicontrol group
@@ -542,125 +311,13 @@ classdef beamlineGUI < labGUI
             xtextsize = 160;
             xeditsize = 180;
             
-            obj.hTestGrp = uipanel(obj.hFigure,...
-                'Title','Testing',...
-                'FontWeight','bold',...
-                'FontSize',12,...
-                'Units','pixels',...
-                'Position',[obj.hStatusGrp.Position(1)+obj.hStatusGrp.Position(3)+xBorderBuffer,...
+
+            obj.guiPanelTest([obj.hStatusGrp.Position(1)+obj.hStatusGrp.Position(3)+xBorderBuffer,...
                                 yBorderBuffer,sum(colSize)+xgap*numel(colSize),500]);
 
-            % Create remaning GUI components
-            %==============================================
-            colInd = 1;
-            xColStart = xstart;
-            obj.hRunBtn = uicontrol(obj.hTestGrp,'Style','pushbutton',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String','RUN TEST',...
-                'FontSize',16,...
-                'FontWeight','bold',...
-                'HorizontalAlignment','center',...
-                'Callback',@obj.runTestCallback);
-            ypos = ypos+ysize+ygap;
-            %==============================================
-            colInd = 1;
-            xColStart = xstart;
-            obj.hAcquisitionText = uicontrol(obj.hTestGrp,'Style','text',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String','Acquisition Type:',...
-                'FontSize',12,...
-                'FontWeight','bold',...
-                'HorizontalAlignment','right');
-
-            xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-            colInd = colInd+1;
-            obj.hAcquisitionEdit = uicontrol(obj.hTestGrp,'Style','popupmenu',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String',[{''},obj.AcquisitionList],...
-                'FontSize',11,...
-                'HorizontalAlignment','left',...
-                'Callback',@obj.acquisitionCallback);
-            ypos = ypos+ysize+ygap;
-
-            %==============================================
-            colInd = 1;
-            xColStart = xstart;
-            obj.hGasText = uicontrol(obj.hTestGrp,'Style','text',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String','Gas Type:',...
-                'FontSize',12,...
-                'FontWeight','bold',...
-                'HorizontalAlignment','right');
-            xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-            colInd = colInd+1;
-            obj.hGasEdit = uicontrol(obj.hTestGrp,'Style','popupmenu',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String',[{''},obj.GasList],...
-                'FontSize',11,...
-                'HorizontalAlignment','left',...
-                'Callback',@obj.gasCallback);
-            ypos = ypos+ysize+ygap;
-            %==============================================
-            colInd = 1;
-            xColStart = xstart;
-            obj.hSequenceText = uicontrol(obj.hTestGrp,'Style','text',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String','Test Sequence:',...
-                'FontSize',12,...
-                'FontWeight','bold',...
-                'HorizontalAlignment','right');
-
-            xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-            colInd = colInd+1;
-            obj.hSequenceEdit = uicontrol(obj.hTestGrp,'Style','text',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String',num2str(obj.TestSequence),...
-                'FontSize',12,...
-                'FontWeight','bold',...
-                'HorizontalAlignment','left');
-
-            ypos = ypos+ysize+ygap;
-            %==============================================
-            colInd = 1;
-            xColStart = xstart;
-            obj.hDateText = uicontrol(obj.hTestGrp,'Style','text',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String','Test Date:',...
-                'FontSize',12,...
-                'FontWeight','bold',...
-                'HorizontalAlignment','right');
-            xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-            colInd = colInd+1;
-            obj.hDateEdit = uicontrol(obj.hTestGrp,'Style','text',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String',obj.TestDate,...
-                'FontSize',12,...
-                'FontWeight','bold',...
-                'HorizontalAlignment','left');
-            ypos = ypos+ysize+ygap;
-            %==============================================
-            colInd = 1;
-            xColStart = xstart;
-            obj.hOperatorText = uicontrol(obj.hTestGrp,'Style','text',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String','Test Operator:',...
-                'FontSize',12,...
-                'FontWeight','bold',...
-                'HorizontalAlignment','right');
-
-            xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-            colInd = colInd+1;
-            obj.hOperatorEdit = uicontrol(obj.hTestGrp,'Style','popupmenu',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String',[{''},obj.OperatorList],...
-                'FontSize',11,...
-                'HorizontalAlignment','left',...
-                'Callback',@obj.operatorCallback);
-            ypos = ypos+ysize+ygap;
-
-            obj.hTestGrp.Position(4) = ypos+yBorderBuffer;
         end
-
+    end
+    methods (Access = private)
         function trigCamController(obj,~,~)
             if obj.Hardware.MCPwebCam.Connected
                 obj.Hardware.MCPwebCam.shutdown();
@@ -679,90 +336,6 @@ classdef beamlineGUI < labGUI
                 obj.Hardware.newportStage.run();
                 obj.hStageButton.set('String','Stop');
             end
-        end
-
-        function copyTSCallback(obj,~,~)
-            %COPYTSCALLBACK Copies test sequence to clipboard
-
-            clipboard('copy',num2str(obj.TestSequence));
-
-        end
-
-        function operatorCallback(obj,src,~)
-            %OPERATORCALLBACK Populate test operator obj property with user selected value
-            
-            % Delete blank popupmenu option
-            obj.popupBlankDelete(src);
-            
-            % Populate obj property with user selection
-            if ~strcmp(src.String{src.Value},"")
-                obj.TestOperator = src.String{src.Value};
-            end
-
-        end
-
-        function gasCallback(obj,src,~)
-            %GASCALLBACK Populate gas type obj property with user selected value
-
-            % Delete blank popupmenu option
-            obj.popupBlankDelete(src);
-
-            % Populate obj property with user selection
-            if ~strcmp(src.String{src.Value},"")
-                obj.GasType = src.String{src.Value};
-            end
-
-        end
-
-        function acquisitionCallback(obj,src,~)
-            %ACQUISITIONCALLBACK Populate acquisition type obj property with user selected value
-
-            % Delete blank popupmenu option
-            obj.popupBlankDelete(src);
-
-            % Populate obj property with user selection
-            if ~strcmp(src.String{src.Value},"")
-                obj.AcquisitionType = src.String{src.Value};
-            end
-
-        end
-
-        function runTestCallback(obj,~,~)
-            %RUNTESTCALLBACK Check for required user input, generate new test sequence, and execute selected acquisition type
-
-            % Throw error if test operator not selected
-            if isempty(obj.TestOperator)
-                errordlg('A test operator must be selected before proceeding!','Don''t be lazy!');
-                return
-            end
-
-            % Throw error if gas type not selected
-            if isempty(obj.GasType)
-                errordlg('A gas type must be selected before proceeding!','Don''t be lazy!');
-                return
-            end
-
-            % Throw error if acquisition type not selected
-            if isempty(obj.AcquisitionType)
-                errordlg('An acquisition type must be selected before proceeding!','Don''t be lazy!');
-                return
-            end
-
-            % Generate new test sequence, test date, and data directory
-            obj.genTestSequence;
-
-            % Update GUI test sequence and test date fields
-            set(obj.hSequenceEdit,'String',num2str(obj.TestSequence));
-            set(obj.hDateEdit,'String',obj.TestDate);
-
-            % Find test acquisition class, instantiate, and execute
-            acqPath = which(strrep(obj.AcquisitionType,' ',''));
-            tokes = regexp(acqPath,'\\','split');
-            fcnStr = tokes{end}(1:end-2);
-            hFcn = str2func(fcnStr);
-            myAcq = hFcn(obj);
-            myAcq.runSweep;
-            obj.Acquisitions = myAcq; 
         end
 
         function HwRefreshCallback(obj,~,~)
@@ -789,43 +362,9 @@ classdef beamlineGUI < labGUI
             end
         end
 
-        function closeGUI(obj,~,~)
-            %CLOSEGUI Stop timer and delete obj when figure is closed
-            % Stop timer if running
-            
-            if strcmp(obj.hLogTimer.Running,'on')
-                stop(obj.hLogTimer);
-            end
-
-            obj.Hardware.MCPwebCam.shutdown();
-            if isvalid(obj.hMonitorPlt)
-                delete(obj.hMonitorPlt.hFigure);
-            end
-            obj.delete();
-            % Delete obj
-            delete(obj);
-        end
-
-
-
     end
 
     methods (Static, Access = private)
-
-        function popupBlankDelete(src)
-            %POPUPBLANKDELETE Deletes blank option of popupmenu if user selected another value
-
-            if isempty(src.String{1})
-                if src.Value ~= 1
-                    oldVal = src.Value;
-                    src.String = src.String(2:end);
-                    src.Value = oldVal-1;
-                else
-                    return
-                end
-            end
-
-        end
 
     end
 
