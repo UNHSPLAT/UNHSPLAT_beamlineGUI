@@ -10,7 +10,7 @@ classdef beamlineGUI < handle
         TestOperator string % Test operator string identifier
         GasType string % Gas type string identifier
         AcquisitionType string % Acquisition type string identifier
-        hTimer % Handle to timer used to update beamline monitor read timer
+
         hLogTimer % Handle to timer used to update the beamline status save log
         hHardwareTimer % Handle to timer used to refresh hardware status
         
@@ -119,7 +119,7 @@ classdef beamlineGUI < handle
         end
 
         function updateLog(obj,~,~,fname)
-            readings = obj.LastRead;
+            readings = obj.updateReadings();
 
             if ~exist('fname','var')
                 fname = fullfile(obj.DataDir,['readings_',num2str(obj.TestSequence),'.mat']);
@@ -168,21 +168,6 @@ classdef beamlineGUI < handle
             obj.restartTimer();
         end
 
-        function setRefreshRate(obj,~,~)
-            obj.stopTimer()
-
-            prompt = {'Enter desired Refresh rate [S]'};
-            dlgtitle = 'Refresh Rate';
-            dims = [1 35];
-            definput = {char(string(obj.hTimer.period))};
-            answer = inputdlg(prompt,dlgtitle,dims,definput);
-
-            if ~isempty(answer)
-                obj.hTimer.set('period',str2double(answer));
-            end
-            obj.restartTimer();
-        end
-
         function setLogRate(obj,~,~)
             obj.stopTimer()
 
@@ -212,17 +197,8 @@ classdef beamlineGUI < handle
 
         function createTimer(obj)
             %CREATETIMER Creates timer to periodically update readings from beamline hardware
-
-            % Create timer object and populate respective obj property
-            obj.hTimer = timer('Name','readTimer',...
-                'Period',2,...
-                'ExecutionMode','fixedRate',...
-                'TimerFcn',@obj.updateReadings,...
-                'ErrorFcn',@obj.restartTimer);
-
-            % Start timer
-            start(obj.hTimer);
-
+            
+            % Create and start log timer
             obj.hLogTimer = timer('Name','readTimer',...
                 'Period',5,...
                 'ExecutionMode','fixedRate',...
@@ -236,37 +212,26 @@ classdef beamlineGUI < handle
         function restartTimer(obj,~,~)
             %RESTARTTIMER Restarts timer if error
 
-            % Stop timer if still running
-            if strcmp(obj.hTimer.Running,'on')
-                stop(obj.hTimer);
-            end
-            
-
-            % Restart timer
-            start(obj.hTimer);
             function restartFunc(x)
                 x.restartTimer();
                 pause(.1);
             end
             structfun(@restartFunc,obj.Hardware,'UniformOutput',false);
 
-            % Stop timer if still running
+            % Stop log timer if still running
             if strcmp(obj.hLogTimer.Running,'on')
                 stop(obj.hLogTimer);
             end
            
-            % Restart timer
+            % Restart log timer
             start(obj.hLogTimer);
         end
 
         function stopTimer(obj,~,~)
-            % Stop timer if still running
-            if strcmp(obj.hTimer.Running,'on')
-                stop(obj.hTimer);
-            end
-            
+            % Stop hardware timers
             structfun(@(x)x.stopTimer(),obj.Hardware,'UniformOutput',false);
 
+            % Stop log timer if running
             if strcmp(obj.hLogTimer.Running,'on')
                 stop(obj.hLogTimer);
             end
@@ -362,8 +327,6 @@ classdef beamlineGUI < handle
             % add option to set sample rate
             uimenu(obj.hEditMenu,'Text','Set Sample Rate',...
                 'MenuSelectedFcn',@obj.setSampleRate);
-            uimenu(obj.hEditMenu,'Text','Set Refresh Rate',...
-                'MenuSelectedFcn',@obj.setRefreshRate);
             uimenu(obj.hEditMenu,'Text','Set Data Log Rate',...
                 'MenuSelectedFcn',@obj.setLogRate);
             % add option to dietable Timer

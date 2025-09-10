@@ -380,8 +380,8 @@ classdef faradayCupSweep2D < acquisition
                 % Set config figure to invisible
                 set(obj.hConfFigure,'Visible','off');
 
-                % Stop beamline timer (timer callback executed manually during test)
-                stop(obj.hBeamlineGUI.hTimer);
+                % Stop beamline timers (timer callback executed manually during test)
+                obj.hBeamlineGUI.stopTimer();
 
                 % Create figures and axes
                 obj.hFigure1 = figure('NumberTitle','off',...
@@ -510,8 +510,8 @@ classdef faradayCupSweep2D < acquisition
                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
             end
 
-            if strcmp(obj.hBeamlineGUI.hTimer.Running,'off')
-                start(obj.hBeamlineGUI.hTimer);
+            % Restart beamline timers
+            obj.hBeamlineGUI.restartTimer();
             end
         end
 
