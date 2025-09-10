@@ -33,8 +33,24 @@ classdef monitor < handle
             end
             
             if ~isempty(obj.parent)
-                obj.parentListener = listener(obj.parent,...
-                                'lastRead','PostSet',@obj.read);
+                % Initialize an array of listeners
+                obj.parentListener = event.listener.empty;
+                
+                % Handle both single objects and arrays
+                parents = obj.parent;
+                if ~iscell(parents)
+                    parents = {parents};
+                end
+                
+                % Create a listener for each parent
+                for i = 1:numel(parents)
+                    try
+                        newListener = addlistener(parents{i}, 'lastRead', 'PostSet', @obj.read);
+                        obj.parentListener(end+1) = newListener;
+                    catch ME
+                        warning('Failed to create listener for parent %d: %s', i, ME.message);
+                    end
+                end
             end
         end
 

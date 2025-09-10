@@ -13,7 +13,7 @@ classdef SWIPS_GUI < handle
         TestOperator string % Test operator string identifier
         AcquisitionType string % Acquisition type string identifier
         
-        hTimer % Handle to timer used to update monitor read timer
+
         hLogTimer % Handle to timer used to update the status save log
         hHardwareTimer % Handle to timer used to refresh hardware status
         
@@ -72,8 +72,7 @@ classdef SWIPS_GUI < handle
         end
 
         function newRead = updateReadings(obj,~,~)
-            
-            %UPDATEREADINGS Read and update all status reading fields
+            %UPDATEREADINGS update lastread buffer
             if isempty(obj.LastRead)
                 obj.LastRead = struct;
             end
@@ -93,7 +92,8 @@ classdef SWIPS_GUI < handle
         end
 
         function updateLog(obj,~,~,fname)
-            readings = obj.LastRead;
+            %UPDATELOG Save current readings to a .mat file
+            readings = obj.updateReadings;
 
             if ~exist('fname','var')
                 fname = fullfile(obj.DataDir,['readings_',num2str(obj.TestSequence),'.mat']);
@@ -142,21 +142,6 @@ classdef SWIPS_GUI < handle
             obj.restartTimer();
         end
 
-        function setRefreshRate(obj,~,~)
-            obj.stopTimer()
-
-            prompt = {'Enter desired Refresh rate [S]'};
-            dlgtitle = 'Refresh Rate';
-            dims = [1 35];
-            definput = {char(string(obj.hTimer.period))};
-            answer = inputdlg(prompt,dlgtitle,dims,definput);
-
-            if ~isempty(answer)
-                obj.hTimer.set('period',str2double(answer));
-            end
-            obj.restartTimer();
-        end
-
         function setLogRate(obj,~,~)
             obj.stopTimer()
 
@@ -174,14 +159,6 @@ classdef SWIPS_GUI < handle
 
         function createTimer(obj)
             %CREATETIMER Creates timer to periodically update readings
-            
-            % Create main update timer
-            obj.hTimer = timer('Name','readTimer',...
-                'Period',2,...
-                'ExecutionMode','fixedRate',...
-                'TimerFcn',@obj.updateReadings,...
-                'ErrorFcn',@obj.restartTimer);
-            start(obj.hTimer);
 
             % Create logging timer
             obj.hLogTimer = timer('Name','logTimer',...
@@ -195,11 +172,7 @@ classdef SWIPS_GUI < handle
         function restartTimer(obj,~,~)
             %RESTARTTIMER Restarts timers if error occurs
             
-            % Restart main timer
-            if strcmp(obj.hTimer.Running,'on')
-                stop(obj.hTimer);
-            end
-            start(obj.hTimer);
+          
             
             % Restart hardware timers
             function restartFunc(x)
@@ -216,10 +189,7 @@ classdef SWIPS_GUI < handle
         end
 
         function stopTimer(obj,~,~)
-            % Stop main timer
-            if strcmp(obj.hTimer.Running,'on')
-                stop(obj.hTimer);
-            end
+           
             
             % Stop hardware timers
             structfun(@(x)x.stopTimer(),obj.Hardware,'UniformOutput',false);
@@ -290,8 +260,7 @@ classdef SWIPS_GUI < handle
             % add option to set sample rate
             uimenu(obj.hEditMenu,'Text','Set Sample Rate',...
                 'MenuSelectedFcn',@obj.setSampleRate);
-            uimenu(obj.hEditMenu,'Text','Set Refresh Rate',...
-                'MenuSelectedFcn',@obj.setRefreshRate);
+
             uimenu(obj.hEditMenu,'Text','Set Data Log Rate',...
                 'MenuSelectedFcn',@obj.setLogRate);
             % add option to dietable Timer
@@ -615,10 +584,7 @@ classdef SWIPS_GUI < handle
         function closeGUI(obj,~,~)
             %CLOSEGUI Clean up when GUI is closed
             
-            % Stop timers
-            if strcmp(obj.hTimer.Running,'on')
-                stop(obj.hTimer);
-            end
+            
             if strcmp(obj.hLogTimer.Running,'on')
                 stop(obj.hLogTimer);
             end
