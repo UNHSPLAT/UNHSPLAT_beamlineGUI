@@ -783,9 +783,7 @@ classdef beamlineGUI < handle
         function closeGUI(obj,~,~)
             %CLOSEGUI Stop timer and delete obj when figure is closed
             % Stop timer if running
-            if strcmp(obj.hTimer.Running,'on')
-                stop(obj.hTimer);
-            end
+            
             if strcmp(obj.hLogTimer.Running,'on')
                 stop(obj.hLogTimer);
             end

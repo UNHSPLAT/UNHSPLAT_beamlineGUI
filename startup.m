@@ -8,6 +8,11 @@ button = questdlg('Powering on Beamline GUI. Do you want to proceed?', 'Confirma
 
 switch button
     case 'OK'
+        alltimers = timerfindall;
+        if ~isempty(alltimers)
+            stop(alltimers);
+            delete(alltimers);
+        end
         % Code to execute if 'OK' is pressed
         myGUI = beamlineGUI;
     case 'Cancel'
