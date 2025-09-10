@@ -495,6 +495,7 @@ classdef faradayCupSweep2D < acquisition
                         obj.complete()
                         fprintf('\nTest complete!\n');
                     end
+                
         end
 
         function complete(obj,~,~)
@@ -512,7 +513,6 @@ classdef faradayCupSweep2D < acquisition
 
             % Restart beamline timers
             obj.hBeamlineGUI.restartTimer();
-            end
         end
 
         function closeGUI(obj,~,~)

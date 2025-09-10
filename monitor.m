@@ -43,7 +43,6 @@ classdef monitor < handle
 %                 end
                 
                 % Create a listener for each parent
-                fprintf(obj.textLabel)
                 for i = 1:numel(parents)
                     try
                         newListener = addlistener(parents(i), 'lastRead', 'PostSet', @obj.read);

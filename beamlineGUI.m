@@ -1,54 +1,63 @@
-classdef beamlineGUI < handle
+classdef beamlineGUI < labGUI
     %BEAMLINEGUI - Defines a GUI used to interface with the Peabody Scientific beamline in lab 145
     
     properties
-        Hardware % Object handle array to contain all hardware connected to beamline PC
-        Monitors % Object handle array to contain all hardware connected to beamline PC
-        TestSequence double % Unique test sequence identifier number
-        TestDate string % Test date derived from TestSequence
-        DataDir string % Data directory derived from TestSequence
-        TestOperator string % Test operator string identifier
+        % Beamline-specific properties
         GasType string % Gas type string identifier
-        AcquisitionType string % Acquisition type string identifier
-
-        hLogTimer % Handle to timer used to update the beamline status save log
-        hHardwareTimer % Handle to timer used to refresh hardware status
-        
-        hFigure % Handle to GUI figure
+        hValveFigure % Handle to valve control figure
         hStatusGrp % Handle to beamline status uicontrol group
-        hTestGrp %
-        hHWConnStatusGrp%
-        hHWConnBtn%
-        HWConnStatusListeners %
-        hMonitorPlt% Handle to monitor plot generated at startup
+        hCamGUI % Handle to cam control init button
+        hCamButton % Handle to camera button
+    end
 
-        hValveFigure %Handle to valve control figure
-
-        hFileMenu % Handle to file top menu dropdown
-        hEditMenu % Handle to edit top menu dropdown
-        hToolsMenu % Handle to edit top menu dropdown
-        hCopyTS % Handle to copy test sequence menu button
-        hSequenceText % Handle to test sequence label
-        hSequenceEdit % Handle to test sequence field
-        hDateText % Handle to test date label
-        hDateEdit % Handle to test date field
-        
-        hOperatorText % Handle to test operator label
-        hOperatorEdit % Handle to test operator popupmenu
+    properties (Access = protected)
+        % Override operator, gas, and acquisition lists
         OperatorList cell = {'Isabella Householder', 'Amanda Wester','Jonathan Bower','Arlo Johnson', 'Daniel Abel','Skylar Vogler'} % Test operators available for selection
-        
-        hGasText % Handle to gas type label
-        hGasEdit % Handle to gas type popupmenu
         GasList cell = {'Air','Argon','Nitrogen','Helium','Deuterium','Oxygen','Magic gas'} % Gas types available for selection
-        
-        hAcquisitionText % Handle to acquisition type label
-        hAcquisitionEdit % Handle to acquisition type popupmenu
         AcquisitionList cell = {'Sweep 1D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition types available for selection
-        Acquisitions = []%
+    end
+
+    properties (SetObservable)
+        LastRead struct % Last readings from the monitor timer
+    end
         
-        hRunBtn % Handle to run test button
-        hCamGUI; % IHandle to cam conctrol init button
-        hCamButton %
+        function createMonitors(obj)
+            % Implementation of abstract method from labGUI
+            % Setup monitors for hardware
+            obj.Monitors = setupMonitors(obj.Hardware);
+        end
+        
+        function createLayout(obj)
+            % Implementation of abstract method from labGUI
+            
+            % Position GUI on primary monitor
+            % Get screen size
+            screenSize = get(0,'ScreenSize');
+            % Center the figure window
+            set(obj.hFigure,'Position',[screenSize(3)/2-500 screenSize(4)/2-300 1000 600]);
+            
+            % Create the monitor plot after a brief pause to allow hardware initialization
+            pause(1);
+            obj.hMonitorPlt = beamlineMonitor(obj);
+            obj.hMonitorPlt.runSweep();
+        endI
+    %BEAMLINEGUI - Defines a GUI used to interface with the Peabody Scientific beamline in lab 145
+    
+    properties
+        % Beamline-specific properties
+        GasType string % Gas type string identifier
+        hValveFigure % Handle to valve control figure
+        hStatusGrp % Handle to beamline status uicontrol group
+        hCamGUI % Handle to cam control init button
+        hCamButton % Handle to camera button
+    end
+
+    properties (Access = protected)
+        % Override operator, gas, and acquisition lists
+        OperatorList cell = {'Isabella Householder', 'Amanda Wester','Jonathan Bower','Arlo Johnson', 'Daniel Abel','Skylar Vogler'} % Test operators available for selection
+        GasList cell = {'Air','Argon','Nitrogen','Helium','Deuterium','Oxygen','Magic gas'} % Gas types available for selection
+        AcquisitionList cell = {'Sweep 1D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition types available for selection
+    end
 
         hStageGUI; % IHandle to stage conctrol init button
         hStageButton %
@@ -311,10 +320,10 @@ classdef beamlineGUI < handle
             % Create file menu
             obj.hFileMenu = uimenu(obj.hFigure,'Text','File');
 
-            % Create edit menu
-            obj.hEditMenu = uimenu(obj.hFigure,'Text','Edit');
+            % Create Timer menu
+            obj.hTimerMenu = uimenu(obj.hFigure,'Text','Timer');
             
-            % Create edit menu
+            % Create Timer menu
             obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
 
             % Create copy test sequence menu button
@@ -325,14 +334,14 @@ classdef beamlineGUI < handle
                 'MenuSelectedFcn',@obj.valveControlCallback);
 
             % add option to set sample rate
-            uimenu(obj.hEditMenu,'Text','Set Sample Rate',...
+            uimenu(obj.hTimerMenu,'Text','Set Sample Rate',...
                 'MenuSelectedFcn',@obj.setSampleRate);
-            uimenu(obj.hEditMenu,'Text','Set Data Log Rate',...
+            uimenu(obj.hTimerMenu,'Text','Set Data Log Rate',...
                 'MenuSelectedFcn',@obj.setLogRate);
             % add option to dietable Timer
-            uimenu(obj.hEditMenu,'Text','Disable Timer',...
+            uimenu(obj.hTimerMenu,'Text','Disable Timer',...
                 'MenuSelectedFcn',@obj.stopTimer);
-            uimenu(obj.hEditMenu,'Text','Restart Timer',...
+            uimenu(obj.hTimerMenu,'Text','Restart Timer',...
                 'MenuSelectedFcn',@obj.restartTimer);
 
             % Turn off dock controls (defaults to on when first uimenu created)

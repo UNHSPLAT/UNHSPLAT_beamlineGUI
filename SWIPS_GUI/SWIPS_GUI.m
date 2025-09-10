@@ -1,54 +1,17 @@
-classdef SWIPS_GUI < handle
+classdef SWIPS_GUI < labGUI
     %SWIPS_GUI - Defines a GUI used to interface with the SWIPS system
     
     properties
-        Hardware % Object handle array to contain all hardware connected to SWIPS
-        Monitors % Object handle array to contain all monitoring devices
-        
-        TestSequence double % Unique test sequence identifier number
-        TestDate string % Test date derived from TestSequence
-        DataDir string % Dat            % Adjust figure size to fit all panels
-            % Calculate required figure size based on panels
-            
-        TestOperator string % Test operator string identifier
-        AcquisitionType string % Acquisition type string identifier
-        
-
-        hLogTimer % Handle to timer used to update the status save log
-        hHardwareTimer % Handle to timer used to refresh hardware status
-        
-        hFigure % Handle to GUI figure
-        hHVStatusGrp % Handle to status uicontrol group
-        hTestGrp % Handle to test control group
+        % SWIPS-specific properties
         hStatusGrp % Handle to status uicontrol group
-        hHWConnStatusGrp % Handle to hardware connection status group
-        hHWConnBtn % Handle to hardware connection refresh button
-        HWConnStatusListeners % Listeners for hardware connection status
-        hMonitorPlt % Handle to monitor plot
+        hHVStatusGrp % Handle to high voltage status uicontrol group
         hPosStatusGrp % Handle to position status panel group
         hInstGrp % Handle to instrument monitors panel
-        
-        hRunBtn % Handle to run test button
-        hSequenceText % Handle to test sequence label
-        hSequenceEdit % Handle to test sequence field
-        hDateText % Handle to test date label
-        hDateEdit % Handle to test date field
-        
-        hOperatorText % Handle to test operator label
-        hOperatorEdit % Handle to test operator popupmenu
-        OperatorList cell = {'Operator 1', 'Operator 2', 'Operator 3'} % Test operators available for selection
-        
-        hAcquisitionText % Handle to acquisition type label
-        hAcquisitionEdit % Handle to acquisition type popupmenu
-        AcquisitionList cell = {'Sweep 1D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition type string identifier
-        Acquisitions = [] % Storage for acquisition instances
-        
-        hFileMenu % Handle to file top menu dropdown
-        hEditMenu % Handle to edit top menu dropdown
-        hToolsMenu % Handle to tools top menu dropdown
-        hCopyTS % Handle to copy test sequence menu button
-
     end
+    
+    properties (Access = protected)
+        % Override operator and acquisition lists
+   end
 
     properties (SetObservable)
         LastRead struct % Last readings from the monitor timer
@@ -57,220 +20,55 @@ classdef SWIPS_GUI < handle
     methods
         function obj = SWIPS_GUI
             %SWIPS_GUI Construct an instance of this class
-            
+            obj@labGUI('SWIPS');
             % Generate a test sequence, test date, and data directory
-            obj.genTestSequence;
+            obj.genTestSequence();
 
-            % Gather and populate required hardware
-            obj.gatherHardware;
+            % Initialize hardware and monitors
+            obj.createHardware();
+            obj.createMonitors();
 
-            % Create GUI components
-            obj.createGUI;
+            % Create GUI components and layout
+            obj.createLayout();
 
             % Create and start status update timer
-            obj.createTimer;
+            obj.createTimer();
         end
 
-        function newRead = updateReadings(obj,~,~)
-            %UPDATEREADINGS update lastread buffer
-            if isempty(obj.LastRead)
-                obj.LastRead = struct;
-            end
-
-            % Read data from hardware
-            readList = structfun(@(x)x.read(),obj.Monitors,'UniformOutput',false);
-
-            % Share monitor values with the last reading variable 
-            fields = fieldnames(obj.Monitors);
-            newRead = struct();
-            for i = 1:numel(fields)
-                lab = fields{i};
-                val = obj.Monitors.(fields{i}).lastRead;
-                newRead.(lab) = val;
-            end
-            obj.LastRead = newRead;
-        end
-
-        function updateLog(obj,~,~,fname)
-            %UPDATELOG Save current readings to a .mat file
-            readings = obj.updateReadings;
-
-            if ~exist('fname','var')
-                fname = fullfile(obj.DataDir,['readings_',num2str(obj.TestSequence),'.mat']);
-            end
-
-            if isfile(fname)
-                save(fname,'-struct','readings','-append');
-            else
-                save(fname,'-struct','readings');
-            end
-        end
-
-        function delete(obj)
-            %DELETE Handle class destructor
-            
-            % Stop timer if running
-            obj.stopTimer();
-
-            % Delete figure
-            if isvalid(obj.hFigure)
-                delete(obj.hFigure);
-            end
-
-            % Clean up monitors and hardware
-            structfun(@(x)delete(x),obj.Monitors,'UniformOutput',false);
-            structfun(@(x)delete(x),obj.Hardware,'UniformOutput',false);
-        end
-        
-        function setSampleRate(obj,~,~)
-            obj.stopTimer()
-
-            prompt = cellfun(@(x)x.Tag, struct2cell(obj.Hardware), 'UniformOutput', false);
-            dlgtitle = 'Instrument Sample Rate';
-            dims = [1 45];
-            definput = cellfun(@(x)char(string(x.Timer.period)), struct2cell(obj.Hardware), 'UniformOutput', false);
-            answer = inputdlg(prompt,dlgtitle,dims,definput);
-
-            if ~isempty(answer)
-                hwFields = fieldnames(obj.Hardware);
-                for i = 1:numel(answer)
-                    if ~isempty(obj.Hardware.(hwFields{i}).Timer)
-                    obj.Hardware.(hwFields{i}).Timer.set('period', str2double(answer{i}));
-                    end
-                end
-            end
-            obj.restartTimer();
-        end
-
-        function setLogRate(obj,~,~)
-            obj.stopTimer()
-
-            prompt = {'Enter desired Log rate [S]'};
-            dlgtitle = 'Log Rate';
-            dims = [1 35];
-            definput = {char(string(obj.hLogTimer.period))};
-            answer = inputdlg(prompt,dlgtitle,dims,definput);
-
-            if ~isempty(answer)
-                obj.hLogTimer.set('period',str2double(answer));
-            end
-            obj.restartTimer();
-        end
-
-        function createTimer(obj)
-            %CREATETIMER Creates timer to periodically update readings
-
-            % Create logging timer
-            obj.hLogTimer = timer('Name','logTimer',...
-                'Period',5,...
-                'ExecutionMode','fixedRate',...
-                'TimerFcn',@obj.updateLog,...
-                'ErrorFcn',@obj.restartTimer);
-            start(obj.hLogTimer);
-        end
-
-        function restartTimer(obj,~,~)
-            %RESTARTTIMER Restarts timers if error occurs
-            
-          
-            
-            % Restart hardware timers
-            function restartFunc(x)
-                x.restartTimer();
-                pause(.1);
-            end
-            structfun(@restartFunc,obj.Hardware,'UniformOutput',false);
-
-            % Restart log timer
-            if strcmp(obj.hLogTimer.Running,'on')
-                stop(obj.hLogTimer);
-            end
-            start(obj.hLogTimer);
-        end
-
-        function stopTimer(obj,~,~)
-           
-            
-            % Stop hardware timers
-            structfun(@(x)x.stopTimer(),obj.Hardware,'UniformOutput',false);
-
-            % Stop log timer
-            if strcmp(obj.hLogTimer.Running,'on')
-                stop(obj.hLogTimer);
-            end
-        end
-        function garbo = readHardware(obj)
-            t1 = now();
-            structfun(@(x)x.read(),obj.Hardware,'UniformOutput',false);
-            disp(now()-t1);
-            disp(structfun(@(x)x.lastRead,obj.Hardware,'UniformOutput',false));
-        end
-    end
-
-    methods (Access = private)
-        function genTestSequence(obj)
-            %GENTESTSEQUENCE Generates test sequence, date, and data directory
-            
-            obj.TestSequence = round(now*1e6);
-            obj.TestDate = datestr(obj.TestSequence/1e6,'mmm dd, yyyy HH:MM:SS');
-            if ~isempty(obj.AcquisitionType)
-                obj.DataDir = fullfile(getenv("USERPROFILE"),"data",strrep(obj.AcquisitionType,' ',''),num2str(obj.TestSequence));
-            else
-                obj.DataDir = fullfile(getenv("USERPROFILE"),"data","General",num2str(obj.TestSequence));
-            end
-            if ~exist(obj.DataDir,'dir')
-                mkdir(obj.DataDir);
-            end
-        end
-        
-        function gatherHardware(obj)
-            % Setup SWIPS hardware and monitors
+        function createHardware(obj)
+            % Implementation of abstract method from labGUI
+            % Setup SWIPS hardware
             obj.Hardware = setupSWIPSInstruments;
-            
+        end
+        
+        function createMonitors(obj)
+            % Implementation of abstract method from labGUI
             % Setup monitors for hardware
             obj.Monitors = setupSWIPSMonitors(obj.Hardware);
         end
+    end
 
-        function createGUI(obj)
+    methods (Access = public)
+
+        function createLayout(obj)
+            % Implementation of abstract method from labGUI
             %CREATEGUI Create SWIPS GUI components
             
             % Create main figure window
-            obj.hFigure = figure('MenuBar','none',...
-                'ToolBar','none',...
-                'Position',[0,0,1000,600],...
-                'NumberTitle','off',...
-                'Name','SWIPS Control GUI',...
-                'DeleteFcn',@obj.closeGUI);
+            obj.hFigure.Position = [0,0,1000,600];
+            %  = figure('MenuBar','none',...
+            %     'ToolBar','none',...
+            %     'Position',[0,0,1000,600],...
+            %     'NumberTitle','off',...
+            %     'Name','SWIPS Control GUI',...
+            %     'DeleteFcn',@obj.closeGUI);
 
 
             %====================================================================================
-            % Create file menu
-            obj.hFileMenu = uimenu(obj.hFigure,'Text','File');
 
-            % Create edit menu
-            obj.hEditMenu = uimenu(obj.hFigure,'Text','Edit');
-            
-            % Create edit menu
-            obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
-
-            % Create copy test sequence menu button
-            uimenu(obj.hFileMenu,'Text','Copy Test Sequence',...
-                'MenuSelectedFcn',@obj.copyTSCallback);
-
-            % add option to set sample rate
-            uimenu(obj.hEditMenu,'Text','Set Sample Rate',...
-                'MenuSelectedFcn',@obj.setSampleRate);
-
-            uimenu(obj.hEditMenu,'Text','Set Data Log Rate',...
-                'MenuSelectedFcn',@obj.setLogRate);
-            % add option to dietable Timer
-            uimenu(obj.hEditMenu,'Text','Disable Timer',...
-                'MenuSelectedFcn',@obj.stopTimer);
-            uimenu(obj.hEditMenu,'Text','Restart Timer',...
-                'MenuSelectedFcn',@obj.restartTimer);
 
             % Define common GUI parameters
-            ysize = 22;    % Height of each control
+            
             ygap = 6;      % Vertical gap between controls
             xgap = 15;     % Horizontal gap between controls
             xstart = 10;   % Initial X position
@@ -396,94 +194,7 @@ classdef SWIPS_GUI < handle
             % Adjust panel height
             obj.hInstGrp.Position(4) = ypos + 20;  % Add padding
    
-            %===================================================================================
-            % Create test control panel in right column
-            obj.hTestGrp = uipanel(obj.hFigure,...
-                'Title', 'Testing',...
-                'FontWeight', 'bold',...
-                'FontSize', 12,...
-                'Units', 'pixels',...
-                'Position', [rightColStart, obj.hInstGrp.Position(4)+obj.hInstGrp.Position(2)+20, 360, 250]);
-
-            % Test panel controls setup
-            testYpos = 10;
-            testXgap = 15;
-            testXstart = 10;
-            testYgap = 15;
-            testColSize = [140, 140];
-
-            % Run Test button
-            obj.hRunBtn = uicontrol(obj.hTestGrp, 'Style', 'pushbutton',...
-                'Position', [testXstart, testYpos, testColSize(1), ysize],...
-                'String', 'RUN TEST',...
-                'FontSize', 16,...
-                'FontWeight', 'bold',...
-                'HorizontalAlignment', 'center',...
-                'Callback', @obj.runTestCallback);
-            testYpos = testYpos + ysize + testYgap;
-
-            % Acquisition Type
-            obj.hAcquisitionText = uicontrol(obj.hTestGrp, 'Style', 'text',...
-                'Position', [testXstart, testYpos, testColSize(1), ysize],...
-                'String', 'Acquisition Type:',...
-                'FontSize', 12,...
-                'FontWeight', 'bold',...
-                'HorizontalAlignment', 'right');
-            obj.hAcquisitionEdit = uicontrol(obj.hTestGrp, 'Style', 'popupmenu',...
-                'Position', [testXstart + testColSize(1) + testXgap, testYpos, testColSize(2), ysize],...
-                'String', [{''}, obj.AcquisitionList],...
-                'FontSize', 11,...
-                'HorizontalAlignment', 'left',...
-                'Callback', @obj.acquisitionCallback);
-            testYpos = testYpos + ysize + testYgap;
-
-            % Test Sequence
-            obj.hSequenceText = uicontrol(obj.hTestGrp, 'Style', 'text',...
-                'Position', [testXstart, testYpos, testColSize(1), ysize],...
-                'String', 'Test Sequence:',...
-                'FontSize', 12,...
-                'FontWeight', 'bold',...
-                'HorizontalAlignment', 'right');
-            obj.hSequenceEdit = uicontrol(obj.hTestGrp, 'Style', 'text',...
-                'Position', [testXstart + testColSize(1) + testXgap, testYpos, testColSize(2), ysize],...
-                'String', num2str(obj.TestSequence),...
-                'FontSize', 12,...
-                'FontWeight', 'bold',...
-                'HorizontalAlignment', 'left');
-            testYpos = testYpos + ysize + testYgap;
-
-            % Test Date
-            obj.hDateText = uicontrol(obj.hTestGrp, 'Style', 'text',...
-                'Position', [testXstart, testYpos, testColSize(1), ysize],...
-                'String', 'Test Date:',...
-                'FontSize', 12,...
-                'FontWeight', 'bold',...
-                'HorizontalAlignment', 'right');
-            obj.hDateEdit = uicontrol(obj.hTestGrp, 'Style', 'text',...
-                'Position', [testXstart + testColSize(1) + testXgap, testYpos, testColSize(2), ysize],...
-                'String', obj.TestDate,...
-                'FontSize', 12,...
-                'FontWeight', 'bold',...
-                'HorizontalAlignment', 'left');
-            testYpos = testYpos + ysize + testYgap;
-
-            % Test Operator
-            obj.hOperatorText = uicontrol(obj.hTestGrp, 'Style', 'text',...
-                'Position', [testXstart, testYpos, testColSize(1), ysize],...
-                'String', 'Test Operator:',...
-                'FontSize', 12,...
-                'FontWeight', 'bold',...
-                'HorizontalAlignment', 'right');
-            obj.hOperatorEdit = uicontrol(obj.hTestGrp, 'Style', 'popupmenu',...
-                'Position', [testXstart + testColSize(1) + testXgap, testYpos, testColSize(2), ysize],...
-                'String', [{''}, obj.OperatorList],...
-                'FontSize', 11,...
-                'HorizontalAlignment', 'left',...
-                'Callback', @obj.operatorCallback);
-            testYpos = testYpos + ysize + testYgap;
-
-            % Adjust test panel height
-            obj.hTestGrp.Position(4) = testYpos + 20;
+            obj.guiPanelTest([rightColStart, obj.hInstGrp.Position(4)+obj.hInstGrp.Position(2)+20, 360, 250]);
 
             % Function to create monitor controls for a channel
             function guiStatusGrpSet(mon, panel)    
@@ -496,7 +207,7 @@ classdef SWIPS_GUI < handle
                 colInd = 1;
                 xColStart = xstart;
                 mon.guiHand.statusGrpText = uicontrol(panel,'Style','text',...
-                    'Position',[xColStart,ypos,colSize(colInd),ysize],...
+                    'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
                     'String',sprintf('%s ',mon.textLabel),...
                     'FontWeight','bold',...
                     'FontSize',9,...
@@ -506,7 +217,7 @@ classdef SWIPS_GUI < handle
                 xColStart = sum(colSize(1:colInd))+xgap*(colInd);
                 colInd = colInd+1;
                 readingTxt = uicontrol(panel,'Style','edit',...
-                    'Position',[xColStart,ypos,colSize(colInd),ysize],...
+                    'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
                     'Enable','inactive',...
                     'FontSize',9,...
                     'HorizontalAlignment','right');
@@ -520,7 +231,7 @@ classdef SWIPS_GUI < handle
                 xColStart = sum(colSize(1:colInd))+xgap*(colInd);
                 colInd = colInd+1;
                 mon.guiHand.statusGrpSetText = uicontrol(panel,'Style','text',...
-                    'Position',[xColStart,ypos,colSize(colInd),ysize],...
+                    'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
                     'String',sprintf('[%s]: ',mon.unit),...
                     'FontSize',9,...
                     'HorizontalAlignment','right');
@@ -531,7 +242,7 @@ classdef SWIPS_GUI < handle
                     xColStart = sum(colSize(1:colInd))+xgap*(colInd);
                     colInd = colInd+1;
                     mon.guiHand.statusGrpSetField = uicontrol(panel,'Style','edit',...
-                        'Position',[xColStart,ypos,colSize(colInd),ysize],...
+                        'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
                         'FontSize',9,...
                         'HorizontalAlignment','right');
 
@@ -539,7 +250,7 @@ classdef SWIPS_GUI < handle
                     xColStart = sum(colSize(1:colInd))+xgap*(colInd);
                     colInd = colInd+1;
                     mon.guiHand.statusGrpSetBtn = uicontrol(panel,'Style','pushbutton',...
-                        'Position',[xColStart,ypos,colSize(colInd),ysize],...
+                        'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
                         'String','SET',...
                         'FontWeight','bold',...
                         'FontSize',9,...
@@ -548,7 +259,7 @@ classdef SWIPS_GUI < handle
                 end
                 
                 % Update vertical position for next control
-                ypos = ypos+ysize+ygap;
+                ypos = ypos+obj.ysize+ygap;
             end
 
             % Adjust figure size to fit all panels
@@ -579,91 +290,8 @@ classdef SWIPS_GUI < handle
             
             % Center the figure on screen
             movegui(obj.hFigure, 'center');
-        end        
-        
-        function closeGUI(obj,~,~)
-            %CLOSEGUI Clean up when GUI is closed
-            
-            
-            if strcmp(obj.hLogTimer.Running,'on')
-                stop(obj.hLogTimer);
-            end
-
-            
-            % Delete the object
-            obj.delete();
-            delete(obj);
-        end
-        function operatorCallback(obj,src,~)
-            %OPERATORCALLBACK Populate test operator obj property with user selected value
-            
-            % Delete blank popupmenu option
-            obj.popupBlankDelete(src);
-            
-            % Populate obj property with user selection
-            if ~strcmp(src.String{src.Value},"")
-                obj.TestOperator = src.String{src.Value};
-            end
         end
 
-        function acquisitionCallback(obj,src,~)
-            %ACQUISITIONCALLBACK Populate acquisition type obj property with user selected value
-
-            % Delete blank popupmenu option
-            obj.popupBlankDelete(src);
-
-            % Populate obj property with user selection
-            if ~strcmp(src.String{src.Value},"")
-                obj.AcquisitionType = src.String{src.Value};
-            end
-        end
-
-        function runTestCallback(obj,~,~)
-            %RUNTESTCALLBACK Check for required user input, generate new test sequence, and execute selected acquisition type
-
-            % Throw error if test operator not selected
-            if isempty(obj.TestOperator)
-                errordlg('A test operator must be selected before proceeding!','Don''t be lazy!');
-                return
-            end
-
-            % Throw error if acquisition type not selected
-            if isempty(obj.AcquisitionType)
-                errordlg('An acquisition type must be selected before proceeding!','Don''t be lazy!');
-                return
-            end
-
-            % Generate new test sequence, test date, and data directory
-            obj.genTestSequence;
-
-            % Update GUI test sequence and test date fields
-            set(obj.hSequenceEdit,'String',num2str(obj.TestSequence));
-            set(obj.hDateEdit,'String',obj.TestDate);
-
-            % Find test acquisition class, instantiate, and execute
-            acqPath = which(strrep(obj.AcquisitionType,' ',''));
-            tokes = regexp(acqPath,'\\','split');
-            fcnStr = tokes{end}(1:end-2);
-            hFcn = str2func(fcnStr);
-            myAcq = hFcn(obj);
-            myAcq.runSweep;
-            obj.Acquisitions = myAcq; 
-        end
     end
 
-    methods (Static, Access = private)
-        function popupBlankDelete(src)
-            %POPUPBLANKDELETE Deletes blank option from popupmenu
-            
-            if isempty(src.String{1})
-                if src.Value ~= 1
-                    oldVal = src.Value;
-                    src.String = src.String(2:end);
-                    src.Value = oldVal-1;
-                else
-                    return
-                end
-            end
-        end
-    end
 end

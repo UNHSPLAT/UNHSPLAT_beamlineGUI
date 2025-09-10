@@ -387,7 +387,6 @@ classdef Sweep1d < acquisition
 
             % Restart beamline timers
             obj.hBeamlineGUI.restartTimer();
-            end
         end
 
         function closeGUI(obj,~,~)
