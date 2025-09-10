@@ -32,13 +32,13 @@ classdef monitor < handle
                 end
             end
             
-            %if ~strcmp(obj.parent.Type,"local")
-            %obj.parentListener = listener(obj.parent(1),...
-            %                    'lastRead','PostSet',@obj.read);
-            %end
+            if ~isempty(obj.parent)
+                obj.parentListener = listener(obj.parent,...
+                                'lastRead','PostSet',@obj.read);
+            end
         end
 
-        function val = read(obj) 
+        function val = read(obj,src,evnt) 
             % if all([obj.parent.Connected])
             try
                 val = obj.readFunc(obj);
