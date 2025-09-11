@@ -20,6 +20,8 @@ classdef beamlineGUI < labGUI
         hHWConnStatusGrp % Handle to hardware connection status uicontrol group
         HWConnStatusListeners
         hHWConnBtn % Handle to hardware connection refresh button
+
+        hControlMenu % Handle to control top menu dropdown
     end
 
     properties (SetObservable)
@@ -110,9 +112,9 @@ classdef beamlineGUI < labGUI
 
             %====================================================================================
             % Create Tools menu
-            obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
+            obj.hControlMenu = uimenu(obj.hFigure,'Text','Control');
 
-            uimenu(obj.hToolsMenu,'Text','ValveControl',...
+            uimenu(obj.hControlMenu,'Text','ValveControl',...
                 'MenuSelectedFcn',@obj.valveControlCallback);
 
             %===================================================================================

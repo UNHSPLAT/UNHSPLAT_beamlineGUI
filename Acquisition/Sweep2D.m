@@ -54,6 +54,8 @@ classdef Sweep2D < acquisition
 
         scanTimer timer%
         scan_mon %
+
+        testLab = string
     end
 
     methods
@@ -65,6 +67,9 @@ classdef Sweep2D < acquisition
             
             % Add listener to delete configuration GUI figure if main beamline GUI deleted
             listener(obj.hBeamlineGUI,'ObjectBeingDestroyed',@obj.beamlineGUIDeleted);
+            
+            % set testLabel
+            obj.testLab = sprintf('%s_%s',num2str(obj.hBeamlineGUI.TestSequence),obj.Type);
 
             % get active and inactive monitors for scanning
             function tag = get_active(mon)
@@ -492,7 +497,7 @@ classdef Sweep2D < acquisition
                 
                         pause(obj.stepDwell);
                         % Obtain readings
-                        fname = fullfile(obj.hBeamlineGUI.DataDir,[strrep(sprintf('%s_%.2fV',psTag,obj.VPoints(iV)),'.','p'),'.mat']);
+                        fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
                         obj.hBeamlineGUI.readHardware();
                         obj.hBeamlineGUI.updateLog([],[],fname);
 
@@ -528,8 +533,8 @@ classdef Sweep2D < acquisition
 
                     % Save results .csv file
                     function end_scan(src,evt)
-                        fname = 'results.csv';
-                        writetable(struct2table(obj.scan_mon), fullfile(obj.hBeamlineGUI.DataDir,fname));
+                        fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
+                        writetable(struct2table(obj.scan_mon), fname);
                         obj.complete()
                         fprintf('\nTest complete!\n');
                     end

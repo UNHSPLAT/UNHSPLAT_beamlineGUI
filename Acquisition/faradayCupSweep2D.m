@@ -48,12 +48,14 @@ classdef faradayCupSweep2D < acquisition
 
         DwellTime double % Dwell time setting
         PSList %
+        resultList
 
         scanTimer timer%
         scan_mon %
     end
 
     methods
+        
         function obj = faradayCupSweep2D(hGUI)
             %FARADAYCUPVSEXBSWEEP Construct an instance of this class
 
@@ -95,12 +97,18 @@ classdef faradayCupSweep2D < acquisition
                 'HorizontalAlignment','right');
 
 
+             % get active and unactive monitors for scanning
             function tag = get_active(mon)
                 if mon.active
                     obj.PSList(end+1) = mon.Tag;
+                else
+                    obj.resultList(end+1) = mon.Tag;
                 end
             end
+
             obj.PSList = [""];
+            obj.resultList = [""];
+
             structfun(@get_active,obj.hBeamlineGUI.Monitors);
             
             obj.hSupplyEdit = uicontrol(obj.hConfFigure,'Style','popupmenu',...

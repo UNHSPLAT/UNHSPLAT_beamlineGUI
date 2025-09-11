@@ -9,6 +9,7 @@ classdef (Abstract) labGUI < handle
         TestSequence double % Unique test sequence identifier number
         TestDate string % Test date derived from TestSequence
         DataDir string % Data directory derived from TestSequence
+        DataLoc string % Data directory location
         TestGas string % Test Gas string identifier
         AcquisitionType string % Acquisition type string identifier
         
@@ -69,6 +70,7 @@ classdef (Abstract) labGUI < handle
                 'CloseRequestFcn',@obj.closeGUI);
             
             % Generate initial test sequence, date, and data directory
+            obj.DataLoc = fullfile(getenv("USERPROFILE"),"data");
             obj.genTestSequence;
             
             % Create file menu
@@ -77,7 +79,13 @@ classdef (Abstract) labGUI < handle
             % Create copy test sequence menu button
             uimenu(obj.hFileMenu,'Text','Copy Test Sequence',...
                 'MenuSelectedFcn',@obj.copyTSCallback);
+            
+            % Create select data directory menu button
+            uimenu(obj.hFileMenu,'Text','Select Data Directory',...
+                'MenuSelectedFcn',@obj.selectDataDirCallback);
 
+            % Create tools menu
+            obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
             % Create Timer menu and all its menu items
             obj.createTimerMenu();
             
@@ -136,16 +144,24 @@ classdef (Abstract) labGUI < handle
 
         function updateLog(obj,~,~,fname)
             %UPDATELOG Save current readings to a .mat file
-            readings = obj.updateReadings;
+            readings = struct(sprintf('r%s',string(round(now()*1e6))),obj.updateReadings);
 
             if ~exist('fname','var')
                 fname = fullfile(obj.DataDir,['readings_',num2str(obj.TestSequence),'.mat']);
+                csvName = fullfile(obj.DataDir,['readings_',num2str(obj.TestSequence),'.csv']);
             end
 
             if isfile(fname)
                 save(fname,'-struct','readings','-append');
             else
                 save(fname,'-struct','readings');
+            end
+
+            if isfile(csvName)
+                fprintf('Appending to existing log file: %s\n',fname);
+                writetable(struct2table(obj.LastRead), csvName,'WriteMode','append','WriteVariableNames',false);
+            else
+                writetable(struct2table(obj.LastRead), csvName);
             end
         end
 
@@ -198,9 +214,9 @@ classdef (Abstract) labGUI < handle
             obj.TestSequence = round(now*1e6);
             obj.TestDate = datestr(obj.TestSequence/1e6,'mmm dd, yyyy HH:MM:SS');
             if ~isempty(obj.AcquisitionType)
-                obj.DataDir = fullfile(getenv("USERPROFILE"),"data",strrep(obj.AcquisitionType,' ',''),num2str(obj.TestSequence));
+                obj.DataDir = fullfile(obj.DataLoc,strrep(obj.AcquisitionType,' ',''),num2str(obj.TestSequence));
             else
-                obj.DataDir = fullfile(getenv("USERPROFILE"),"data","General",num2str(obj.TestSequence));
+                obj.DataDir = fullfile(obj.DataLoc,"General",num2str(obj.TestSequence));
             end
             if ~exist(obj.DataDir,'dir')
                 mkdir(obj.DataDir);
@@ -214,9 +230,10 @@ classdef (Abstract) labGUI < handle
             % Create logging timer
             obj.hLogTimer = timer('Name','logTimer',...
                 'Period',5,...
-                'ExecutionMode','fixedRate',...
+                'ExecutionMode','fixedDelay',...
+                'BusyMode','drop',...
                 'TimerFcn',@obj.updateLog,...
-                'ErrorFcn',@obj.restartTimer);
+                'ErrorFcn',@obj.stopTimer);
         end
 
         %% Timer menu callbacks
@@ -323,6 +340,20 @@ classdef (Abstract) labGUI < handle
         function copyTSCallback(obj,~,~)
             %COPYTSCALLBACK Copies current test sequence to clipboard
             clipboard('copy',num2str(obj.TestSequence));
+        end
+        
+        function selectDataDirCallback(obj,~,~)
+            %SELECTDATADIRCALLBACK Opens a folder selection dialog and updates DataDir
+            % Open folder selection dialog
+            newDir = uigetdir(obj.DataLoc, 'Select Data Directory');
+            
+            % If user didn't cancel and selected a folder
+            if newDir ~= 0
+                % Update the DataDir property
+                obj.DataLoc = string(newDir);
+                obj.genTestSequence;
+
+            end
         end
 
         function operatorCallback(obj,src,~)
