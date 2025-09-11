@@ -129,6 +129,7 @@ classdef NewportStageControl < handle
         function delete(obj)
             % Delete the webcam object
             obj.shutdown();
+            delete(obj.Timer);
         end
 
         function home(obj)
