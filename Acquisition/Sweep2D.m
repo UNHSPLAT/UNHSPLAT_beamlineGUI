@@ -14,8 +14,7 @@ classdef Sweep2D < acquisition
     properties
         PSTag string % String identifying user-selected HVPS
         hHVPS % Handle to desired power supply
-        hConfFigure % Handle to configuration GUI figure
-        hFigure1 % Handle to I-V data plot
+
         hAxes1 % Handle to I-V data axes
         hAxes2 % Handle to I-1/V^2 data axes
         
@@ -46,6 +45,7 @@ classdef Sweep2D < acquisition
         hSweepBtn % Handle to run sweep button
         VPoints double % Array of ExB voltage setpoints
         VPoints2 double % Array of ExB voltage setpoints
+        hConfFigure
         
 
         DwellTime double % Dwell time setting
@@ -65,8 +65,7 @@ classdef Sweep2D < acquisition
 
             obj@acquisition(hGUI);
             
-            % Add listener to delete configuration GUI figure if main beamline GUI deleted
-            listener(obj.hBeamlineGUI,'ObjectBeingDestroyed',@obj.beamlineGUIDeleted);
+            
             
             % set testLabel
             obj.testLab = sprintf('%s_%s',num2str(obj.hBeamlineGUI.TestSequence),obj.Type);
@@ -326,14 +325,7 @@ classdef Sweep2D < acquisition
 
         end
 
-        function beamlineGUIDeleted(obj,~,~)
-            %BEAMLINEGUIDELETED Delete configuration GUI figure
-
-            if isvalid(obj) && isvalid(obj.hConfFigure)
-                delete(obj.hConfFigure);
-            end
-            
-        end
+        
     end
 
     methods (Access = private)
@@ -422,12 +414,12 @@ classdef Sweep2D < acquisition
                 obj.hBeamlineGUI.stopTimer();
 
                 % Create figures and axes
-                obj.hFigure1 = figure('NumberTitle','off',...
+                obj.hFigure = figure('NumberTitle','off',...
                                       'Name','Faraday Cup Current vs Voltage',...
                                       'DeleteFcn',@obj.closeGUI);
 
 
-                obj.hAxes1 = axes(obj.hFigure1);
+                obj.hAxes1 = axes(obj.hFigure);
 
                 % Preallocate arrays
                 FX = reshape(obj.VPoints,[stepsVal,stepsVal2])';
@@ -476,10 +468,10 @@ classdef Sweep2D < acquisition
             end
             function scan_step(src,evt)
                         iV = get(src,'TasksExecuted');
-                        if isempty(obj.hFigure1) || ~isvalid(obj.hFigure1)
-                            obj.hFigure1 = figure('NumberTitle','off',...
+                        if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
+                            obj.hFigure = figure('NumberTitle','off',...
                                 'Name','Faraday Cup Current vs Voltage');
-                            obj.hAxes1 = axes(obj.hFigure1); %#ok<LAXES> Only executed if figure deleted or not instantiated
+                            obj.hAxes1 = axes(obj.hFigure); %#ok<LAXES> Only executed if figure deleted or not instantiated
                         end
 
                         % Set ExB voltage
@@ -558,6 +550,9 @@ classdef Sweep2D < acquisition
             obj.hBeamlineGUI.restartTimer();
         end
 
+    end
+
+    methods (Access = public)
         function closeGUI(obj,~,~)
             %Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
             obj.complete();
@@ -566,7 +561,6 @@ classdef Sweep2D < acquisition
                 % Delete obj
             delete(obj);
         end
-
     end
 
 end

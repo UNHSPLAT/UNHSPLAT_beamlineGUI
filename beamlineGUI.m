@@ -8,6 +8,7 @@ classdef beamlineGUI < labGUI
         hStatusGrp % Handle to beamline status uicontrol group
         hCamGUI % Handle to camera control init button
         hCamButton % Handle to camera button
+        hBeamMonFigure
     end
     
     properties (Access = protected)
@@ -33,7 +34,7 @@ classdef beamlineGUI < labGUI
     methods
         function obj = beamlineGUI
             %BEAMLINEGUI Construct an instance of this class
-
+            
             % Check for and clean up any running timers
             if ~isempty(timerfindall)
                 warning('Matlab timers found running, deleting all timers');
@@ -49,6 +50,9 @@ classdef beamlineGUI < labGUI
             % Create GUI components and layout
             obj.createLayout();
 
+            obj.updateReadings();
+            obj.hBeamMonFigure = beamlineMonitor(obj);
+            obj.hBeamMonFigure.runSweep();
             % Create and start status update timer
             obj.createTimer();
         end

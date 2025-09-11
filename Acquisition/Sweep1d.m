@@ -253,8 +253,7 @@ classdef Sweep1d < acquisition
                 logSpacing = logical(obj.hSpacingEdit.Value);
 
                 % Retrieve config info
-                operator = obj.hBeamlineGUI.TestOperator;
-                gasType = obj.hBeamlineGUI.GasType;
+                gasType = obj.hBeamlineGUI.gasType;
                 testSequence = obj.hBeamlineGUI.TestSequence;
     
                 % Create voltage setpoint array
@@ -267,7 +266,7 @@ classdef Sweep1d < acquisition
                 obj.VPoints = reshape(vPoints,1,[]);
 
                 % Save config info
-                save(fullfile(obj.hBeamlineGUI.DataDir,'config.mat'),'vPoints','minVal','maxVal','stepsVal','dwellVal','logSpacing','operator','gasType','testSequence');
+                save(fullfile(obj.hBeamlineGUI.DataDir,'config.mat'),'vPoints','minVal','maxVal','stepsVal','dwellVal','logSpacing','gasType','testSequence');
     
                 % Set DwellTime property
                 obj.DwellTime = dwellVal;
@@ -389,6 +388,8 @@ classdef Sweep1d < acquisition
             obj.hBeamlineGUI.restartTimer();
         end
 
+    end
+    methods (Access = public)
         function closeGUI(obj,~,~)
             %Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
             obj.complete();
@@ -398,5 +399,4 @@ classdef Sweep1d < acquisition
             delete(obj);
         end
     end
-
 end

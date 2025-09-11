@@ -8,7 +8,6 @@ classdef beamlineMonitor < acquisition
     end
 
     properties (SetAccess = private)
-        hFigure % Handle to readings figure
         hAxesP % Handle to pressure readings axes
         hAxesI % Handle to current readings axes
         hAxesV % Handle to voltage readings axes
@@ -64,12 +63,11 @@ classdef beamlineMonitor < acquisition
                 % Initialize Readings with LastRead from beamlineGUI
                 obj.Readings = obj.hBeamlineGUI.LastRead;
                 % Retrieve config info
-                operator = obj.hBeamlineGUI.TestOperator;
-                gasType = obj.hBeamlineGUI.GasType;
+                gasType = obj.hBeamlineGUI.gasType;
                 testSequence = obj.hBeamlineGUI.TestSequence;
     
                 % Save config info
-                save(fullfile(obj.hBeamlineGUI.DataDir,'config.mat'),'operator','gasType','testSequence');
+                save(fullfile(obj.hBeamlineGUI.DataDir,'config.mat'),'gasType','testSequence');
 
                 start(obj.ReadingsListener);
 
@@ -95,6 +93,24 @@ classdef beamlineMonitor < acquisition
         end
 
         function closeFigure(obj,~,~)
+            %CLOSEFIGURE Re-enable beamline GUI run test button, plot all data, and delete obj when figure is closed
+            
+            % Enable beamline GUI run test button if still valid
+%             if isvalid(obj.hBeamlineGUI)
+%                 set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
+%                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
+%                 obj.mkFigure();
+%                 obj.plotVals();
+%             end
+
+            % Delete obj
+%             readings = obj.Readings;
+%             save(fullfile(obj.hBeamlineGUI.DataDir,'beamlineMonitor.mat'),'readings');
+            delete(obj.ReadingsListener);
+            delete(obj);
+
+        end
+        function closeGUI(obj,~,~)
             %CLOSEFIGURE Re-enable beamline GUI run test button, plot all data, and delete obj when figure is closed
             
             % Enable beamline GUI run test button if still valid
