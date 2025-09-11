@@ -10,8 +10,10 @@ function instruments = setupSWIPSInstruments()
     
     instruments.caen_HVPS1.connectDevice;
 
-    instruments.newportStage.run;
-
+%     instruments.newportStage.run;
+    instruments.newportStage.initDevice();
+%     instruments.newportStage.home();
+    
     instruments.Opal_Kelly.connectDevice;
     instruments.Opal_Kelly.configurePPA_ok;
     %assign tags to instrument structures

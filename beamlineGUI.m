@@ -8,8 +8,6 @@ classdef beamlineGUI < labGUI
         hStatusGrp % Handle to beamline status uicontrol group
         hCamGUI % Handle to camera control init button
         hCamButton % Handle to camera button
-        hGasText % Handle to gas type label
-        hGasEdit % Handle to gas type popupmenu
     end
     
     properties (Access = protected)

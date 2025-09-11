@@ -148,8 +148,8 @@ classdef (Abstract) labGUI < handle
 
             if ~exist('fname','var')
                 fname = fullfile(obj.DataDir,['readings_',num2str(obj.TestSequence),'.mat']);
-                csvName = fullfile(obj.DataDir,['readings_',num2str(obj.TestSequence),'.csv']);
             end
+            csvName = strrep(fname,'.mat','.csv');
 
             if isfile(fname)
                 save(fname,'-struct','readings','-append');
@@ -158,7 +158,6 @@ classdef (Abstract) labGUI < handle
             end
 
             if isfile(csvName)
-                fprintf('Appending to existing log file: %s\n',fname);
                 writetable(struct2table(obj.LastRead), csvName,'WriteMode','append','WriteVariableNames',false);
             else
                 writetable(struct2table(obj.LastRead), csvName);

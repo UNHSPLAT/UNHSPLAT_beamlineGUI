@@ -512,7 +512,7 @@ classdef Sweep2D < acquisition
                             try
                                 obj.scan_mon.(tag)(iV) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
                             catch
-                                warning(sprintf('data collect failed for %s',tag))
+%                                 warning(sprintf('data collect failed for %s',tag))
                                 obj.scan_mon.(tag)(iV) = sprintf(obj.hBeamlineGUI.Monitors.(tag).formatSpec,obj.hBeamlineGUI.Monitors.(tag).lastRead);
                             end
                         end
