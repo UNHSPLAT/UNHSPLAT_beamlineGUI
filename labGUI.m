@@ -150,12 +150,6 @@ classdef (Abstract) labGUI < handle
             end
             csvName = strrep(fname,'.mat','.csv');
 
-            if isfile(fname)
-                save(fname,'-struct','readings','-append');
-            else
-                save(fname,'-struct','readings');
-            end
-
             if isfile(csvName)
                 writetable(struct2table(obj.LastRead), csvName,'WriteMode','append','WriteVariableNames',false);
             else
@@ -227,7 +221,7 @@ classdef (Abstract) labGUI < handle
 
             % Create logging timer
             obj.hLogTimer = timer('Name','logTimer',...
-                'Period',5,...
+                'Period',2,...
                 'ExecutionMode','fixedDelay',...
                 'BusyMode','drop',...
                 'TimerFcn',@obj.updateLog,...

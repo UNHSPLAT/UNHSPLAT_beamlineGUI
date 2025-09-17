@@ -367,9 +367,9 @@ classdef Sweep1d < acquisition
             end
             % Save results .csv file
             function end_scan(src,evt)
-                fname = 'results.csv';
-                writetable(struct2table(obj.scan_mon), fullfile(obj.hBeamlineGUI.DataDir,fname));
-                obj.complete();
+                fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
+                writetable(struct2table(obj.scan_mon), fname);
+                obj.complete()
                 fprintf('\nTest complete!\n');
             end
 

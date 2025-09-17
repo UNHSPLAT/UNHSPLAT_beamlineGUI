@@ -7,7 +7,7 @@ classdef Sweep2D < acquisition
         MaxDefault double = 1 % Default maximum voltage
         StepsDefault double = 5 % Default number of steps
         DwellDefault double = 1 % Default dwell time
-        stepDwell double = 1 % Time to wait after setting voltage before acquiring data
+        rampDwell double = 1 % Time to wait after setting voltage before acquiring data
         % PSList string = ["ExB","ESA","Defl","Ysteer"] %    List of sweep supplies
     end
 
@@ -64,8 +64,6 @@ classdef Sweep2D < acquisition
             %FARADAYCUPVSEXBSWEEP Construct an instance of this class
 
             obj@acquisition(hGUI);
-            
-            
             
             % set testLabel
             obj.testLab = sprintf('%s_%s',num2str(obj.hBeamlineGUI.TestSequence),obj.Type);
@@ -488,7 +486,7 @@ classdef Sweep2D < acquisition
                         end
                         % Pause for ramp time
                 
-                        pause(obj.stepDwell);
+                        pause(obj.rampDwell);
                         % Obtain readings
                         fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
                         obj.hBeamlineGUI.readHardware();
@@ -502,12 +500,7 @@ classdef Sweep2D < acquisition
                         fields = fieldnames(obj.hBeamlineGUI.Monitors);
                         for i=1:numel(fields)
                             tag = fields{i};
-                            try
-                                obj.scan_mon.(tag)(iV) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
-                            catch
-%                                 warning(sprintf('data collect failed for %s',tag))
-                                obj.scan_mon.(tag)(iV) = sprintf(obj.hBeamlineGUI.Monitors.(tag).formatSpec,obj.hBeamlineGUI.Monitors.(tag).lastRead);
-                            end
+                            obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
                         end
                         
                         FF = reshape(obj.scan_mon.(daqTag),[stepsVal,stepsVal2])';

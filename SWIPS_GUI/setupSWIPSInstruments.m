@@ -11,8 +11,10 @@ function instruments = setupSWIPSInstruments()
 
      % Configure the Stanford research read functions
      function val = read_srsHVPS(self)
+         val = zeros(2,1);
          if self.Connected
-             val = self.measV;
+             val(1) = self.measV;
+             val(2) = self.measI;
          end
      end
      instruments.HvMCPn.readFunc = @read_srsHVPS;
