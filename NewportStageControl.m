@@ -63,38 +63,41 @@ classdef NewportStageControl < handle
         end
 
         function connectDevice(obj)
-            
+            if ~ obj.Connected
+                if ~isempty(obj.myxps)
+                    open_code=obj.myxps.OpenInstrument(obj.address,5001,1000);
+                    if open_code == 0
+                        obj.Connected = true;
+                    else
+                        warning('Failed to connect to Newport XPS stage');
+                    end
+                end
+            end
         end
 
         function run(obj)
+            obj.connectDevice();
             obj.initDevice();
             obj.home();
             start(obj.Timer)
         end
 
         function initDevice(obj)
-            if ~ obj.Connected
-                if ~isempty(obj.myxps)
-                    open_code=obj.myxps.OpenInstrument(obj.address,5001,1000);
-                    if open_code == 0
-                        init_codes = NaN(1,length(obj.groups));
-                        for i = 1:length(obj.groups)
-                            gp = obj.groups(i);
-                            code=obj.myxps.GroupInitialize(gp);
-                            init_codes(i) = code;
-                            if code ~= 0
-                                fprintf('Failed to initialize group %s\n', gp);
-                            end
-                        end
-                        display(init_codes);
-
-                        obj.group_status = ~init_codes;
-                        if ~all(init_codes)
-                            obj.Connected = true;
-                        end
-                    else
-                        warning('Failed to connect to Newport XPS stage');
+            if obj.Connected
+                init_codes = NaN(1,length(obj.groups));
+                for i = 1:length(obj.groups)
+                    gp = obj.groups(i);
+                    code=obj.myxps.GroupInitialize(gp);
+                    init_codes(i) = code;
+                    if code ~= 0
+                        fprintf('Failed to initialize group %s\n', gp);
                     end
+                end
+                display(init_codes);
+
+                obj.group_status = ~init_codes;
+                if ~all(init_codes)
+                    obj.Connected = true;
                 end
             end
         end

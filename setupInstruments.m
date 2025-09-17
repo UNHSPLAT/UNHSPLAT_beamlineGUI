@@ -47,12 +47,6 @@
             hFaraday.devRW(':SYST:LOC');
         end
     end
-    
-     function self = config_newport(self)
-        if self.Connected
-        self.myxps.PositionerUserTravelLimitsSet('Group1.Pos',-150,150);
-        end
-     end
 
     % Generate list of available hardware
 
@@ -73,7 +67,7 @@
                          "newportStage",NewportStageControl('192.168.0.254')...
                          );
 
-    config_newport(instruments.newportStage);
+    
 
     %assign tags to instrument structures
     fields = fieldnames(instruments);

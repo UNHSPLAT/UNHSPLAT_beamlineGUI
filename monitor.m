@@ -13,6 +13,7 @@ classdef monitor < handle
         active = false %tag indicating if the monitor can be set (like a highvoltage power supply) or cant be set (like a pressure monitor)
         group string = ""%
         children = []%
+        monTimer
     end
     properties (SetObservable) 
         lastRead %

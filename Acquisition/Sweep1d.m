@@ -3,10 +3,10 @@ classdef Sweep1d < acquisition
 
     properties (Constant)
         Type string = "Sweep 1D" % Acquisition type identifier string
-        MinDefault double = 100 % Default minimum voltage
-        MaxDefault double = 300 % Default maximum voltage
+        MinDefault double = 50 % Default minimum voltage
+        MaxDefault double = 100 % Default maximum voltage
         StepsDefault double = 4 % Default number of steps
-        DwellDefault double = 1 % Default dwell time
+        DwellDefault double = 5 % Default dwell time
         % PSList string = ["ExB","ESA","Defl","Ysteer"] % List of sweep supplies
     end
 
@@ -102,7 +102,7 @@ classdef Sweep1d < acquisition
             obj.hSupplyEdit = uicontrol(obj.hConfFigure,'Style','popupmenu',...
                 'Position',[xpos,ystart,xeditsize,ysize],...
                 'String',obj.PSList,...
-                'Value',1,...
+                'Value',2,...
                 'HorizontalAlignment','right');
             
             ypos = ypos-ysize;
@@ -115,7 +115,7 @@ classdef Sweep1d < acquisition
             obj.hResultEdit = uicontrol(obj.hConfFigure,'Style','popupmenu',...
                 'Position',[xpos,ypos,xeditsize,ysize],...
                 'String',obj.resultList,...
-                'Value',1,...
+                'Value',4,...
                 'HorizontalAlignment','right');
             
             
@@ -288,11 +288,13 @@ classdef Sweep1d < acquisition
                 fields = fieldnames(obj.hBeamlineGUI.Monitors);
                 for i=1:numel(fields)
                     tag = fields{i};
+                    disp(tag);
                     monitor = obj.hBeamlineGUI.Monitors.(tag);
+                    mon_shape = length(obj.hBeamlineGUI.Monitors.(tag).lastRead);
                     if contains(monitor.formatSpec,'%s')
-                        obj.scan_mon.(tag)=strings(length(obj.VPoints),1);
+                        obj.scan_mon.(tag)=strings(length(obj.VPoints),mon_shape);
                     else
-                        obj.scan_mon.(tag) = zeros(length(obj.VPoints),1);
+                        obj.scan_mon.(tag) = zeros(length(obj.VPoints),mon_shape)*nan;
                     end
                 end
                 
@@ -339,7 +341,9 @@ classdef Sweep1d < acquisition
 
                     % Obtain readings
                     fname = fullfile(obj.hBeamlineGUI.DataDir,[strrep(sprintf('%s_%.2fV',psTag,obj.VPoints(iV)),'.','p'),'.mat']);
-                    readings = obj.hBeamlineGUI.updateReadings([],[],fname);
+                    fprintf(fname);
+                    obj.hBeamlineGUI.readHardware();
+                    obj.hBeamlineGUI.updateLog([],[],fname);
                     
                     fprintf('Setting: [%6.1f] V...\n',obj.VPoints(iV));
                     fprintf('Result:  [%6.1f] V...\n',...
@@ -348,9 +352,9 @@ classdef Sweep1d < acquisition
                     fields = fieldnames(obj.hBeamlineGUI.Monitors);
                     for i=1:numel(fields)
                         tag = fields{i};
-                        obj.scan_mon.(tag)(iV) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
+                        obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
                     end
-                    plot(obj.hAxes1,obj.scan_mon.(psTag)(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
+                    plot(obj.hAxes1,obj.VPoints(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
                     %set(obj.hAxes1,'YScale','log');
                     xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
                     ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
@@ -365,7 +369,7 @@ classdef Sweep1d < acquisition
             function end_scan(src,evt)
                 fname = 'results.csv';
                 writetable(struct2table(obj.scan_mon), fullfile(obj.hBeamlineGUI.DataDir,fname));
-                obj.complete()
+                obj.complete();
                 fprintf('\nTest complete!\n');
             end
 

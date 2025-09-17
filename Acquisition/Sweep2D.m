@@ -435,10 +435,11 @@ classdef Sweep2D < acquisition
                     tag = fields{i};
                     disp(tag);
                     monitor = obj.hBeamlineGUI.Monitors.(tag);
+                    mon_shape = length(obj.hBeamlineGUI.Monitors.(tag).lastRead);
                     if contains(monitor.formatSpec,'%s')
-                        obj.scan_mon.(tag)=strings(length(obj.VPoints),1);
+                        obj.scan_mon.(tag)=strings(length(obj.VPoints),mon_shape);
                     else
-                        obj.scan_mon.(tag) = zeros(length(obj.VPoints),1)*nan;
+                        obj.scan_mon.(tag) = zeros(length(obj.VPoints),mon_shape)*nan;
                     end
                 end
 

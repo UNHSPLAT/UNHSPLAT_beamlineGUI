@@ -105,18 +105,17 @@ classdef (Abstract) labGUI < handle
         
         function restartTimer(obj,~,~)
             %RESTARTTIMER Restarts timer if error
-
             function restartFunc(x)
                 x.restartTimer();
                 pause(.1);
             end
             structfun(@restartFunc,obj.Hardware,'UniformOutput',false);
-
+           
             % Stop log timer if still running
             if strcmp(obj.hLogTimer.Running,'on')
                 stop(obj.hLogTimer);
             end
-           
+          
             % Restart log timer
             start(obj.hLogTimer);
         end
