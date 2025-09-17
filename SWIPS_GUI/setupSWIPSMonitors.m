@@ -32,7 +32,7 @@ function monitors = setupSWIPSMonitors(instruments)
         end
         self.lock = true;
         %check the voltage being applied and ramp the voltage in steps if need be
-        minstep = 10;
+        minstep = 20;
         step_rate = 5;
 
         if abs(volt)-abs(self.lastRead)>minstep

@@ -11,6 +11,7 @@ classdef Sweep1d < acquisition
     end
 
     properties
+        rampDwell = 2
         PSTag string % String identifying user-selected HVPS
         resultTag string % String identifying user-selected HVPS
 
@@ -34,6 +35,7 @@ classdef Sweep1d < acquisition
         hMaxEdit % Handle to maximum voltage field
         hDwellText % Handle to dwell time label
         hDwellEdit % Handle to dwell time field
+        hrampEdit
         hSweepBtn % Handle to run sweep button
         VPoints double % Array of ExB voltage setpoints
         DwellTime double % Dwell time setting
@@ -66,7 +68,7 @@ classdef Sweep1d < acquisition
             obj.hConfFigure = figure('MenuBar','none',...
                 'ToolBar','none',...
                 'Resize','off',...
-                'Position',[400,160,300,240],...
+                'Position',[400,160,300,280],...
                 'NumberTitle','off',...
                 'Name','Sweep Config',...
                 'DeleteFcn',@obj.closeGUI);
@@ -87,7 +89,7 @@ classdef Sweep1d < acquisition
 
             
             % Set positions
-            ystart = 210;
+            ystart = 250;
             ypos = ystart;
             ysize = 20;
             xpos = 150;
@@ -120,7 +122,7 @@ classdef Sweep1d < acquisition
             
             
             % Set positions
-            ystart = 155;
+            ystart = 200;
             ypos = ystart;
             ysize = 20;
             ygap = 16;
@@ -196,7 +198,23 @@ classdef Sweep1d < acquisition
                 'String',num2str(obj.DwellDefault),...
                 'HorizontalAlignment','right');
             
+            ypos = ypos-ysize-ygap;
+
+            uicontrol(obj.hConfFigure,'Style','text',...
+                'Position',[xpos,ypos,xtextsize,ysize],...
+                'String','Ramp Pause [s]: ',...
+                'FontSize',8,...
+                'HorizontalAlignment','center');
+            
+            ypos = ypos-ysize;
+            
+            obj.hrampEdit = uicontrol(obj.hConfFigure,'Style','edit',...
+                'Position',[xpos+(xtextsize-xeditsize)/2,ypos,xeditsize,ysize],...
+                'String',num2str(obj.rampDwell),...
+                'HorizontalAlignment','right');
+            
             ypos = ypos-ysize*2-ygap;
+            str2double(obj.hDwellEdit.String);
             
             obj.hSweepBtn = uicontrol(obj.hConfFigure,'Style','pushbutton',...
                 'Position',[xpos,ypos,xtextsize,ysize+ygap],...
@@ -233,6 +251,7 @@ classdef Sweep1d < acquisition
                 maxVal = str2double(obj.hMaxEdit.String);
                 stepsVal = str2double(obj.hStepsEdit.String);
                 dwellVal = str2double(obj.hDwellEdit.String);
+                
     
                 % % Error checking
                 if isnan(minVal) || isnan(maxVal) || isnan(stepsVal) || isnan(dwellVal) || isempty(psTag)
@@ -278,10 +297,10 @@ classdef Sweep1d < acquisition
                 obj.hBeamlineGUI.stopTimer();
 
                 % Create figures and axes
-                obj.hFigure1 = figure('NumberTitle','off',...
-                                      'Name','Voltage Sweep',...
-                                      'DeleteFcn',@obj.closeGUI);
-                obj.hAxes1 = axes(obj.hFigure1);
+%                 obj.hFigure1 = figure('NumberTitle','off',...
+%                                       'Name','Voltage Sweep',...
+%                                       'DeleteFcn',@obj.closeGUI);
+%                 obj.hAxes1 = axes(obj.hFigure1);
 
                 % Preallocate arrays
                 obj.scan_mon = struct();
@@ -297,15 +316,26 @@ classdef Sweep1d < acquisition
                         obj.scan_mon.(tag) = zeros(length(obj.VPoints),mon_shape)*nan;
                     end
                 end
-                
-                iV = 0;
-                % Listener to sample measurements after voltage ramp and
-                % dwell time
-                obj.listo = listener(obj.hBeamlineGUI.Monitors.(psTag),'lock',...
-                                                 'PostSet',...
-                                                    @read_buffer);
-                % trigger voltage ramp
-                scan_step();
+                 % Run sweep
+                vsetx = nan;
+                obj.scanTimer = timer('Period',obj.DwellTime,... %period
+                          'ExecutionMode','fixedDelay',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
+                          'BusyMode','drop',... %{drop, error, queue}
+                          'TasksToExecute',numel(obj.VPoints),...          
+                          'StartDelay',0,...
+                          'TimerFcn',@scan_step,...
+                          'StartFcn',[],...
+                          'StopFcn',@end_scan,...
+                          'ErrorFcn',[]);
+                start(obj.scanTimer);
+%                 iV = 0;
+%                 % Listener to sample measurements after voltage ramp and
+%                 % dwell time
+%                 obj.listo = listener(obj.hBeamlineGUI.Monitors.(psTag),'lock',...
+%                                                  'PostSet',...
+%                                                     @read_buffer);
+%                 % trigger voltage ramp
+%                 scan_step();
 
             catch MExc
                 % Delete figure if error, triggering closeGUI callback
@@ -316,55 +346,105 @@ classdef Sweep1d < acquisition
             end
 
                            % Run sweep
-            function scan_step(varargin)
-                iV=iV+1;
-                if isempty(obj.hFigure1) || ~isvalid(obj.hFigure1)
-                    obj.hFigure1 = figure('NumberTitle','off',...
-                        'Name','Voltage sweep');
-                    obj.hAxes1 = axes(obj.hFigure1); %#ok<LAXES> Only executed if figure deleted or not instantiated
+%             function scan_step(varargin)
+%                 iV=iV+1;
+%                 if isempty(obj.hFigure1) || ~isvalid(obj.hFigure1)
+%                     obj.hFigure1 = figure('NumberTitle','off',...
+%                         'Name','Voltage sweep');
+%                     obj.hAxes1 = axes(obj.hFigure1); %#ok<LAXES> Only executed if figure deleted or not instantiated
+%                 end
+% 
+%                 fprintf('Setting voltage to %.2f V...\n',obj.VPoints(iV));
+%                 obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(iV));    
+%             end
+% 
+%             function read_buffer(varargin)
+%                 obj.scanTimer = timer('ExecutionMode','singleShot',...
+%                         'StartDelay',obj.DwellTime,...
+%                         'TimerFcn',@read_results);
+%                  start(obj.scanTimer);
+%             end
+% 
+%             function read_results(varargin)
+%                 if ~obj.hBeamlineGUI.Monitors.(psTag).lock
+%                     % Wait for voltage ramp to complete
+% 
+%                     % Obtain readings
+%                     fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
+%                     obj.hBeamlineGUI.readHardware();
+%                     obj.hBeamlineGUI.updateLog([],[],fname);
+%                     
+%                     fprintf('Setting: [%6.1f] V...\n',obj.VPoints(iV));
+%                     fprintf('Result:  [%6.1f] V...\n',...
+%                             obj.hBeamlineGUI.Monitors.(psTag).lastRead);
+%                     % Assign variables
+%                     fields = fieldnames(obj.hBeamlineGUI.Monitors);
+%                     for i=1:numel(fields)
+%                         tag = fields{i};
+%                         obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
+%                     end
+%                     plot(obj.hAxes1,obj.VPoints(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
+%                     %set(obj.hAxes1,'YScale','log');
+%                     xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
+%                     ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
+%                     if iV<numel(obj.VPoints)
+%                         scan_step();
+%                     else
+%                         end_scan();
+%                     end
+%                 end
+%             end
+%             % Save results .csv file
+%             function end_scan(src,evt)
+%                 fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
+%                 writetable(struct2table(obj.scan_mon), fname);
+%                 obj.complete()
+%                 fprintf('\nTest complete!\n');
+%             end
+
+
+        function scan_step(src,evt)
+                iV = get(src,'TasksExecuted');
+                if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
+                    obj.hFigure = figure('NumberTitle','off',...
+                        'Name','Faraday Cup Current vs Voltage');
+                    obj.hAxes1 = axes(obj.hFigure); %#ok<LAXES> Only executed if figure deleted or not instantiated
                 end
 
-                fprintf('Setting voltage to %.2f V...\n',obj.VPoints(iV));
-                obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(iV));    
-            end
+                % Set ExB voltage
+                
+                if obj.VPoints(iV) ~= vsetx
+                    vsetx = obj.VPoints(iV);
+                    fprintf('Setting %s voltage to %.2f V...\n',psTag,obj.VPoints(iV));
+                    obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(iV));
+                end
+                
+                % Pause for ramp time
+                
+                waitfor(obj.hBeamlineGUI.Monitors.(psTag),'lock',false);
+                
 
-            function read_buffer(varargin)
-                tRead = timer('ExecutionMode','singleShot',...
-                'StartDelay',obj.DwellTime,...
-                'TimerFcn',@read_results);
-                 start(tRead);
-            end
+                % Obtain readings
+                fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
+                obj.hBeamlineGUI.readHardware();
+                obj.hBeamlineGUI.updateLog([],[],fname);
 
-            function read_results(varargin)
-                if ~obj.hBeamlineGUI.Monitors.(psTag).lock
-                    % Wait for voltage ramp to complete
-
-                    % Obtain readings
-                    fname = fullfile(obj.hBeamlineGUI.DataDir,[strrep(sprintf('%s_%.2fV',psTag,obj.VPoints(iV)),'.','p'),'.mat']);
-                    fprintf(fname);
-                    obj.hBeamlineGUI.readHardware();
-                    obj.hBeamlineGUI.updateLog([],[],fname);
-                    
-                    fprintf('Setting: [%6.1f] V...\n',obj.VPoints(iV));
-                    fprintf('Result:  [%6.1f] V...\n',...
+                fprintf('Setting: [%6.1f] V...\n',obj.VPoints(iV));
+                fprintf('Result:  [%6.1f] V...\n',...
                             obj.hBeamlineGUI.Monitors.(psTag).lastRead);
-                    % Assign variables
-                    fields = fieldnames(obj.hBeamlineGUI.Monitors);
-                    for i=1:numel(fields)
-                        tag = fields{i};
-                        obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
-                    end
-                    plot(obj.hAxes1,obj.VPoints(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
-                    %set(obj.hAxes1,'YScale','log');
-                    xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
-                    ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
-                    if iV<numel(obj.VPoints)
-                        scan_step();
-                    else
-                        end_scan();
-                    end
+                % Assign variables
+                fields = fieldnames(obj.hBeamlineGUI.Monitors);
+                for i=1:numel(fields)
+                    tag = fields{i};
+                    obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
                 end
+                
+                plot(obj.hAxes1,obj.VPoints(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
+                    %set(obj.hAxes1,'YScale','log');
+                xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
+                ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
             end
+
             % Save results .csv file
             function end_scan(src,evt)
                 fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
@@ -372,8 +452,9 @@ classdef Sweep1d < acquisition
                 obj.complete()
                 fprintf('\nTest complete!\n');
             end
-
         end
+
+                
 
         function complete(obj,~,~)
             %CLOSEGUI Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
@@ -388,6 +469,7 @@ classdef Sweep1d < acquisition
                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
             end
 
+            
             % Restart beamline timers
             obj.hBeamlineGUI.restartTimer();
         end
