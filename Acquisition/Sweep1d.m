@@ -43,6 +43,7 @@ classdef Sweep1d < acquisition
         scanTimer timer%
         scan_mon %
         listo%
+        testLab
     end
 
     methods
@@ -50,6 +51,8 @@ classdef Sweep1d < acquisition
             %FARADAYCUPVSEXBSWEEP Construct an instance of this class
 
             obj@acquisition(hGUI);
+            % set testLabel
+            obj.testLab = sprintf('%s_%s',num2str(obj.hBeamlineGUI.TestSequence),obj.Type);
             
             % Add listener to delete configuration GUI figure if main beamline GUI deleted
             listener(obj.hBeamlineGUI,'ObjectBeingDestroyed',@obj.beamlineGUIDeleted);

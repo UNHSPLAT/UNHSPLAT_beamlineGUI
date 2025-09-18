@@ -38,10 +38,6 @@ classdef monitor < handle
                 
                 % Handle both single objects and arrays
                 parents = obj.parent;
-%                 if ~iscell(parents)
-%                     fprintf(obj.textLabel)
-%                     parents = {parents};
-%                 end
                 
                 % Create a listener for each parent
                 for i = 1:numel(parents)
