@@ -55,7 +55,7 @@ classdef Sweep2D < acquisition
         scanTimer timer%
         scan_mon %
 
-        testLab = string
+
     end
 
     methods
@@ -66,7 +66,6 @@ classdef Sweep2D < acquisition
             obj@acquisition(hGUI);
             
             % set testLabel
-            obj.testLab = sprintf('%s_%s',num2str(obj.hBeamlineGUI.TestSequence),obj.Type);
 
             % get active and inactive monitors for scanning
             function tag = get_active(mon)
@@ -539,7 +538,7 @@ classdef Sweep2D < acquisition
                 set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
             end
-
+            
             % Restart beamline timers
             obj.hBeamlineGUI.restartTimer();
         end

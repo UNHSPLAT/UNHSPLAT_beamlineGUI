@@ -195,11 +195,6 @@ classdef (Abstract) labGUI < handle
             structfun(@(x)delete(x),obj.Hardware,'UniformOutput',false);
         end
         
-        
-    end
-
-    methods (Access = protected)
-
         function genTestSequence(obj)
             %GENTESTSEQUENCE Generates test sequence, date, and data directory
             
@@ -213,7 +208,16 @@ classdef (Abstract) labGUI < handle
             if ~exist(obj.DataDir,'dir')
                 mkdir(obj.DataDir);
             end
+            
+            % Update GUI test sequence and test date fields
+            set(obj.hSequenceEdit,'String',num2str(obj.TestSequence));
+            set(obj.hDateEdit,'String',obj.TestDate);
         end
+    end
+
+    methods (Access = protected)
+
+        
 
         %% Timer management
         function createTimer(obj)
@@ -396,9 +400,7 @@ classdef (Abstract) labGUI < handle
             % Generate new test sequence, test date, and data directory
             obj.genTestSequence;
 
-            % Update GUI test sequence and test date fields
-            set(obj.hSequenceEdit,'String',num2str(obj.TestSequence));
-            set(obj.hDateEdit,'String',obj.TestDate);
+            
 
             % Find test acquisition class, instantiate, and execute
             acqPath = which(strrep(obj.AcquisitionType,' ',''));
