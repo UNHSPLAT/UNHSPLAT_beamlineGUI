@@ -7,6 +7,8 @@ classdef SWIPS_GUI < labGUI
         hHVStatusGrp % Handle to high voltage status uicontrol group
         hPosStatusGrp % Handle to position status panel group
         hInstGrp % Handle to instrument monitors panel
+        mcpRampListener
+        hMCPRamp
     end
     
     properties (Access = protected)
@@ -51,6 +53,9 @@ classdef SWIPS_GUI < labGUI
     methods (Access = public)
 
         function createLayout(obj)
+            uimenu(obj.hToolsMenu,'Text','Ramp MCP Voltage',...
+                'MenuSelectedFcn',@obj.mcpRampCallback);
+
             % Implementation of abstract method from labGUI
             %CREATEGUI Create SWIPS GUI components
             
@@ -87,6 +92,29 @@ classdef SWIPS_GUI < labGUI
                     guiStatusGrpSet(monitor);
                 end
             end
+
+            %===================================================================================
+             % MCP ramp activate and abort button
+            obj.hMCPRamp = uicontrol(obj.hHVStatusGrp, ...
+                'Style','pushbutton',...
+               'Position',[sum(colSize(1:3))+xgap*3,ygap,sum(colSize(4:end))+xgap*3,obj.ysize],...
+               'String','Ramp MCP',...
+               'FontSize',12,...
+               'FontWeight','bold',...
+                'HorizontalAlignment','center',...
+                'Callback',@obj.mcpRampCallback);
+
+            function ramp_stat(self)
+                if self.parent.lock
+                    curr_string = 'Abort Ramp';
+                else
+                    curr_string = 'Ramp MCP';
+                end
+                se
+                t(self.guiHand,'String',curr_string);
+            end
+            obj.mcpRampListener = guiListener(obj.Monitors.voltMCP,'lock',...
+                                        obj.hMCPRamp,@ramp_stat);
 
             % Adjust panel height to fit all controls
             obj.hHVStatusGrp.Position(4) = ypos+20;  % Add some padding at the bottom
@@ -146,10 +174,10 @@ classdef SWIPS_GUI < labGUI
             for i = 1:length(monitorFields)
                 monitor = obj.Monitors.(monitorFields{i});
                 if strcmp(monitor.group, 'status')
-                    fprintf('sdfdsf');
                     guiStatusGrpSet(monitor, obj.hStatusGrp);
                 end
             end
+             
 
             obj.hStatusGrp.Position(4) = ypos+20;  
 
@@ -281,6 +309,15 @@ classdef SWIPS_GUI < labGUI
             
             % Center the figure on screen
             movegui(obj.hFigure, 'center');
+        end
+
+        function mcpRampCallback(obj,~,~)
+            mcpMon = obj.Monitors.voltMCP;
+            if mcpMon.lock
+                stop(mcpMon.monTimer);
+            else
+                Ramp_MCPHVPS(mcpMon);
+            end
         end
 
     end
