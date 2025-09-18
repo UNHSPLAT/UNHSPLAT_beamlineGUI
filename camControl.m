@@ -83,7 +83,7 @@ classdef camControl < handle
             end
         end
 
-        function val = read(obj);
+        function val = read(obj)
             if obj.Connected
                 val = obj.lastRead;
             else
@@ -139,6 +139,11 @@ classdef camControl < handle
             if strcmp(obj.Timer.Running,'on')
                 stop(obj.Timer);
             end
+        end
+
+        function delete(obj)
+            % Delete the webcam object
+            obj.shutdown();
         end
 
     end

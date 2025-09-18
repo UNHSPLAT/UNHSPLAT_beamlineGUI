@@ -13,11 +13,11 @@ classdef monitor < handle
         active = false %tag indicating if the monitor can be set (like a highvoltage power supply) or cant be set (like a pressure monitor)
         group string = ""%
         children = []%
+        monTimer
     end
     properties (SetObservable) 
         lastRead %
         lock = false%
-        monTimer = timer%
         parentListener
     end
 
@@ -32,16 +32,34 @@ classdef monitor < handle
                 end
             end
             
-            %if ~strcmp(obj.parent.Type,"local")
-            %obj.parentListener = listener(obj.parent(1),...
-            %                    'lastRead','PostSet',@obj.read);
-            %end
+            if ~isempty(obj.parent)
+                % Initialize an array of listeners
+                obj.parentListener = event.listener.empty;
+                
+                % Handle both single objects and arrays
+                parents = obj.parent;
+%                 if ~iscell(parents)
+%                     fprintf(obj.textLabel)
+%                     parents = {parents};
+%                 end
+                
+                % Create a listener for each parent
+                for i = 1:numel(parents)
+                    try
+                        newListener = addlistener(parents(i), 'lastRead', 'PostSet', @obj.read);
+                        obj.parentListener(end+1) = newListener;
+                    catch ME
+                        warning('Failed to create listener for parent %d: %s', i, ME.message);
+                    end
+                end
+            end
         end
 
-        function val = read(obj) 
-            if all([obj.parent.Connected])
+        function val = read(obj,src,evnt) 
+            % if all([obj.parent.Connected])
+            try
                 val = obj.readFunc(obj);
-            else
+            catch
                 val = nan;
             end
             obj.lastRead = val;
