@@ -6,6 +6,7 @@ classdef acquisition < handle
         hBeamlineGUI % Handle to beamline GUI
 
         hFigure
+        testLab = string
     end
 
     properties (Abstract, Constant)
@@ -18,7 +19,8 @@ classdef acquisition < handle
             %UNTITLED Construct an instance of this class
             %   Detailed explanation goes here
             obj.hBeamlineGUI = hGUI;
-
+            
+            obj.testLab = sprintf('%s_%s',num2str(obj.hBeamlineGUI.TestSequence),obj.Type);
             % Add listener to delete configuration GUI figure if main beamline GUI deleted
             listener(obj.hBeamlineGUI,'ObjectBeingDestroyed',@obj.beamlineGUIDeleted);
         end
