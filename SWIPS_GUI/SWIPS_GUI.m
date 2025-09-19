@@ -57,6 +57,13 @@ classdef SWIPS_GUI < labGUI
             % Create CAEN HV Control submenu
             hCaenMenu = uimenu(obj.hToolsMenu,'Text','CAEN HV Control');
             
+            % Create Opal Kelly Settings submenu
+            hOpalMenu = uimenu(obj.hToolsMenu,'Text','Opal Kelly Settings');
+            
+            % Add acquisition time control
+            uimenu(hOpalMenu,'Text','Set Acquisition Time',...
+                'MenuSelectedFcn',@obj.setAcqTimeCallback);
+            
             % Add menu items for each HV channel
             uimenu(hCaenMenu,'Text','Upper Deflector',...
                 'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh0_upDefl',0));
@@ -362,6 +369,30 @@ classdef SWIPS_GUI < labGUI
             end
         end
 
+        
+        function setAcqTimeCallback(obj, ~, ~)
+            % Create dialog for acquisition time selection
+            choice = questdlg('Select Acquisition Time:', ...
+                'Set Acquisition Time', ...
+                '1 second','10 seconds','1 second');
+            
+            % Get the Opal Kelly device
+            ok_device = obj.Hardware.Opal_Kelly;
+            
+            % Handle response
+            if ~isempty(choice)
+                try
+                    if strcmp(choice, '1 second')
+                        ok_device.acq_time = 0;
+                    else  % 10 seconds
+                        ok_device.acq_time = 1;
+                    end
+                    ok_device.configurePPA_ok(); % Apply the new setting
+                catch ME
+                    errordlg(['Error setting acquisition time: ' ME.message], 'Error');
+                end
+            end
+        end
     end
 
 end
