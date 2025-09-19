@@ -27,12 +27,12 @@ classdef acquisition < handle
 
         function beamlineGUIDeleted(obj,~,~)
             %BEAMLINEGUIDELETED Delete configuration GUI figure
-
+            
+            obj.closeGUI();
             if isvalid(obj) && isvalid(obj.hConfFigure)
                 delete(obj.hConfFigure);
                 delete(obj.hFigure);
             end
-            closeGUI(obj);
         end
 
     end

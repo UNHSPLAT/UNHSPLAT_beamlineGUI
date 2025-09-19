@@ -57,10 +57,15 @@ classdef (Abstract) labGUI < handle
     end
     
     methods
-        function obj = labGUI(guiLab)
+        function obj = labGUI(guiLab,dataLoc)
             % Construct an instance of this class
             %   Detailed explanation goes here
-            
+            if nargin < 2
+                obj.DataLoc = fullfile(getenv("USERPROFILE"),"data");
+            else
+                obj.DataLoc = dataLoc;
+            end
+
             % Create main GUI figure
             obj.hFigure = figure('Name',guiLab,...
                 'NumberTitle','off',...
@@ -70,7 +75,6 @@ classdef (Abstract) labGUI < handle
                 'CloseRequestFcn',@obj.closeGUI);
             
             % Generate initial test sequence, date, and data directory
-            obj.DataLoc = fullfile(getenv("USERPROFILE"),"data");
             obj.genTestSequence;
             
             % Create file menu
@@ -200,11 +204,8 @@ classdef (Abstract) labGUI < handle
             
             obj.TestSequence = round(now*1e6);
             obj.TestDate = datestr(obj.TestSequence/1e6,'mmm dd, yyyy HH:MM:SS');
-            if ~isempty(obj.AcquisitionType)
-                obj.DataDir = fullfile(obj.DataLoc,strrep(obj.AcquisitionType,' ',''),num2str(obj.TestSequence));
-            else
-                obj.DataDir = fullfile(obj.DataLoc,"General",num2str(obj.TestSequence));
-            end
+            obj.DataDir = fullfile(obj.DataLoc,datestr(obj.TestSequence/1e6,'yyyymmdd'),num2str(obj.TestSequence));
+            
             if ~exist(obj.DataDir,'dir')
                 mkdir(obj.DataDir);
             end
