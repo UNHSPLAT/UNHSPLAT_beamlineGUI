@@ -38,7 +38,12 @@ function instruments = setupSWIPSInstruments()
 
     %Connect and config opalkelly
     instruments.Opal_Kelly.connectDevice();
-    instruments.Opal_Kelly.configurePPA_ok;
+
+    % @2000V - 
+    instruments.Opal_Kelly.configurePPA_ok([68,60,60,60, 60,60,60,60, 60,60,60,61, 60,60,60,76]);
+    % @2100V -
+    % instruments.Opal_Kelly.configurePPA_ok([110,80,60,60, 75,60,72,60, 60,60,61,74, 86,84,87,115]);
+    
      
     %assign tags to instrument structures
     fields = fieldnames(instruments);

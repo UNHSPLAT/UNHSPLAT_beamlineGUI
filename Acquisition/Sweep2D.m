@@ -352,9 +352,6 @@ classdef Sweep2D < acquisition
                 if isnan(minVal) || isnan(maxVal) || isnan(stepsVal) || isnan(dwellVal)
                     errordlg('All fields must be filled with a valid numeric entry!','User input error!');
                     return
-                elseif minVal > maxVal || minVal < 0 || maxVal < 0
-                    errordlg('Invalid min and max voltages! Must be increasing positive values.','User input error!');
-                    return
                 elseif dwellVal <= 0
                     errordlg('Invalid dwell time! Must be a positive value.','User input error!');
                     return
