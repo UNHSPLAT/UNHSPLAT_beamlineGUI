@@ -54,8 +54,18 @@ classdef SWIPS_GUI < labGUI
     methods (Access = public)
 
         function createLayout(obj)
-            uimenu(obj.hToolsMenu,'Text','Ramp MCP Voltage',...
-                'MenuSelectedFcn',@obj.mcpRampCallback);
+            % Create CAEN HV Control submenu
+            hCaenMenu = uimenu(obj.hToolsMenu,'Text','CAEN HV Control');
+            
+            % Add menu items for each HV channel
+            uimenu(hCaenMenu,'Text','Upper Deflector',...
+                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh0_upDefl',0));
+            uimenu(hCaenMenu,'Text','Lower Deflector',...
+                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh1_lowDefl',1));
+            uimenu(hCaenMenu,'Text','Flux Reducer',...
+                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh2_flRed',2));
+            uimenu(hCaenMenu,'Text','inner Dome',...
+                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh3_inDome',3));
 
             % Implementation of abstract method from labGUI
             %CREATEGUI Create SWIPS GUI components
@@ -317,6 +327,38 @@ classdef SWIPS_GUI < labGUI
                 stop(mcpMon.monTimer);
             else
                 Ramp_MCPHVPS(mcpMon);
+            end
+        end
+
+        function HVenableCallback(obj, channelName,chan)
+            % Get the monitor for this channel
+            if ~isfield(obj.Monitors, channelName)
+                errordlg(['Channel ' channelName ' not found'], 'Error');
+                return;
+            end
+            monitor = obj.Monitors.(channelName);
+            % Create confirmation dialog with channel-specific message
+            channelLabel = monitor.textLabel;
+            choice = questdlg([sprintf('%s:',channelLabel) channelName], ...
+                'Enable/Disable HV', ...
+                'Enable','Disable','Disable');
+            
+            % Handle response
+            if strcmp(choice, 'Enable')
+                fprintf('Enabling %s\n', channelLabel);
+                try
+                    monitor.set(0); % Set to 0V when enabling
+                    monitor.parent.setON(chan);
+                catch ME
+                    errordlg(['Error enabling ' channelLabel ': ' ME.message], 'Error');
+                end
+            elseif strcmp(choice, 'Disable')
+                fprintf('Disabling %s\n', channelLabel);
+                try
+                    monitor.parent.setOFF(chan);
+                catch ME
+                    errordlg(['Error disabling ' channelLabel ': ' ME.message], 'Error');
+                end
             end
         end
 

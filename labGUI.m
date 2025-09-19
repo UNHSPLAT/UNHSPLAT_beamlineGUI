@@ -88,6 +88,9 @@ classdef (Abstract) labGUI < handle
             uimenu(obj.hFileMenu,'Text','Select Data Directory',...
                 'MenuSelectedFcn',@obj.selectDataDirCallback);
 
+            uimenu(obj.hFileMenu,'Text','New Test Sequence',...
+                'MenuSelectedFcn',@obj.genTestSequence);
+
             % Create tools menu
             obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
             % Create Timer menu and all its menu items
