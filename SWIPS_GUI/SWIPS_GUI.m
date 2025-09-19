@@ -24,6 +24,9 @@ classdef SWIPS_GUI < labGUI
             %SWIPS_GUI Construct an instance of this class
             obj@labGUI('SWIPS');
 
+            % Generate initial test sequence, date, and data directory
+            obj.DataLoc = fullfile(getenv("USERPROFILE"),"data/SWIPS");
+
             obj.AcquisitionList = {'Sweep 1D','Sweep 2D'};
 
             % Initialize hardware and monitors
