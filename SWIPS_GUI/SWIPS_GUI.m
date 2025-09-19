@@ -110,8 +110,7 @@ classdef SWIPS_GUI < labGUI
                 else
                     curr_string = 'Ramp MCP';
                 end
-                se
-                t(self.guiHand,'String',curr_string);
+                set(self.guiHand,'String',curr_string);
             end
             obj.mcpRampListener = guiListener(obj.Monitors.voltMCP,'lock',...
                                         obj.hMCPRamp,@ramp_stat);

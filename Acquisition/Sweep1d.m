@@ -45,7 +45,6 @@ classdef Sweep1d < acquisition
         scanTimer timer%
         scan_mon %
         listo%
-        testLab
     end
 
     methods
@@ -300,10 +299,10 @@ classdef Sweep1d < acquisition
                 obj.hBeamlineGUI.stopTimer();
 
                 % Create figures and axes
-%                 obj.hFigure1 = figure('NumberTitle','off',...
-%                                       'Name','Voltage Sweep',...
-%                                       'DeleteFcn',@obj.closeGUI);
-%                 obj.hAxes1 = axes(obj.hFigure1);
+                obj.hFigure1 = figure('NumberTitle','off',...
+                                      'Name','Voltage Sweep',...
+                                      'DeleteFcn',@obj.closeGUI);
+                obj.hAxes1 = axes(obj.hFigure1);
 
                 % Preallocate arrays
                 obj.scan_mon = struct();
@@ -408,7 +407,7 @@ classdef Sweep1d < acquisition
 
         function scan_step(src,evt)
                 iV = get(src,'TasksExecuted');
-                if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
+                if isempty(obj.hFigure1) || ~isvalid(obj.hFigure1)
                     obj.hFigure = figure('NumberTitle','off',...
                         'Name','Faraday Cup Current vs Voltage');
                     obj.hAxes1 = axes(obj.hFigure); %#ok<LAXES> Only executed if figure deleted or not instantiated
