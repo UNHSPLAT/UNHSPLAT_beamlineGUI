@@ -44,6 +44,7 @@ classdef (Abstract) labGUI < handle
         hFileMenu % Handle to file top menu dropdown
         hTimerMenu % Handle to Timer top menu dropdown
         hToolsMenu % Handle to tools top menu dropdown
+
         hCopyTS % Handle to copy test sequence menu button
 
         % Panels
@@ -93,11 +94,21 @@ classdef (Abstract) labGUI < handle
 
             % Create tools menu
             obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
-            % Create Timer menu and all its menu items
-            obj.createTimerMenu();
             
-            % Create timer to periodically update readings
+            % Add acquisition control menu items
+            
+            hAcqMenu = uimenu(obj.hToolsMenu,'Text','Acquisition Control');
+
+            uimenu(hAcqMenu,'Text','Start Acquisition',...
+                'MenuSelectedFcn',@obj.startAcquisition);
+
+            uimenu(hAcqMenu,'Text','Stop Acquisition',...
+                'MenuSelectedFcn',@obj.stopAcquisition);
+            
+            % Create Timer menu and all its menu items
+            obj.createTimerMenu();            % Create timer to periodically update readings
             obj.createTimer();
+            
         end
         
         function stopTimer(obj,~,~)
@@ -216,6 +227,52 @@ classdef (Abstract) labGUI < handle
             % Update GUI test sequence and test date fields
             set(obj.hSequenceEdit,'String',num2str(obj.TestSequence));
             set(obj.hDateEdit,'String',obj.TestDate);
+        end
+
+        function isRunning = isAcquisitionRunning(obj)
+            %ISACQUISITIONRUNNING Check if there is an active acquisition running
+            isRunning = false;
+            if ~isempty(obj.Acquisitions)
+                if isvalid(obj.Acquisitions) && isprop(obj.Acquisitions, 'Timer') && ...
+                   ~isempty(obj.Acquisitions.Timer) && isvalid(obj.Acquisitions.Timer) && ...
+                   strcmp(obj.Acquisitions.Timer.Running, 'on')
+                    isRunning = true;
+                end
+            end
+        end
+
+        function stopAcquisition(obj, ~, ~)
+            %STOPACQUISITION Stops the current acquisition if one is running
+            if obj.isAcquisitionRunning()
+                try
+                    stop(obj.Acquisitions.Timer);
+                    msgbox('Acquisition stopped successfully', 'Stop Acquisition');
+                catch ME
+                    errordlg(['Failed to stop acquisition: ' ME.message], 'Stop Acquisition Error');
+                end
+            else
+                msgbox('No acquisition currently running', 'Stop Acquisition');
+            end
+        end
+
+        function startAcquisition(obj, ~, ~)
+            %STARTACQUISITION Starts the current acquisition if one exists but isn't running
+            if ~isempty(obj.Acquisitions) && isvalid(obj.Acquisitions) && ...
+               isprop(obj.Acquisitions, 'Timer') && ~isempty(obj.Acquisitions.Timer) && ...
+               isvalid(obj.Acquisitions.Timer)
+                if strcmp(obj.Acquisitions.Timer.Running, 'off')
+                    try
+                        start(obj.Acquisitions.Timer);
+                        msgbox('Acquisition started successfully', 'Start Acquisition');
+                    catch ME
+                        errordlg(['Failed to start acquisition: ' ME.message], 'Start Acquisition Error');
+                    end
+                else
+                    msgbox('Acquisition is already running', 'Start Acquisition');
+                end
+            else
+                msgbox('No acquisition available to start. Please set up an acquisition first.', 'Start Acquisition');
+            end
         end
     end
 
