@@ -64,9 +64,42 @@ function monitors = setupSWIPSMonitors(instruments)
 
     function set_caen_volt(self,chan,volt)
         % set voltage and account for lock
-        self.lock = true;
-        self.parent.setVSet(chan,volt)
-        self.lock = false;
+        
+        % check inputs
+        if isnan(volt)
+            errordlg('A valid voltage value must be entered!','Invalid input!');
+            return
+        end
+        
+        % check volt ramp up/dwn, get associate ramp rate
+        v_start = self.lastRead;
+        v_diff = abs(volt - v_start);
+        if abs(volt)>abs(v_start);
+            r_rate = self.parent.getRUP(chan);
+        else
+            r_rate = self.parent.getRDW(chan);
+        end
+
+        % issue timer to lock set according to ramp rate
+        function stop_func(src,evt)
+            self.read();
+            self.lock = false;
+            if self.monTimer.Running
+                stop(self.monTimer);
+            end
+            delete(self.monTimer);
+        end
+
+        self.monTimer = timer('Period',v_diff/(r_rate),... %period
+                      'ExecutionMode','singleShot',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
+                      'BusyMode','queue',... %{drop, error, queue}       
+                      'StartDelay',0,...
+                      'TimerFcn',@(src,evt) self.parent.setVSet(chan,abs(volt)),...
+                      'StartFcn',@(src,evt)setfield( self , 'lock' , true ),...
+                      'StopFcn',@stop_func,...
+                      'ErrorFcn',@stop_func);
+
+        start(self.monTimer);
     end
     
     function set_np_pos(self,grp,pos)
@@ -207,6 +240,45 @@ function monitors = setupSWIPSMonitors(instruments)
                         ) ...
         );
 
+
+    % =======================================================================
+    % Setup level 2 monitors (Derrive values from sibling monitors)
+    %   - level 2 monitors may utilize sibling monitors to read or set values
+    %   - because these are referential to other monitors assignment order matters
+    % =======================================================================
+
+    % Define flux reducer ratio monitor to control dome-FR sync
+    function set_FRR(self,ratio)
+        self.lastRead = ratio;
+        if isnan(ratio) || ratio==0
+            return
+        end
+        volt_dome = self.siblings(2).lastRead;
+        volt_FR = ratio*volt_dome;
+        self.siblings(1).set(volt_FR);
+    end
+
+    monitors.flRed_ratio= monitor('readFunc', @(self) self.lastRead, ...
+                        'setFunc', @set_FRR, ...
+                        'textLabel', 'Flux Red. Ratio (Set)', ...
+                        'unit', 'V_{FR}/V_{dome}', ...
+                        'active', true, ...
+                        'formatSpec', '%.1f', ...
+                        'group', 'HV', ...
+                        'parent', instruments.caen_HVPS1 ...
+                        'siblings',[monitors.voltCh2_flRed, monitors.voltCh3_inDome] ...
+                        );
+    monitors.flRed_ratio.lastRead = 0; % initialize property zero stops sync with inner dome 
+
+    % adjust inner dome set function to sync flux reducer
+    function dome_FR_set(self,chan,volt)
+        %set caen supply to desired voltage
+        set_caen_volt(self,3,volt);
+        %sync flux reducer according to flRed_ratio
+        monitors.flRed_ratio.set(monitors.flRed_ratio.lastRead);
+    end
+    monitors.voltCh3_inDome.setFunc = @dome_FR_set;
+    
     % Assign tags to monitors
     fields = fieldnames(monitors);
     for i = 1:numel(fields)
