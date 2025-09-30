@@ -72,16 +72,17 @@ function monitors = setupSWIPSMonitors(instruments)
         end
         
         % check volt ramp up/dwn, get associate ramp rate
-        v_start = self.lastRead;
-        v_diff = abs(volt - v_start);
+        v_start = abs(self.lastRead);
+        v_diff = abs(abs(volt) - v_start);
         if abs(volt)>abs(v_start);
-            r_rate = self.parent.getRUP(chan);
+            r_rate = abs(self.parent.getRUP(chan));
         else
-            r_rate = self.parent.getRDW(chan);
+            r_rate = abs(self.parent.getRDW(chan));
         end
 
         % issue timer to lock set according to ramp rate
         function stop_func(src,evt)
+            self.parent.read();
             self.read();
             self.lock = false;
             if self.monTimer.Running
@@ -89,8 +90,8 @@ function monitors = setupSWIPSMonitors(instruments)
             end
             delete(self.monTimer);
         end
-
-        self.monTimer = timer('Period',v_diff/(r_rate),... %period
+        
+        self.monTimer = timer('Period',abs(round(v_diff/(r_rate),2))+.1,... %period
                       'ExecutionMode','singleShot',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
                       'BusyMode','queue',... %{drop, error, queue}       
                       'StartDelay',0,...
@@ -253,7 +254,7 @@ function monitors = setupSWIPSMonitors(instruments)
         if isnan(ratio) || ratio==0
             return
         end
-        volt_dome = self.siblings(2).lastRead;
+        volt_dome = self.siblings(2).read;
         volt_FR = ratio*volt_dome;
         self.siblings(1).set(volt_FR);
     end
@@ -270,14 +271,27 @@ function monitors = setupSWIPSMonitors(instruments)
                         );
     monitors.flRed_ratio.lastRead = 0; % initialize property zero stops sync with inner dome 
 
+    monitors.inDome_FR_sync = monitor('readFunc', @(self) -self.parent.lastRead(4), ...
+                        'setFunc', @dome_FR_set, ...
+                        'textLabel', 'InDome-FluxRed Sync', ...
+                        'unit', 'V', ...
+                        'active', true, ...`
+                        'formatSpec', '%.1f', ...
+                        'group', 'HV', ...
+                        'parent', instruments.caen_HVPS1, ...
+                        'siblings',[monitors.voltCh2_flRed, monitors.voltCh3_inDome,monitors.flRed_ratio] ...
+                        );
     % adjust inner dome set function to sync flux reducer
-    function dome_FR_set(self,chan,volt)
+    function dome_FR_set(self,volt)
         %set caen supply to desired voltage
-        set_caen_volt(self,3,volt);
+        self.siblings(2).set(volt)
+        ratio = self.siblings(3).lastRead;
+
+        volt_FR = ratio*volt;
+        
+        self.siblings(1).set(volt_FR);
         %sync flux reducer according to flRed_ratio
-        monitors.flRed_ratio.set(monitors.flRed_ratio.lastRead);
     end
-    monitors.voltCh3_inDome.setFunc = @dome_FR_set;
     
     % Assign tags to monitors
     fields = fieldnames(monitors);
