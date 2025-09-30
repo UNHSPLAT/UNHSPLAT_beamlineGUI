@@ -61,47 +61,52 @@ function monitors = setupSWIPSMonitors(instruments)
         self.parent.configurePPA_ok(int32(ones(1,16)*val));
         self.lock = false;
     end
-
     function set_caen_volt(self,chan,volt)
         % set voltage and account for lock
-        
-        % check inputs
-        if isnan(volt)
-            errordlg('A valid voltage value must be entered!','Invalid input!');
-            return
-        end
-        
-        % check volt ramp up/dwn, get associate ramp rate
-        v_start = abs(self.lastRead);
-        v_diff = abs(abs(volt) - v_start);
-        if abs(volt)>abs(v_start);
-            r_rate = abs(self.parent.getRUP(chan));
-        else
-            r_rate = abs(self.parent.getRDW(chan));
-        end
-
-        % issue timer to lock set according to ramp rate
-        function stop_func(src,evt)
-            self.parent.read();
-            self.read();
-            self.lock = false;
-            if self.monTimer.Running
-                stop(self.monTimer);
-            end
-            delete(self.monTimer);
-        end
-        
-        self.monTimer = timer('Period',abs(round(v_diff/(r_rate),2))+.1,... %period
-                      'ExecutionMode','singleShot',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
-                      'BusyMode','queue',... %{drop, error, queue}       
-                      'StartDelay',0,...
-                      'TimerFcn',@(src,evt) self.parent.setVSet(chan,abs(volt)),...
-                      'StartFcn',@(src,evt)setfield( self , 'lock' , true ),...
-                      'StopFcn',@stop_func,...
-                      'ErrorFcn',@stop_func);
-
-        start(self.monTimer);
+        self.lock = true;
+        self.parent.setVSet(chan,volt);
+        self.lock = false;
     end
+%     function set_caen_volt(self,chan,volt)
+%         % set voltage and account for lock
+%         
+%         % check inputs
+%         if isnan(volt)
+%             errordlg('A valid voltage value must be entered!','Invalid input!');
+%             return
+%         end
+%         
+%         % check volt ramp up/dwn, get associate ramp rate
+%         v_start = abs(self.lastRead);
+%         v_diff = abs(abs(volt) - v_start);
+%         if abs(volt)>abs(v_start);
+%             r_rate = abs(self.parent.getRUP(chan));
+%         else
+%             r_rate = abs(self.parent.getRDW(chan));
+%         end
+% 
+%         % issue timer to lock set according to ramp rate
+%         function stop_func(src,evt)
+%             self.parent.read();
+%             self.read();
+%             self.lock = false;
+%             if self.monTimer.Running
+%                 stop(self.monTimer);
+%             end
+%             delete(self.monTimer);
+%         end
+%         
+%         self.monTimer = timer('Period',abs(round(v_diff/(r_rate),2))+.1,... %period
+%                       'ExecutionMode','singleShot',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
+%                       'BusyMode','queue',... %{drop, error, queue}       
+%                       'StartDelay',0,...
+%                       'TimerFcn',@(src,evt) self.parent.setVSet(chan,abs(volt)),...
+%                       'StartFcn',@(src,evt)setfield( self , 'lock' , true ),...
+%                       'StopFcn',@stop_func,...
+%                       'ErrorFcn',@stop_func);
+% 
+%         start(self.monTimer);
+%     end
     
     function set_np_pos(self,grp,pos)
         self.lock = true;
