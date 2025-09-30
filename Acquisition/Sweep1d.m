@@ -347,7 +347,6 @@ classdef Sweep1d < acquisition
                 end
 
                 % Set ExB Val
-                
                 if obj.VPoints(iV) ~= vsetx
                     vsetx = obj.VPoints(iV);
                     fprintf('Setting %s to %.2f %s...\n',psTag,obj.VPoints(iV),obj.hBeamlineGUI.Monitors.(psTag).unit);
@@ -355,27 +354,28 @@ classdef Sweep1d < acquisition
                 end
                 
                 % Pause for ramp time
-                
                 waitfor(obj.hBeamlineGUI.Monitors.(psTag),'lock',false);
                 
-
                 % Obtain readings
                 fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
                 obj.hBeamlineGUI.readHardware();
                 obj.hBeamlineGUI.updateLog([],[],fname);
-
+                
+                % Display set values
                 fprintf('Setting: [%6.1f] %s...\n',obj.VPoints(iV),obj.hBeamlineGUI.Monitors.(psTag).unit);
                 fprintf('Result:  [%6.1f] %s...\n',...
                             obj.hBeamlineGUI.Monitors.(psTag).lastRead,obj.hBeamlineGUI.Monitors.(psTag).unit);
-                % Assign variables
+                
+                % Assign variables from readings
                 fields = fieldnames(obj.hBeamlineGUI.Monitors);
                 for i=1:numel(fields)
                     tag = fields{i};
                     obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
                 end
                 
+                % Update plot
+                cla(obj.hAxes1);
                 plot(obj.hAxes1,obj.VPoints(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
-                    %set(obj.hAxes1,'YScale','log');
                 xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
                 ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
             end
@@ -403,8 +403,7 @@ classdef Sweep1d < acquisition
                 set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
             end
-
-            
+            obj.hBeamlineGUI.generate
             % Restart beamline timers
             obj.hBeamlineGUI.restartTimer();
         end

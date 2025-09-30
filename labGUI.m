@@ -95,16 +95,7 @@ classdef (Abstract) labGUI < handle
             % Create tools menu
             obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
             
-            % Add acquisition control menu items
-            
-            hAcqMenu = uimenu(obj.hToolsMenu,'Text','Acquisition Control');
-
-            uimenu(hAcqMenu,'Text','Start Acquisition',...
-                'MenuSelectedFcn',@obj.startAcquisition);
-
-            uimenu(hAcqMenu,'Text','Stop Acquisition',...
-                'MenuSelectedFcn',@obj.stopAcquisition);
-            
+                
             % Create Timer menu and all its menu items
             obj.createTimerMenu();            % Create timer to periodically update readings
             obj.createTimer();
@@ -233,19 +224,19 @@ classdef (Abstract) labGUI < handle
             %ISACQUISITIONRUNNING Check if there is an active acquisition running
             isRunning = false;
             if ~isempty(obj.Acquisitions)
-                if isvalid(obj.Acquisitions) && isprop(obj.Acquisitions, 'Timer') && ...
-                   ~isempty(obj.Acquisitions.Timer) && isvalid(obj.Acquisitions.Timer) && ...
-                   strcmp(obj.Acquisitions.Timer.Running, 'on')
+                if isvalid(obj.Acquisitions) && isprop(obj.Acquisitions, 'scanTimer') && ...
+                   ~isempty(obj.Acquisitions.scanTimer) && isvalid(obj.Acquisitions.scanTimer) && ...
+                   strcmp(obj.Acquisitions.scanTimer.Running, 'on')
                     isRunning = true;
                 end
             end
         end
 
-        function stopAcquisition(obj, ~, ~)
-            %STOPACQUISITION Stops the current acquisition if one is running
+        function pauseAcquisition(obj, ~, ~)
+            %pauseAcquisition Stops the current acquisition if one is running
             if obj.isAcquisitionRunning()
                 try
-                    stop(obj.Acquisitions.Timer);
+                    obj.Acquisitions.scanTimer.Period = 99999999999;
                     msgbox('Acquisition stopped successfully', 'Stop Acquisition');
                 catch ME
                     errordlg(['Failed to stop acquisition: ' ME.message], 'Stop Acquisition Error');
@@ -255,14 +246,14 @@ classdef (Abstract) labGUI < handle
             end
         end
 
-        function startAcquisition(obj, ~, ~)
-            %STARTACQUISITION Starts the current acquisition if one exists but isn't running
+        function unPauseAcquisition(obj, ~, ~)
+            %unPauseAcquisition Starts the current acquisition if one exists but isn't running
             if ~isempty(obj.Acquisitions) && isvalid(obj.Acquisitions) && ...
-               isprop(obj.Acquisitions, 'Timer') && ~isempty(obj.Acquisitions.Timer) && ...
-               isvalid(obj.Acquisitions.Timer)
-                if strcmp(obj.Acquisitions.Timer.Running, 'off')
+               isprop(obj.Acquisitions, 'scanTimer') && ~isempty(obj.Acquisitions.scanTimer) && ...
+               isvalid(obj.Acquisitions.scanTimer)
+                if strcmp(obj.Acquisitions.scanTimer.Running, 'off')
                     try
-                        start(obj.Acquisitions.Timer);
+                        obj.Acquisitions.scanTimer.Period = obj.Acquisitions.dwellTime;
                         msgbox('Acquisition started successfully', 'Start Acquisition');
                     catch ME
                         errordlg(['Failed to start acquisition: ' ME.message], 'Start Acquisition Error');
@@ -391,6 +382,15 @@ classdef (Abstract) labGUI < handle
             
             uimenu(obj.hTimerMenu,'Text','View Active Timers',...
                 'MenuSelectedFcn',@obj.viewActiveTimers);
+
+            % Add acquisition control menu items
+            hAcqMenu = uimenu(obj.hTimerMenu,'Text','Acquisition Control');
+
+            uimenu(hAcqMenu,'Text','Pause Acquisition',...
+                'MenuSelectedFcn',@obj.pauseAcquisition);
+
+            uimenu(hAcqMenu,'Text','Un-Pause Acquisition',...
+                'MenuSelectedFcn',@obj.unPauseAcquisition);
         end
 
         %% Menu and Control callbacks
