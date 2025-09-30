@@ -177,11 +177,9 @@ classdef (Abstract) labGUI < handle
         function closeGUI(obj,~,~)
             %CLOSEGUI Clean up when GUI is closed
             
-            
             if strcmp(obj.hLogTimer.Running,'on')
                 stop(obj.hLogTimer);
             end
-
             
             % Delete the object
             obj.delete();

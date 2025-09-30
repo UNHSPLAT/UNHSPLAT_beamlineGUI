@@ -552,6 +552,13 @@ classdef Sweep2D < acquisition
             %Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
             obj.complete();
             
+            if isvalid(obj) && isvalid(obj.hConfFigure)
+                delete(obj.hConfFigure);
+            end
+            
+            if isvalid(obj) && isvalid(obj.hFigure)
+                delete(obj.hFigure);
+            end
             % stop(obj.scanTimer);
                 % Delete obj
             delete(obj);

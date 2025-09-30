@@ -36,6 +36,9 @@ classdef monitor < handle
                 % Initialize an array of listeners
                 obj.parentListener = event.listener.empty;
                 
+                
+                % obj.parentListener = addlistener(obj.parent, 'lastRead', 'PostSet', @obj.read);
+
                 % Handle both single objects and arrays
                 parents = obj.parent;
                 

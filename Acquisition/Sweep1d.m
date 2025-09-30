@@ -17,8 +17,8 @@ classdef Sweep1d < acquisition
 
         hHVPS % Handle to desired power supply
         hConfFigure % Handle to configuration GUI figure
-        hFigure1 % Handle to I-V data plot
-        hFigure2 % Handle to I-1/V^2 data plot
+        hFigure % Handle to I-V data plot
+        
         hAxes1 % Handle to I-V data axes
         hAxes2 % Handle to I-1/V^2 data axes
         hSupplyText % Handle to sweep supply label
@@ -54,9 +54,6 @@ classdef Sweep1d < acquisition
             obj@acquisition(hGUI);
             % set testLabel
             obj.testLab = sprintf('%s_%s',num2str(obj.hBeamlineGUI.TestSequence),obj.Type);
-            
-            % Add listener to delete configuration GUI figure if main beamline GUI deleted
-            listener(obj.hBeamlineGUI,'ObjectBeingDestroyed',@obj.beamlineGUIDeleted);
         end
 
         function runSweep(obj)
@@ -227,15 +224,6 @@ classdef Sweep1d < acquisition
                 'Callback',@obj.sweepBtnCallback);
 
         end
-
-        function beamlineGUIDeleted(obj,~,~)
-            %BEAMLINEGUIDELETED Delete configuration GUI figure
-
-            if isvalid(obj) && isvalid(obj.hConfFigure)
-                delete(obj.hConfFigure);
-            end
-            
-        end
     end
 
     methods (Access = private)
@@ -296,10 +284,10 @@ classdef Sweep1d < acquisition
                 obj.hBeamlineGUI.stopTimer();
 
                 % Create figures and axes
-                obj.hFigure1 = figure('NumberTitle','off',...
+                obj.hFigure = figure('NumberTitle','off',...
                                       'Name',sprintf('1D Sweep:[%s,%s]',psTag,obj.resultTag),...
                                       'DeleteFcn',@obj.closeGUI);
-                obj.hAxes1 = axes(obj.hFigure1);
+                obj.hAxes1 = axes(obj.hFigure);
 
                 % Preallocate arrays
                 obj.scan_mon = struct();
@@ -340,7 +328,7 @@ classdef Sweep1d < acquisition
 
         function scan_step(src,evt)
                 iV = get(src,'TasksExecuted');
-                if isempty(obj.hFigure1) || ~isvalid(obj.hFigure1)
+                if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
                     obj.hFigure = figure('NumberTitle','off',...
                         'Name','1D Sweep');
                     obj.hAxes1 = axes(obj.hFigure); %#ok<LAXES> Only executed if figure deleted or not instantiated
@@ -403,7 +391,6 @@ classdef Sweep1d < acquisition
                 set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
             end
-            obj.hBeamlineGUI.generate
             % Restart beamline timers
             obj.hBeamlineGUI.restartTimer();
         end
@@ -413,10 +400,18 @@ classdef Sweep1d < acquisition
         function closeGUI(obj,~,~)
             %Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
             obj.complete();
+
+            if isvalid(obj) && isvalid(obj.hConfFigure)
+                delete(obj.hConfFigure);
+            end
             
+            if isvalid(obj) && isvalid(obj.hFigure)
+                delete(obj.hFigure);
+            end
             % stop(obj.scanTimer);
                 % Delete obj
             delete(obj);
+
         end
     end
 end
