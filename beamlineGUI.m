@@ -44,9 +44,7 @@ classdef beamlineGUI < labGUI
 
             obj@labGUI('Beamline GUI');
             % Initialize hardware and monitors
-            obj.createHardware();
-            obj.createMonitors();
-
+            
             % Create GUI components and layout
             obj.createLayout();
 
