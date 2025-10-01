@@ -345,7 +345,7 @@ classdef (Abstract) labGUI < handle
             end
             % Create a table to display timer information
             data = {};
-            headers = {'Timer Name', 'Period (s)', 'Running', 'Execution Mode', 'Owner', 'Tasks To Execute', 'Tasks Executed'};
+            headers = {'Index', 'Timer Name', 'Period (s)', 'Running', 'Execution Mode', 'Owner', 'Tasks To Execute', 'Tasks Executed'};
             
             % Get all timers in MATLAB
             allTimers = timerfindall;
@@ -380,6 +380,7 @@ classdef (Abstract) labGUI < handle
                     
                     % Add row to data
                     data(end+1,:) = {...
+                        i, ...
                         char(t.Name), ...
                         double(t.Period), ...
                         char(t.Running), ...
@@ -390,11 +391,6 @@ classdef (Abstract) labGUI < handle
                 end
             end
             
-            % Sort data by timer name
-            if ~isempty(data)
-                [~, idx] = sort(cellfun(@char, data(:,1), 'UniformOutput', false));
-                data = data(idx,:);
-            end
             
             % Create the uitable
             t = uitable(timerFig, ...
@@ -402,11 +398,11 @@ classdef (Abstract) labGUI < handle
                 'ColumnName', headers, ...
                 'RowName', [], ...
                 'Position', [20 20 760 360], ...
-                'ColumnWidth', {120 80 80 100 120 100 100}, ...
+                'ColumnWidth', {50 120 80 80 100 120 100 100}, ...
                 'ColumnEditable', false);
             
-            % Enable text wrapping
-            t.ColumnFormat = {'char', 'numeric', 'char', 'char', 'char', 'char', 'char'};
+            % Enable text wrapping and set column formats
+            t.ColumnFormat = {'numeric', 'char', 'numeric', 'char', 'char', 'char', 'char', 'char'};
             
             % Add a refresh button
             uicontrol(timerFig, 'Style', 'pushbutton', ...
