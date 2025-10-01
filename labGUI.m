@@ -35,7 +35,8 @@ classdef (Abstract) labGUI < handle
     properties (SetAccess = protected)
         %linesize
         ysize = 22;    % Height of each control
-        
+        figureMargin = 10; % Margin to add around figure when auto-scaling
+
         GasList cell = {'MTG Gas', 'H', 'He','Ar','Ne'} % Test operators available for selection
         AcquisitionList cell = {'Sweep 1D','Sweep 2D','Faraday cup sweep 2D','Beamline Monitor'} % Acquisition type string identifier
         gasType string = "" % Test Gas string identifier
@@ -218,13 +219,12 @@ classdef (Abstract) labGUI < handle
             set(obj.hDateEdit,'String',obj.TestDate);
         end
 
-        function isRunning = isAcquisitionRunning(obj)
+        function isRunning = isAcquisition(obj)
             %ISACQUISITIONRUNNING Check if there is an active acquisition running
             isRunning = false;
             if ~isempty(obj.Acquisitions)
                 if isvalid(obj.Acquisitions) && isprop(obj.Acquisitions, 'scanTimer') && ...
-                   ~isempty(obj.Acquisitions.scanTimer) && isvalid(obj.Acquisitions.scanTimer) && ...
-                   strcmp(obj.Acquisitions.scanTimer.Running, 'on')
+                   ~isempty(obj.Acquisitions.scanTimer) && isvalid(obj.Acquisitions.scanTimer)
                     isRunning = true;
                 end
             end
@@ -232,25 +232,29 @@ classdef (Abstract) labGUI < handle
 
         function pauseAcquisition(obj, ~, ~)
             %pauseAcquisition Stops the current acquisition if one is running
-            if obj.isAcquisitionRunning()
-                try
-                    stop(obj.Acquisitions.scanTimer);
-                    msgbox('Acquisition stopped successfully', 'Stop Acquisition');
-                catch ME
-                    errordlg(['Failed to stop acquisition: ' ME.message], 'Stop Acquisition Error');
+            if obj.isAcquisition()
+                if strcmp(obj.Acquisitions.scanTimer.Running, 'on')
+                    try
+                        stop(obj.Acquisitions.scanTimer);
+                        msgbox('Acquisition stopped successfully', 'Stop Acquisition');
+                        obj.restartTimer();
+                    catch ME
+                        errordlg(['Failed to stop acquisition: ' ME.message], 'Stop Acquisition Error');
+                    end
+                else
+                    msgbox('No acquisition currently running', 'Stop Acquisition');
                 end
             else
-                msgbox('No acquisition currently running', 'Stop Acquisition');
+                msgbox('No acquisition available. Please set up an acquisition first.', 'Stop Acquisition');
             end
         end
 
         function unPauseAcquisition(obj, ~, ~)
             %unPauseAcquisition Starts the current acquisition if one exists but isn't running
-            if ~isempty(obj.Acquisitions) && isvalid(obj.Acquisitions) && ...
-               isprop(obj.Acquisitions, 'scanTimer') && ~isempty(obj.Acquisitions.scanTimer) && ...
-               isvalid(obj.Acquisitions.scanTimer)
+            if obj.isAcquisition()
                 if strcmp(obj.Acquisitions.scanTimer.Running, 'off')
                     try
+                        obj.stopTimer();
                         start(obj.Acquisitions.scanTimer);
                         msgbox('Acquisition started successfully', 'Start Acquisition');
                     catch ME
@@ -266,9 +270,6 @@ classdef (Abstract) labGUI < handle
     end
 
     methods (Access = protected)
-
-        
-
         %% Timer management
         function createTimer(obj)
             %CREATETIMER Creates timer to periodically update readings
@@ -284,7 +285,7 @@ classdef (Abstract) labGUI < handle
 
         %% Timer menu callbacks
         function setLogRate(obj,~,~)
-            obj.stopTimer()
+            obj.stopTimer();
 
             prompt = {'Enter desired Log rate [S]'};
             dlgtitle = 'Refresh Rate';
@@ -299,7 +300,7 @@ classdef (Abstract) labGUI < handle
         end
 
         function setSampleRate(obj,~,~)
-            obj.stopTimer()
+            obj.stopTimer();
 
             prompt = cellfun(@(x)x.Tag, struct2cell(obj.Hardware), 'UniformOutput', false);
             dlgtitle = 'Instrument Sample Rate';
@@ -365,24 +366,26 @@ classdef (Abstract) labGUI < handle
             % Create main Timer menu
             obj.hTimerMenu = uimenu(obj.hFigure,'Text','Timer');
             
+            
+            hSystemTimerMenu = uimenu(obj.hTimerMenu,'Text','System Timer Control');
             % Add timer control options
-            uimenu(obj.hTimerMenu,'Text','Set Sample Rate',...
+            uimenu(hSystemTimerMenu,'Text','Set Sample Rate',...
                 'MenuSelectedFcn',@obj.setSampleRate);
             
-            uimenu(obj.hTimerMenu,'Text','Set Data Log Rate',...
+            uimenu(hSystemTimerMenu,'Text','Set Data Log Rate',...
                 'MenuSelectedFcn',@obj.setLogRate);
             
-            uimenu(obj.hTimerMenu,'Text','Disable Timer',...
+            uimenu(hSystemTimerMenu,'Text','Disable Timer',...
                 'MenuSelectedFcn',@obj.stopTimer);
             
-            uimenu(obj.hTimerMenu,'Text','Restart Timer',...
+            uimenu(hSystemTimerMenu,'Text','Restart Timer',...
                 'MenuSelectedFcn',@obj.restartTimer);
             
-            uimenu(obj.hTimerMenu,'Text','View Active Timers',...
+            uimenu(hSystemTimerMenu,'Text','View Active Timers',...
                 'MenuSelectedFcn',@obj.viewActiveTimers);
 
             % Add acquisition control menu items
-            hAcqMenu = uimenu(obj.hTimerMenu,'Text','Acquisition Control');
+            hAcqMenu = uimenu(obj.hTimerMenu,'Text','Acquisition Timer Control');
 
             uimenu(hAcqMenu,'Text','Pause Acquisition',...
                 'MenuSelectedFcn',@obj.pauseAcquisition);
@@ -572,6 +575,38 @@ classdef (Abstract) labGUI < handle
             testYpos = testYpos + obj.ysize + testYgap;
             % Adjust test panel height
             obj.hTestPanel.Position(4) = testYpos + 20;
+        end
+
+        function guiAutoScale(obj,figure)
+            % Adjust figure size to fit all panels
+            % Calculate required figure size based on panels
+            allPanels = findall(figure,'Type','uipanel');
+
+            maxX = 0;
+            maxY = 0;
+            
+            % Find the rightmost and topmost points of all panels
+            for i = 1:length(allPanels)
+                panel = allPanels(i);
+                panelRight = panel.Position(1) + panel.Position(3);
+                panelTop = panel.Position(2) + panel.Position(4);
+                maxX = max(maxX, panelRight);
+                maxY = max(maxY, panelTop);
+            end
+            
+            % Add margins for the figure size
+            newWidth = maxX + obj.figureMargin;
+            newHeight = maxY + obj.figureMargin;
+            
+            % Get current figure position (to maintain screen location)
+            currentPos = figure.Position;
+            
+
+            % Update figure size while maintaining position
+            figure.Position = [currentPos(1), currentPos(2), newWidth, newHeight];
+
+            % Center the figure on screen
+            movegui(figure, 'center');
         end
     end
 

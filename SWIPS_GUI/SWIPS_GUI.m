@@ -297,35 +297,10 @@ classdef SWIPS_GUI < labGUI
                 % Update vertical position for next control
                 ypos = ypos+obj.ysize+ygap;
             end
-
             % Adjust figure size to fit all panels
             % Calculate required figure size based on panels
-            allPanels = [obj.hPosStatusGrp, obj.hHVStatusGrp, obj.hStatusGrp,obj.hInstGrp];
-            maxX = 0;
-            maxY = 0;
+            obj.guiAutoScale(obj.hFigure);
             
-            % Find the rightmost and topmost points of all panels
-            for i = 1:length(allPanels)
-                panel = allPanels(i);
-                panelRight = panel.Position(1) + panel.Position(3);
-                panelTop = panel.Position(2) + panel.Position(4);
-                maxX = max(maxX, panelRight);
-                maxY = max(maxY, panelTop);
-            end
-            
-            % Add margins for the figure size
-            figureMargin = leftMargin;  % pixels of margin around the edges
-            newWidth = maxX + figureMargin;
-            newHeight = maxY + figureMargin;
-            
-            % Get current figure position (to maintain screen location)
-            currentPos = obj.hFigure.Position;
-            
-            % Update figure size while maintaining position
-            obj.hFigure.Position = [currentPos(1), currentPos(2), newWidth, newHeight];
-            
-            % Center the figure on screen
-            movegui(obj.hFigure, 'center');
         end
 
         function mcpRampCallback(obj,~,~)
