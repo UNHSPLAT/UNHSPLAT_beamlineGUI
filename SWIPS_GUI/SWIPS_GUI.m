@@ -27,10 +27,6 @@ classdef SWIPS_GUI < labGUI
 
             obj.AcquisitionList = {'Sweep 1D','Sweep 2D'};
 
-            % Initialize hardware and monitors
-            obj.createHardware();
-            obj.createMonitors();
-
             % Create GUI components and layout
             obj.createLayout();
 

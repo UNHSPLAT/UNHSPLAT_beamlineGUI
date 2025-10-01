@@ -14,6 +14,7 @@ classdef monitor < handle
         group string = ""%
         children = []%
         monTimer
+        lastReadTime datetime = datetime('now')%
     end
     properties (SetObservable) 
         lastRead %
@@ -55,9 +56,13 @@ classdef monitor < handle
         end
 
         function val = read(obj,src,evnt) 
-            % if all([obj.parent.Connected])
             try
                 val = obj.readFunc(obj);
+                if isempty(obj.parent) || all([obj.parent.Connected]) 
+                    obj.lastReadTime = datetime('now');
+                else
+                    obj.lastReadTime = datetime('NaT');
+                end
             catch
                 val = nan;
             end

@@ -100,9 +100,36 @@ classdef (Abstract) labGUI < handle
             uimenu(obj.hToolsMenu,'Text','Inspect Hardware',...
                 'MenuSelectedFcn',@obj.inspectHardwareCallback);
                 
+            % Add monitor inspection option
+            uimenu(obj.hToolsMenu,'Text','Inspect Monitors',...
+                'MenuSelectedFcn',@obj.inspectMonitorsCallback);
+                
             % Create Timer menu and all its menu items
             obj.createTimerMenu();            % Create timer to periodically update readings
             obj.createTimer();
+
+            % Initialize hardware and monitors
+            obj.createHardware();
+            obj.createMonitors();
+
+            obj.Monitors.dateTime = monitor('readFunc', @(x) datetime(now(), 'ConvertFrom', 'datenum'), ...
+                        'textLabel', 'Date Time', ...
+                        'unit', 'D-M-Y H:M:S', ...
+                        'group','status',...
+                        'formatSpec', "%s" ...
+                        );
+            obj.Monitors.T = monitor('readFunc', @(x) now(), ...
+                            'textLabel', 'Time', ...
+                            'unit', 'DateNum', ...
+                            'group','status',...
+                            'formatSpec', "%d" ...
+                            );
+            obj.Monitors.cmd_cnt = monitor('readFunc', @(x) obj.hLogTimer.TasksExecuted, ...
+                            'textLabel', 'Log Count', ...
+                            'unit', 'cnt', ...
+                            'group','status',...
+                            'formatSpec', "%d" ...
+                            );
             
         end
         
@@ -663,14 +690,15 @@ classdef (Abstract) labGUI < handle
             movegui(figure, 'center');
         end
 
-        function inspectHardwareCallback(obj, ~, ~)
-            % Create a figure for the hardware information
-            hwFig = figure('Name', 'Hardware Inspector', ...
-                'NumberTitle', 'off', ...
-                'MenuBar', 'none', ...
-                'ToolBar', 'none', ...
-                'Position', [100 100 800 400]);
-            
+        function inspectHardwareCallback(obj, ~, ~,hwFig)
+            if nargin < 4 || ~isvalid(hwFig)
+                % Create a figure for the hardware information
+                hwFig = figure('Name', 'Hardware Inspector', ...
+                    'NumberTitle', 'off', ...
+                    'MenuBar', 'none', ...
+                    'ToolBar', 'none', ...
+                    'Position', [100 100 800 400]);
+            end
             % Get hardware fields
             hwFields = fieldnames(obj.Hardware);
             
@@ -756,6 +784,125 @@ classdef (Abstract) labGUI < handle
             % Make the figure visible and bring it to front
             figure(hwFig);
         end
+
+        function inspectMonitorsCallback(obj, ~, ~,monFig)
+            
+            if nargin < 4 || ~isvalid(monFig)
+                % Create a figure for the monitor information
+                monFig = figure('Name', 'Monitor Inspector', ...
+                    'NumberTitle', 'off', ...
+                    'MenuBar', 'none', ...
+                    'ToolBar', 'none', ...
+                    'Position', [100 100 900 400]);
+            end
+            % Get monitor fields
+            monFields = fieldnames(obj.Monitors);
+            
+            % Create table to display monitor information
+            data = {};
+            headers = {'Monitor Name', 'Group', 'Parent HW', 'Read Function', 'Last Read', ...
+                 'Last Read Time', 'Controllable'};
+            
+            % Populate data for each monitor
+            for i = 1:length(monFields)
+                mon = obj.Monitors.(monFields{i});
+                
+                % Get the last read time in a readable format
+                try
+                    lastReadTime = datestr(mon.lastReadTime, 'HH:MM:SS');
+                catch
+                    lastReadTime = 'N/A';
+                end
+                
+                % Format the last read value
+                try
+                    lastRead = char(sprintf(mon.formatSpec,mon.lastRead));
+                    % if isnumeric(mon.lastRead)
+                    %     lastRead = num2str(mon.lastRead, '%.4g');
+                    % else
+                    %     lastRead = char(string(mon.lastRead));
+                    % end
+                catch
+                    lastRead = 'N/A';
+                end
+                
+                % Get the hardware name
+                try
+                    if isprop(mon, 'parent') && ~isempty(mon.parent)
+                        hwName = char(mon.parent.Tag);
+                    else
+                        hwName = 'None';
+                    end
+                catch
+                    hwName = 'N/A';
+                end
+                
+                % Get read function info
+                try
+                    if isa(mon.readFunc, 'function_handle')
+                        readFunc = func2str(mon.readFunc);
+                    else
+                        readFunc = 'None';
+                    end
+                catch
+                    readFunc = 'N/A';
+                end
+                
+                % Get active status
+                try
+                    if mon.active
+                        activeStatus = 'Yes';
+                    else
+                        activeStatus = 'No';
+                    end
+                catch
+                    activeStatus = 'N/A';
+                end
+                
+                % Add row to data
+                data(end+1,:) = {...
+                    monFields{i}, ...
+                    char(string(mon.group)), ...
+                    hwName, ...
+                    readFunc, ...
+                    lastRead, ...
+                    lastReadTime, ...
+                    activeStatus}; %#ok<AGROW>
+            end
+            
+            % Sort data by group and then by monitor name
+            if ~isempty(data)
+                % Convert cell array to table for easier sorting
+                dataTable = cell2table(data, 'VariableNames', ...
+                    {'MonitorName', 'Group', 'Hardware', 'ReadFunction', 'LastRead', 'LastReadTime', 'Active'});
+                % Sort by Group first, then by MonitorName
+                dataTable = sortrows(dataTable, {'Group', 'MonitorName'});
+                % Convert back to cell array
+                data = table2cell(dataTable);
+            end
+            
+            % Create the uitable with monitor information
+            t = uitable(monFig, ...
+                'Data', data, ...
+                'ColumnName', headers, ...
+                'RowName', [], ...
+                'Position', [20 20 860 360], ...
+                'ColumnWidth', {120 80 120 150 100 100 100}, ...
+                'ColumnEditable', false);
+                
+            % Enable text wrapping
+            t.ColumnFormat = {'char', 'char', 'char', 'char', 'char', 'char', 'char'};
+            
+            % Add a refresh button
+            uicontrol(monFig, 'Style', 'pushbutton', ...
+                'String', 'Refresh', ...
+                'Position', [20 385 100 20], ...
+                'Callback', @(~,~) obj.inspectMonitorsCallback([],[],monFig));
+                
+            % Make the figure visible and bring it to front
+            figure(monFig);
+        end
+        
     end
 
     methods (Static, Access = private)
@@ -774,7 +921,6 @@ classdef (Abstract) labGUI < handle
                 end
             end
         end
-
         
     end
 end
