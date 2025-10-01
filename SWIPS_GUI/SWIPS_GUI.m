@@ -203,7 +203,7 @@ classdef SWIPS_GUI < labGUI
 
             % Define common GUI parameters
             % Column sizes for different elements
-            colSize = [60,200,60,60,60];  % [Label, Value, Units, Set Value, Set Button]
+            colSize = [100,200,40,60,60];  % [Label, Value, Units, Set Value, Set Button]
             panel2Width = sum(colSize)+xgap*numel(colSize);
             
             % Define second column position
