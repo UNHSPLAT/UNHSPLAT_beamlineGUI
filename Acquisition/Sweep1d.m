@@ -45,6 +45,9 @@ classdef Sweep1d < acquisition
         scanTimer timer%
         scan_mon %
         listo%
+
+        testRunning = false
+        step_num = 1 % Current step number in the sweep
     end
 
     methods
@@ -230,7 +233,7 @@ classdef Sweep1d < acquisition
 
         function sweepBtnCallback(obj,~,~)
             %SWEEPBTNCALLBACK Begin sweep execution based on configuration info
-            
+            obj.testRunning = true;
             % Run inside a try-catch to reset beamline GUI run test button if error occurs
             try
     
@@ -314,7 +317,7 @@ classdef Sweep1d < acquisition
                           'StartDelay',0,...
                           'TimerFcn',@scan_step,...
                           'StartFcn',[],...
-                          'StopFcn',@end_scan,...
+                          'StopFcn',[],...
                           'ErrorFcn',[]);
                 start(obj.scanTimer);
 
@@ -327,7 +330,7 @@ classdef Sweep1d < acquisition
             end
 
         function scan_step(src,evt)
-                iV = get(src,'TasksExecuted');
+                iV = obj.step_num;
                 if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
                     obj.hFigure = figure('NumberTitle','off',...
                         'Name','1D Sweep');
@@ -366,26 +369,32 @@ classdef Sweep1d < acquisition
                 plot(obj.hAxes1,obj.VPoints(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
                 xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
                 ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
-            end
 
-            % Save results .csv file
-            function end_scan(src,evt)
-                fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
-                writetable(struct2table(obj.scan_mon), fname);
-                obj.complete()
-                fprintf('\nTest complete!\n');
+                if iV >= length(obj.VPoints)
+                    obj.complete();
+                end
+                obj.step_num = obj.step_num + 1;
             end
-        end
-
-                
+        end    
 
         function complete(obj,~,~)
-            %CLOSEGUI Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
+            % Stop timer if valid and running, 
             if isvalid(obj.scanTimer)
-                stop(obj.scanTimer);
+                if strcmp(obj.scanTimer.Running,'on')
+                    stop(obj.scanTimer);
+                end
                 delete(obj.scanTimer);
             end
 
+            if obj.testRunning
+                % Save results to CSV
+                fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
+                writetable(struct2table(obj.scan_mon), fname);
+                fprintf('\nTest complete!\n');
+
+                obj.testRunning = false;
+            end
+            %CLOSEGUI Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
             % Enable beamline GUI run test button if still valid
             if isvalid(obj.hBeamlineGUI)
                 set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
@@ -396,6 +405,7 @@ classdef Sweep1d < acquisition
         end
 
     end
+
     methods (Access = public)
         function closeGUI(obj,~,~)
             %Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
@@ -405,7 +415,7 @@ classdef Sweep1d < acquisition
                 delete(obj.hConfFigure);
             end
             
-            if isvalid(obj) && isvalid(obj.hFigure)
+            if isvalid(obj) && isfield(obj, 'hFigure') && ~isempty(obj.hFigure) && isvalid(obj.hFigure)
                 delete(obj.hFigure);
             end
             % stop(obj.scanTimer);

@@ -234,7 +234,7 @@ classdef (Abstract) labGUI < handle
             %pauseAcquisition Stops the current acquisition if one is running
             if obj.isAcquisitionRunning()
                 try
-                    obj.Acquisitions.scanTimer.Period = 99999999999;
+                    stop(obj.Acquisitions.scanTimer);
                     msgbox('Acquisition stopped successfully', 'Stop Acquisition');
                 catch ME
                     errordlg(['Failed to stop acquisition: ' ME.message], 'Stop Acquisition Error');
@@ -251,7 +251,7 @@ classdef (Abstract) labGUI < handle
                isvalid(obj.Acquisitions.scanTimer)
                 if strcmp(obj.Acquisitions.scanTimer.Running, 'off')
                     try
-                        obj.Acquisitions.scanTimer.Period = obj.Acquisitions.dwellTime;
+                        start(obj.Acquisitions.scanTimer);
                         msgbox('Acquisition started successfully', 'Start Acquisition');
                     catch ME
                         errordlg(['Failed to start acquisition: ' ME.message], 'Start Acquisition Error');

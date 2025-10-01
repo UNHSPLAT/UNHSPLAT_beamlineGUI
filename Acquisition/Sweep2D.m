@@ -14,7 +14,9 @@ classdef Sweep2D < acquisition
     properties
         PSTag string % String identifying user-selected HVPS
         hHVPS % Handle to desired power supply
-
+        hConfFigure % Handle to configuration GUI figure
+        hFigure % Handle to I-V data plot
+        
         hAxes1 % Handle to I-V data axes
         hAxes2 % Handle to I-1/V^2 data axes
         
@@ -43,19 +45,21 @@ classdef Sweep2D < acquisition
         hDwellText % Handle to dwell time label
         hDwellEdit % Handle to dwell time field
         hSweepBtn % Handle to run sweep button
-        VPoints double % Array of ExB Val setpoints
-        VPoints2 double % Array of ExB Val setpoints
-        hConfFigure
         
-
+        VPoints double % Array of first Val setpoints
+        VPoints2 double % Array of second Val setpoints
         DwellTime double % Dwell time setting
-        PSList %
-        resultList
+        
+        PSList % List of available power supplies
+        resultList % List of available result monitors
 
-        scanTimer timer%
-        scan_mon %
+        scanTimer timer % Timer for scanning
+        scan_mon % Monitor for scanning
+        listo % List of observers
 
-
+        testRunning = false % Flag indicating if test is running
+        
+        step_num = 1 % Current step number in the sweep
     end
 
     methods
@@ -329,7 +333,7 @@ classdef Sweep2D < acquisition
 
         function sweepBtnCallback(obj,~,~)
             %SWEEPBTNCALLBACK Begin sweep execution based on configuration info
-            
+            obj.testRunning = true;
             % Run inside a try-catch to reset beamline GUI run test button if error occurs
             try
     
@@ -452,7 +456,7 @@ classdef Sweep2D < acquisition
                           'StartDelay',0,...
                           'TimerFcn',@scan_step,...
                           'StartFcn',[],...
-                          'StopFcn',@end_scan,...
+                          'StopFcn',[],...
                           'ErrorFcn',[]);
                 start(obj.scanTimer);
 
@@ -466,81 +470,88 @@ classdef Sweep2D < acquisition
 
             end
             function scan_step(src,evt)
-                        iV = get(src,'TasksExecuted');
-                        if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
-                            obj.hFigure = figure('NumberTitle','off',...
-                                'Name','Sweep2D');
-                            obj.hAxes1 = axes(obj.hFigure); %#ok<LAXES> Only executed if figure deleted or not instantiated
-                        end
+                iV = obj.step_num;
+                display(iV/length(obj.VPoints))
+                if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
+                    obj.hFigure = figure('NumberTitle','off',...
+                        'Name','Sweep2D');
+                    obj.hAxes1 = axes(obj.hFigure); %#ok<LAXES> Only executed if figure deleted or not instantiated
+                end
 
-                        % Set ExB Val
-                        if obj.VPoints(iV) ~= vsetx
-                            vsetx = obj.VPoints(iV);
-                            fprintf('Setting %s to %.2f %s...\n',psTag,obj.VPoints(iV),obj.hBeamlineGUI.Monitors.(psTag).unit);
+                % Set ExB Val
+                if obj.VPoints(iV) ~= vsetx
+                    vsetx = obj.VPoints(iV);
+                    fprintf('Setting %s to %.2f %s...\n',psTag,obj.VPoints(iV),obj.hBeamlineGUI.Monitors.(psTag).unit);
                     obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(iV));
-                        end
-                        if obj.VPoints2(iV) ~= vsety
-                            vsety = obj.VPoints2(iV);
-                            fprintf('Setting %s to %.2f %s...\n',psTag2,obj.VPoints2(iV),obj.hBeamlineGUI.Monitors.(psTag2).unit);
-                            obj.hBeamlineGUI.Monitors.(psTag2).set(obj.VPoints2(iV));
-                        end
-                        % Pause for ramp time
+                end
+                if obj.VPoints2(iV) ~= vsety
+                    vsety = obj.VPoints2(iV);
+                    fprintf('Setting %s to %.2f %s...\n',psTag2,obj.VPoints2(iV),obj.hBeamlineGUI.Monitors.(psTag2).unit);
+                    obj.hBeamlineGUI.Monitors.(psTag2).set(obj.VPoints2(iV));
+                end
+                % Pause for ramp time
+        
+                pause(obj.rampDwell);
+                % Obtain readings
+                fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
+                obj.hBeamlineGUI.readHardware();
+                obj.hBeamlineGUI.updateLog([],[],fname);
+
+                fprintf('Setting: [%s,%s]= [%6.1f,%6.1f] ...\n',psTag,psTag2,vsetx,vsety);
+                fprintf('Result:  [%s,%s]= [%6.1f,%6.1f] ...\n',...
+                    psTag,psTag2,...
+                    obj.hBeamlineGUI.Monitors.(psTag).lastRead,...
+                    obj.hBeamlineGUI.Monitors.(psTag2).lastRead);
+                % Assign variables
+                fields = fieldnames(obj.hBeamlineGUI.Monitors);
+                for i=1:numel(fields)
+                    tag = fields{i};
+                    obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
+                end
                 
-                        pause(obj.rampDwell);
-                        % Obtain readings
-                        fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
-                        obj.hBeamlineGUI.readHardware();
-                        obj.hBeamlineGUI.updateLog([],[],fname);
-
-                        fprintf('Setting: [%s,%s]= [%6.1f,%6.1f] ...\n',psTag,psTag2,vsetx,vsety);
-                        fprintf('Result:  [%s,%s]= [%6.1f,%6.1f] ...\n',...
-                            psTag,psTag2,...
-                            obj.hBeamlineGUI.Monitors.(psTag).lastRead,...
-                            obj.hBeamlineGUI.Monitors.(psTag2).lastRead);
-                        % Assign variables
-                        fields = fieldnames(obj.hBeamlineGUI.Monitors);
-                        for i=1:numel(fields)
-                            tag = fields{i};
-                            obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
-                        end
-                        
-                        FF = reshape(obj.scan_mon.(daqTag),[stepsVal,stepsVal2])';
-                        %FF(2:2:end,:) = fliplr(FF(2:2:end,:));
-                        
-                        imagesc(obj.hAxes1,vPointsX,vPointsY,FF);
-                        
-                        cBar = colorbar(obj.hAxes1);
-                        cBar.Label.String = obj.hBeamlineGUI.Monitors.(daqTag).sPrint();
-                        set(obj.hAxes1,'ColorScale','log')
-                        xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
-                        ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag2).sPrint());
-                        set(obj.hAxes1,'YDir','normal');
-                        drawnow();
-                    end
-
-                    % Save results .csv file
-                    function end_scan(src,evt)
-                        fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
-                        writetable(struct2table(obj.scan_mon), fname);
-                        obj.complete()
-                        fprintf('\nTest complete!\n');
-                    end
+                FF = reshape(obj.scan_mon.(daqTag),[stepsVal,stepsVal2])';
+                %FF(2:2:end,:) = fliplr(FF(2:2:end,:));
+                
+                imagesc(obj.hAxes1,vPointsX,vPointsY,FF);
+                
+                cBar = colorbar(obj.hAxes1);
+                cBar.Label.String = obj.hBeamlineGUI.Monitors.(daqTag).sPrint();
+                set(obj.hAxes1,'ColorScale','log')
+                xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
+                ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag2).sPrint());
+                set(obj.hAxes1,'YDir','normal');
+                drawnow();
+                if iV >= numel(obj.VPoints)
+                    obj.complete();
+                end
+                obj.step_num = obj.step_num + 1;
+            end
                 
         end
 
         function complete(obj,~,~)
-            %CLOSEGUI Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
+            % Stop timer if valid and running, 
             if isvalid(obj.scanTimer)
-                stop(obj.scanTimer);
+                if strcmp(obj.scanTimer.Running,'on')
+                    stop(obj.scanTimer);
+                end
                 delete(obj.scanTimer);
             end
 
+            if obj.testRunning
+                % Save results to CSV
+                fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
+                writetable(struct2table(obj.scan_mon), fname);
+                fprintf('\nTest complete!\n');
+
+                obj.testRunning = false;
+            end
+            %CLOSEGUI Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
             % Enable beamline GUI run test button if still valid
             if isvalid(obj.hBeamlineGUI)
                 set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
             end
-            
             % Restart beamline timers
             obj.hBeamlineGUI.restartTimer();
         end
@@ -551,17 +562,18 @@ classdef Sweep2D < acquisition
         function closeGUI(obj,~,~)
             %Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
             obj.complete();
-            
+
             if isvalid(obj) && isvalid(obj.hConfFigure)
                 delete(obj.hConfFigure);
             end
             
-            if isvalid(obj) && isvalid(obj.hFigure)
+            if isvalid(obj) && isfield(obj, 'hFigure') && ~isempty(obj.hFigure) && isvalid(obj.hFigure)
                 delete(obj.hFigure);
             end
             % stop(obj.scanTimer);
                 % Delete obj
             delete(obj);
+
         end
     end
 
