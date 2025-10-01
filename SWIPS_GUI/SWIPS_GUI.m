@@ -34,8 +34,6 @@ classdef SWIPS_GUI < labGUI
             % Create GUI components and layout
             obj.createLayout();
 
-            % Create and start status update timer
-            obj.createTimer();
         end
 
         function createHardware(obj)

@@ -96,6 +96,9 @@ classdef (Abstract) labGUI < handle
             % Create tools menu
             obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
             
+            % Add hardware inspection option
+            uimenu(obj.hToolsMenu,'Text','Inspect Hardware',...
+                'MenuSelectedFcn',@obj.inspectHardwareCallback);
                 
             % Create Timer menu and all its menu items
             obj.createTimerMenu();            % Create timer to periodically update readings
@@ -176,12 +179,8 @@ classdef (Abstract) labGUI < handle
 
         %% Destructors
         function closeGUI(obj,~,~)
-            %CLOSEGUI Clean up when GUI is closed
-            
-            if strcmp(obj.hLogTimer.Running,'on')
-                stop(obj.hLogTimer);
-            end
-            
+            %CLOSEGUI Clean up when GUI is closed            
+
             % Delete the object
             obj.delete();
             delete(obj);
@@ -193,6 +192,9 @@ classdef (Abstract) labGUI < handle
             % Stop timer if running
             obj.stopTimer();
 
+            % delete timers on instruments, log and acq
+            obj.destroyTimer();
+
             % Delete figure
             if isvalid(obj.hFigure)
                 delete(obj.hFigure);
@@ -201,6 +203,19 @@ classdef (Abstract) labGUI < handle
             % Clean up monitors and hardware
             structfun(@(x)delete(x),obj.Monitors,'UniformOutput',false);
             structfun(@(x)delete(x),obj.Hardware,'UniformOutput',false);
+        end
+
+        function destroyTimer(obj);
+            % Destroy all timers
+            if isvalid(obj.hLogTimer)
+                delete(obj.hLogTimer);
+            end
+            function time2die(tmr)
+                if isvalid(tmr)
+                    delete(tmr);
+                end
+            end
+            structfun(@(x)time2die(x.Timer),obj.Hardware,'UniformOutput',false);
         end
         
         function genTestSequence(obj)
@@ -319,45 +334,88 @@ classdef (Abstract) labGUI < handle
             obj.restartTimer();
         end
 
-        function viewActiveTimers(obj, ~, ~)
+        function viewActiveTimers(obj, ~, ~,timerFig)
             % Create a figure for the timer information
-            timerFig = figure('Name', 'Active Timers', ...
-                'NumberTitle', 'off', ...
-                'MenuBar', 'none', ...
-                'ToolBar', 'none', ...
-                'Position', [100 100 500 400]);
-            
+            if nargin < 4 || ~isvalid(timerFig)
+                timerFig = figure('Name', 'Active Timers', ...
+                    'NumberTitle', 'off', ...
+                    'MenuBar', 'none', ...
+                    'ToolBar', 'none', ...
+                    'Position', [100 100 800 400]);
+            end
             % Create a table to display timer information
             data = {};
-            headers = {'Timer Name', 'Period (s)', 'Running', 'Execution Mode'};
+            headers = {'Timer Name', 'Period (s)', 'Running', 'Execution Mode', 'Owner', 'Tasks To Execute', 'Tasks Executed'};
             
-            % Add hardware timers info
-            hwFields = fieldnames(obj.Hardware);
-            for i = 1:length(hwFields)
-                hw = obj.Hardware.(hwFields{i});
-                if isprop(hw, 'Timer') && ~isempty(hw.Timer)
-                    data(end+1,:) = {char(hw.Timer.Name), ...
-                        double(hw.Timer.Period), ...
-                        char(hw.Timer.Running), ...
-                        char(hw.Timer.ExecutionMode)}; %#ok<AGROW>
+            % Get all timers in MATLAB
+            allTimers = timerfindall;
+            
+            % Add all timer info
+            for i = 1:length(allTimers)
+                t = allTimers(i);
+                if isvalid(t)
+                    % Get owner info
+                    try
+                        if isobject(t.UserData) && isvalid(t.UserData)
+                            ownerInfo = class(t.UserData);
+                        else
+                            ownerInfo = 'Unknown';
+                        end
+                    catch
+                        ownerInfo = 'Unknown';
+                    end
+                    
+                    % Get tasks information
+                    try
+                        tasksToExec = num2str(t.TasksToExecute);
+                    catch
+                        tasksToExec = 'Inf';
+                    end
+                    
+                    try
+                        tasksExec = num2str(t.TasksExecuted);
+                    catch
+                        tasksExec = '0';
+                    end
+                    
+                    % Add row to data
+                    data(end+1,:) = {...
+                        char(t.Name), ...
+                        double(t.Period), ...
+                        char(t.Running), ...
+                        char(t.ExecutionMode), ...
+                        ownerInfo, ...
+                        tasksToExec, ...
+                        tasksExec}; %#ok<AGROW>
                 end
             end
             
-            % Add log timer info
-            if ~isempty(obj.hLogTimer)
-                data(end+1,:) = {char(obj.hLogTimer.Name), ...
-                    double(obj.hLogTimer.Period), ...
-                    char(obj.hLogTimer.Running), ...
-                    char(obj.hLogTimer.ExecutionMode)}; %#ok<AGROW>
+            % Sort data by timer name
+            if ~isempty(data)
+                [~, idx] = sort(cellfun(@char, data(:,1), 'UniformOutput', false));
+                data = data(idx,:);
             end
             
             % Create the uitable
-            uitable(timerFig, ...
+            t = uitable(timerFig, ...
                 'Data', data, ...
                 'ColumnName', headers, ...
                 'RowName', [], ...
-                'Position', [20 20 460 360], ...
-                'ColumnWidth', {120 80 80 120});
+                'Position', [20 20 760 360], ...
+                'ColumnWidth', {120 80 80 100 120 100 100}, ...
+                'ColumnEditable', false);
+            
+            % Enable text wrapping
+            t.ColumnFormat = {'char', 'numeric', 'char', 'char', 'char', 'char', 'char'};
+            
+            % Add a refresh button
+            uicontrol(timerFig, 'Style', 'pushbutton', ...
+                'String', 'Refresh', ...
+                'Position', [20 385 100 20], ...
+                'Callback', @(~,~) obj.viewActiveTimers([],[],timerFig));
+                
+            % Make the figure visible and bring it to front
+            figure(timerFig);
         end
 
         function createTimerMenu(obj)
@@ -608,9 +666,105 @@ classdef (Abstract) labGUI < handle
             % Center the figure on screen
             movegui(figure, 'center');
         end
+
+        function inspectHardwareCallback(obj, ~, ~)
+            % Create a figure for the hardware information
+            hwFig = figure('Name', 'Hardware Inspector', ...
+                'NumberTitle', 'off', ...
+                'MenuBar', 'none', ...
+                'ToolBar', 'none', ...
+                'Position', [100 100 800 400]);
+            
+            % Get hardware fields
+            hwFields = fieldnames(obj.Hardware);
+            
+            % Create a table to display hardware information
+            data = {};
+            headers = {'Hardware Name', 'Type', 'Model Number', 'Address', 'Connected', 'Timer Running', 'Other Properties'};
+            
+            % Populate data for each hardware component
+            for i = 1:length(hwFields)
+                hw = obj.Hardware.(hwFields{i});
+                propStr = '';
+                
+                % Get the standard properties with error handling
+                try
+                    hwType = char(hw.Type);
+                catch
+                    hwType = 'N/A';
+                end
+                
+                try
+                    modelNum = char(string(hw.ModelNum));
+                catch
+                    modelNum = 'N/A';
+                end
+
+                try
+                    address = char(string(hw.Address));
+                catch
+                    address = 'N/A';
+                end
+                
+                try
+                    if hw.Connected
+                        connected = 'true';
+                    else   
+                        connected = 'false';
+                    end
+                catch
+                    connected = 'N/A';
+                end
+                
+                try
+                    if ~isempty(hw.Timer) && isvalid(hw.Timer)
+                        timerRunning = char(hw.Timer.Running);
+                    else
+                        timerRunning = 'No Timer';
+                    end
+                catch
+                    timerRunning = 'N/A';
+                end
+                
+                % Get remaining properties
+                props = properties(hw);
+                standardProps = {'Type', 'ModelNum', 'Address', 'Connected', 'Timer'};
+                
+                % Add remaining properties to propStr
+                for j = 1:length(props)
+                    if ~any(strcmp(props{j}, standardProps))
+                        try
+                            propVal = hw.(props{j});
+                            if isnumeric(propVal) || islogical(propVal) || ischar(propVal) || isstring(propVal)
+                                propStr = [propStr, props{j}, ': ', char(string(propVal)), '| '];
+                            end
+                        catch
+                            % Skip properties that can't be accessed or converted
+                        end
+                    end
+                end
+                
+                % Add row to data
+                data(end+1,:) = {hwFields{i}, hwType, modelNum, address, connected, timerRunning, propStr}; %#ok<AGROW>
+            end
+            
+            % Create the uitable with hardware information
+            uitable(hwFig, ...
+                'Data', data, ...
+                'ColumnName', headers, ...
+                'RowName', [], ...
+                'Position', [20 20 860 360], ...
+                'ColumnWidth', {120 100 100 100 80 100 240}, ...
+                'ColumnEditable', false);
+            
+            % Make the figure visible and bring it to front
+            figure(hwFig);
+        end
     end
 
     methods (Static, Access = private)
+        
+
         function popupBlankDelete(src)
             %POPUPBLANKDELETE Deletes blank option from popupmenu
             

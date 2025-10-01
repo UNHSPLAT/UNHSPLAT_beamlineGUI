@@ -4,7 +4,7 @@ classdef NewportStageControl < handle
         Tag string =""%
         textLabel string = ""% 
         unit string = ""%
-        address string = ""%
+        Address string = ""%
         asmInfo %
         groups = ["Group1","Group2","Group3"] % Define the group names for the stage
         group_status = [0,0,0]
@@ -19,12 +19,12 @@ classdef NewportStageControl < handle
     end
 
     methods
-        function obj = NewportStageControl(address,groups)
+        function obj = NewportStageControl(Address,groups)
             % Initialize control
             obj.Connected = false;
             obj.Tag = '3axisNewportStage';
             
-            obj.address = address;
+            obj.Address = Address;
             if nargin >1
                 obj.groups = groups;
             end
@@ -65,7 +65,7 @@ classdef NewportStageControl < handle
         function connectDevice(obj)
             if ~ obj.Connected
                 if ~isempty(obj.myxps)
-                    open_code=obj.myxps.OpenInstrument(obj.address,5001,1000);
+                    open_code=obj.myxps.OpenInstrument(obj.Address,5001,1000);
                     if open_code == 0
                         obj.Connected = true;
                     else
