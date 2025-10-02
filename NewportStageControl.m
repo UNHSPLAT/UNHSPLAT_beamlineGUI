@@ -53,11 +53,17 @@ classdef NewportStageControl < handle
         end
 
         function shutdown(obj,~,~)
-                if isvalid(obj.myxps)
-                    things = obj.myxps.KillAll();
-                    obj.myxps.CloseInstrument;
+                if ~isempty(obj.myxps)
+                    try
+                        things = obj.myxps.KillAll();
+                        obj.myxps.CloseInstrument;
+                    catch
+                        % Ignore errors during shutdown
+                    end
                 end
-                stop(obj.Timer);
+                if ~isempty(obj.Timer) && isvalid(obj.Timer) && strcmp(obj.Timer.Running, 'on')
+                    stop(obj.Timer);
+                end
                 obj.Connected = false;
                 obj.lastRead = nan;
         end
@@ -123,8 +129,8 @@ classdef NewportStageControl < handle
         end
 
         function stopTimer(obj)
-            % Stop timer if still running
-            if strcmp(obj.Timer.Running,'on')
+            % Stop timer if still running and valid
+            if ~isempty(obj.Timer) && isvalid(obj.Timer) && strcmp(obj.Timer.Running,'on')
                 stop(obj.Timer);
             end
         end

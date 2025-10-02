@@ -228,11 +228,19 @@ classdef (Abstract) labGUI < handle
             end
 
             % Clean up monitors and hardware
-            structfun(@(x)delete(x),obj.Monitors,'UniformOutput',false);
-            structfun(@(x)delete(x),obj.Hardware,'UniformOutput',false);
+            % run instrument and monitor delete in try-catch during shutdown
+            function try_delete(x)
+                try
+                    delete(x);
+                catch
+                    % pass to avoid error during cleanup
+                end
+            end
+            structfun(@(x)try_delete(x),obj.Monitors,'UniformOutput',false);
+            structfun(@(x)try_delete(x),obj.Hardware,'UniformOutput',false);
         end
 
-        function destroyTimer(obj);
+        function destroyTimer(obj)
             % Destroy all timers
             if isvalid(obj.hLogTimer)
                 delete(obj.hLogTimer);
