@@ -455,6 +455,11 @@ classdef (Abstract) labGUI < handle
             % Create main Timer menu
             obj.hTimerMenu = uimenu(obj.hFigure,'Text','Timer');
             
+            uimenu(obj.hTimerMenu,'Text','Restart Timer',...
+                'MenuSelectedFcn',@obj.restartTimer);
+
+            uimenu(obj.hTimerMenu,'Text','Disable Timer',...
+                'MenuSelectedFcn',@obj.stopTimer);
             
             hSystemTimerMenu = uimenu(obj.hTimerMenu,'Text','System Timer Control');
             % Add timer control options
@@ -463,12 +468,6 @@ classdef (Abstract) labGUI < handle
             
             uimenu(hSystemTimerMenu,'Text','Set Data Log Rate',...
                 'MenuSelectedFcn',@obj.setLogRate);
-            
-            uimenu(hSystemTimerMenu,'Text','Disable Timer',...
-                'MenuSelectedFcn',@obj.stopTimer);
-            
-            uimenu(hSystemTimerMenu,'Text','Restart Timer',...
-                'MenuSelectedFcn',@obj.restartTimer);
             
             uimenu(hSystemTimerMenu,'Text','View Active Timers',...
                 'MenuSelectedFcn',@obj.viewActiveTimers);

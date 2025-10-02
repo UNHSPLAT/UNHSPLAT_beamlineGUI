@@ -9,7 +9,7 @@ dlg = dialog('Name', 'GUI Startup Options', ...
     'Position', [300 300 300 250]);
 
 % Add GUI selection list
-guiTypes = {'Beamline GUI', 'SWIPS GUI'};
+guiTypes = {'Beamline GUI', 'SWIPS GUI', 'MCP Cam Control'};
 uicontrol(dlg, 'Style', 'text', ...
     'Position', [20 200 260 30], ...
     'String', 'Select GUI to launch:', ...
@@ -69,9 +69,11 @@ switch button
         % Code to execute if 'OK' is pressed
         switch guiIdx
             case 1
-                myGUI = beamlineGUI;
+                mybeamlineGUI = beamlineGUI;
             case 2
-                myGUI = SWIPS_GUI;
+                mySWIPS_GUI = SWIPS_GUI;
+            case 3
+                MainScript;
         end
     case 'Cancel'
         % Code to execute if 'Cancel' is pressed
