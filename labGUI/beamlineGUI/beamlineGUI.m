@@ -68,7 +68,21 @@ classdef beamlineGUI < labGUI
         end
 
         function valveControlCallback(obj,~,~)
-           vfrac = .4;
+            %VALVECONTROLCALLBACK Creates a valve control window with web interface
+            %   This function creates a figure with two main components:
+            %   1. A web panel displaying the power strip control interface
+            %   2. A system layout diagram showing the valve configuration
+            %
+            %   The window includes:
+            %   - Power strip web control interface in bottom 40% of window
+            %   - System layout diagram in top 60% of window
+            %   - Refresh button to reload the web interface
+            %
+            %   Parameters:
+            %   obj - The beamlineGUI object
+            %   ~,~ - Unused callback parameters
+            
+           vfrac = .4; % Fraction of window height for valve control panel
            obj.hValveFigure = figure('MenuBar','none',...
                 'ToolBar','none',...
                 'Position',[658 245 876 687],...
@@ -208,101 +222,29 @@ classdef beamlineGUI < labGUI
             %===================================================================================
             % Create beamline status uicontrol group
             % Set positions for components
-            ysize = 22;
-            ygap = 6;
-            ystart = ypanelBuffer;
-            ypos = ystart;
-            xgap = 15;
-            xstart = 10;
-
+            
+            ypos = yBorderBuffer;
             colSize = [180,140,60,60,60];
-
-            obj.hStatusGrp = uipanel(obj.hFigure,...
-                'Title','Beamline Status',...
-                'FontWeight','bold',...
-                'FontSize',12,...
-                'Units','pixels',...
-                'Position',[obj.hHWConnStatusGrp.Position(3)+xBorderBuffer*2,yBorderBuffer,sum(colSize)+xgap*numel(colSize),10]);
-
-            function x = guiStatusGrpSet(x)    
-                colInd = 1;
-                xColStart = xstart;
-                x.guiHand.statusGrpText=uicontrol(obj.hStatusGrp,'Style','text',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String',sprintf('%s ',x.textLabel),...
-                'FontWeight','bold',...
-                'FontSize',9,...
-                'HorizontalAlignment','right');
-
-                xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-                colInd = colInd+1;
-                readingTxt = uicontrol(obj.hStatusGrp,'Style','edit',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'Enable','inactive',...
-                'FontSize',9,...
-                'HorizontalAlignment','right');
-
-                % Define listener to auto update status text when parameter is changed
-                x.guiHand.listener = guiListener(x,'lastRead',...
-                                                     readingTxt,...
-                            @(self) set(self.guiHand,'String',sprintf(self.parent.formatSpec,self.parent.lastRead)));
-
-                
-                
-                % column for units following readouts
-                xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-                colInd = colInd+1;
-                x.guiHand.statusGrpSetText = uicontrol(obj.hStatusGrp,'Style','text',...
-                    'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                    'String',sprintf('[%s]: ',x.unit),...
-                    'FontSize',9,...
-                    'HorizontalAlignment','right');
-
-                if x.active
-
-                    xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-                    colInd = colInd+1;
-                    x.guiHand.statusGrpSetField = uicontrol(obj.hStatusGrp,'Style','edit',...
-                        'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                        'FontSize',9,...
-                        'HorizontalAlignment','right');
-
-                    xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-                    colInd = colInd+1;
-                    x.guiHand.statusGrpSetBtn = uicontrol(obj.hStatusGrp,'Style','pushbutton',...
-                        'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                        'String','SET',...
-                        'FontWeight','bold',...
-                        'FontSize',9,...
-                        'HorizontalAlignment','center',...
-                        'Callback',@x.guiSetCallback);
-
-                    xColStart = sum(colSize(1:colInd))+xgap*(colInd);
-                end
-                ypos = ypos+ysize+ygap;
-                obj.hStatusGrp.Position(4) = ypos+yBorderBuffer;
+            grps = unique(structfun(@(x)x.group,obj.Monitors));
+            for i = 1:numel(grps)
+                grp = grps(i);
+                out = obj.guiPanelMake(obj.hFigure,...
+                255, ...
+                ypos,...
+                grp,...
+                'colSizes',colSize,...
+                'monitorGroup', grp);
+                ypos = out.Position(4)+out.Position(2);
             end
             
-            structfun(@guiStatusGrpSet,obj.Monitors);
-
             %====================================================================================
             %Test Panel group
             % Set positions for right-side GUI components
-            ysize = 22;
-            ygap = 20;
-            ystart = ypanelBuffer;
-            ypos = ystart;
-            xgap = 15;
-            xstart = 10;
-            colSize = [160,180];
             
-            xtextsize = 160;
-            xeditsize = 180;
-            
+            obj.guiPanelTest([out.Position(1)+out.Position(3)+xBorderBuffer,...
+                                yBorderBuffer,360, 250]);
 
-            obj.guiPanelTest([obj.hStatusGrp.Position(1)+obj.hStatusGrp.Position(3)+xBorderBuffer,...
-                                yBorderBuffer,sum(colSize)+xgap*numel(colSize),500]);
-
+            obj.guiAutoScale(obj.hFigure);
         end
     end
     methods (Access = private)

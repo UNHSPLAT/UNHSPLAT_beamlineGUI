@@ -317,6 +317,135 @@ classdef (Abstract) labGUI < handle
                 msgbox('No acquisition available to start. Please set up an acquisition first.', 'Start Acquisition');
             end
         end
+
+        function pan_out = guiPanelMake(obj, fig, panx, pany, panName, varargin)
+            %GUIPANELMAKE Creates a standardized panel with monitor controls
+            %   pan_out = guiPanelMake(obj, fig, panx, pany, panName, monitorGroup)
+            %   pan_out = guiPanelMake(obj, fig, panx, pany, panName, monitorGroup, 'Parameter', Value, ...)
+            %
+            %   Parameters:
+            %   obj - The SWIPS_GUI object
+            %   fig - Handle to parent figure
+            %   panx - X position of panel
+            %   pany - Y position of panel
+            %   panName - Title of the panel
+            %   monitorGroup - Group name for monitors to include
+            %
+            %   Optional Parameters (Name-Value pairs):
+            %   'ColumnSizes' - Array of column widths [default: [100,200,40,60,60]]
+            %   'Margin' - Panel margin size [default: 10]
+            %   'XGap' - Gap between columns [default: 15]
+            %   'YGap' - Gap between rows [default: 6]
+            %
+            %   Returns:
+            %   pan_out - Handle to created panel
+            
+            % Parse optional parameters
+            p = inputParser;
+            addParameter(p, 'monitorGroup', 'all'); % Default monitor group
+            addParameter(p, 'colSizes', [100,200,40,60,60]); % Default column sizes
+            addParameter(p, 'Margin', 10);
+            addParameter(p, 'XGap', 15);
+            addParameter(p, 'YGap', 6);
+            parse(p, varargin{:});
+            
+            % Get parsed values
+            colSize = p.Results.colSizes;
+            margin = p.Results.Margin;
+            xgap = p.Results.XGap;
+            ygap = p.Results.YGap;
+            monitorGroup = p.Results.monitorGroup;
+            
+            % Calculate panel width
+            panel2Width = sum(colSize)+xgap*numel(colSize);
+            
+            % Create instrument monitor panel in right column
+            ypos = 10;  % Reset Y position for new panel
+            pan_out = uipanel(fig,...
+                'Title', panName,...
+                'FontWeight', 'bold',...
+                'FontSize', 12,...
+                'Units', 'pixels',...
+                'Position', [panx, pany, panel2Width, 150]);
+                
+            % Add instrument monitors
+            monitorFields = fieldnames(obj.Monitors);
+            for i = 1:length(monitorFields)
+                monitor = obj.Monitors.(monitorFields{i});
+                if strcmp(monitor.group, monitorGroup) || strcmp(monitorGroup, 'all')
+                    guiStatusGrpSet(monitor, pan_out);
+                end
+            end
+            
+            % Adjust panel height
+            pan_out.Position(4) = ypos + 20;  % Add padding
+   
+            % Function to create monitor controls for a channel
+            function guiStatusGrpSet(mon, panel)    
+                % Use specified panel or default to HV status panel
+                if nargin < 2
+                    panel = obj.hHVStatusGrp;
+                end
+                
+                % Label column
+                colInd = 1;
+                xColStart = margin;
+                mon.guiHand.statusGrpText = uicontrol(panel,'Style','text',...
+                    'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
+                    'String',sprintf('%s ',mon.textLabel),...
+                    'FontWeight','bold',...
+                    'FontSize',9,...
+                    'HorizontalAlignment','right');
+
+                % Reading value column
+                xColStart = sum(colSize(1:colInd))+xgap*(colInd);
+                colInd = colInd+1;
+                readingTxt = uicontrol(panel,'Style','edit',...
+                    'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
+                    'Enable','inactive',...
+                    'FontSize',9,...
+                    'HorizontalAlignment','right');
+
+                % Create listener for auto-updating the reading
+                mon.guiHand.listener = guiListener(mon,'lastRead',...
+                    readingTxt,...
+                    @(self) set(self.guiHand,'String',sprintf(self.parent.formatSpec,self.parent.lastRead)));
+
+                % Units column
+                xColStart = sum(colSize(1:colInd))+xgap*(colInd);
+                colInd = colInd+1;
+                mon.guiHand.statusGrpSetText = uicontrol(panel,'Style','text',...
+                    'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
+                    'String',sprintf('[%s]: ',mon.unit),...
+                    'FontSize',9,...
+                    'HorizontalAlignment','right');
+
+                % Set value field and button (only for active monitors)
+                if mon.active
+                    % Set value input field
+                    xColStart = sum(colSize(1:colInd))+xgap*(colInd);
+                    colInd = colInd+1;
+                    mon.guiHand.statusGrpSetField = uicontrol(panel,'Style','edit',...
+                        'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
+                        'FontSize',9,...
+                        'HorizontalAlignment','right');
+
+                    % Set button
+                    xColStart = sum(colSize(1:colInd))+xgap*(colInd);
+                    colInd = colInd+1;
+                    mon.guiHand.statusGrpSetBtn = uicontrol(panel,'Style','pushbutton',...
+                        'Position',[xColStart,ypos,colSize(colInd),obj.ysize],...
+                        'String','SET',...
+                        'FontWeight','bold',...
+                        'FontSize',9,...
+                        'HorizontalAlignment','center',...
+                        'Callback',@mon.guiSetCallback);
+                end
+                
+                % Update vertical position for next control
+                ypos = ypos+obj.ysize+ygap;
+            end
+        end
     end
 
     methods (Access = protected)
@@ -910,6 +1039,7 @@ classdef (Abstract) labGUI < handle
             figure(monFig);
         end
         
+
     end
 
     methods (Static, Access = private)
