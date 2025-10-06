@@ -67,7 +67,8 @@
                          'caen_HVPS2',caen_hvps([],[],2,'config_caenPS2.ini')......
                          );
 
-    
+    % connect to devices
+    instruments.caen_HVPS2.connectDevice();
 
     %assign tags to instrument structures
     fields = fieldnames(instruments);

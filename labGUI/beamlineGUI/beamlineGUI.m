@@ -220,12 +220,13 @@ classdef beamlineGUI < labGUI
             ypos = obj.hCamGUI.Position(2)+obj.hCamGUI.Position(4);
 
             %===================================================================================
+            % Panel column 2
             % Create beamline status uicontrol group
             % Set positions for components
             
             ypos = yBorderBuffer;
             colSize = [180,140,60,60,60];
-            grps = unique(structfun(@(x)x.group,obj.Monitors));
+            grps = {'HV','beam','pressure','status'};
             for i = 1:numel(grps)
                 grp = grps(i);
                 out = obj.guiPanelMake(obj.hFigure,...
@@ -238,16 +239,59 @@ classdef beamlineGUI < labGUI
             end
             
             %====================================================================================
+            % Panel column 3
+            % Imaging MCP control panel
+            p3colSizes =[90,100,60,60,60];
+            pan3x =out.Position(1)+out.Position(3)+xBorderBuffer;
+            imgMCP = obj.guiPanelMake(obj.hFigure,...
+                pan3x, ...
+                yBorderBuffer,...
+                'ImgMCP',...
+                'colSizes',p3colSizes,...
+                'monitorGroup', 'ImgMCP');
+
+             %===================================================================================
+             % MCP ramp activate and abort button
+            hMCPRamp = uicontrol(imgMCP, ...
+                'Style','pushbutton',...
+               'Position',[sum(p3colSizes(1:3))+xgap*3,ygap,sum(p3colSizes(4:end))+xgap*2,obj.ysize],...
+               'String','Ramp MCP',...
+               'FontSize',12,...
+               'FontWeight','bold',...
+                'HorizontalAlignment','center',...
+                'Callback',@obj.mcpRampCallback);
+
+            function ramp_stat(self)
+                if self.parent.lock
+                    curr_string = 'Abort Ramp';
+                else
+                    curr_string = 'Ramp MCP';
+                end
+                set(self.guiHand,'String',curr_string);
+            end
+
+            mcpRampListener = guiListener(obj.Monitors.voltCh2_mcpVA,'lock',...
+                                        hMCPRamp,@ramp_stat);
+
             %Test Panel group
             % Set positions for right-side GUI components
             
-            obj.guiPanelTest([out.Position(1)+out.Position(3)+xBorderBuffer,...
-                                yBorderBuffer,360, 250]);
+            obj.guiPanelTest([pan3x,...
+                                imgMCP.Position(4)+imgMCP.Position(2)+yBorderBuffer,360, 250]);
 
             obj.guiAutoScale(obj.hFigure);
         end
     end
     methods (Access = private)
+        function mcpRampCallback(obj,~,~)
+            mcpMon = obj.Monitors.voltCh2_mcpVA;
+            if mcpMon.lock
+                stop(mcpMon.monTimer);
+            else
+                Ramp_ImgMCP(mcpMon,obj.Monitors.voltCh1_mcpVout);
+            end
+        end
+
         function trigCamController(obj,~,~)
             if obj.Hardware.MCPwebCam.Connected
                 obj.Hardware.MCPwebCam.shutdown();
