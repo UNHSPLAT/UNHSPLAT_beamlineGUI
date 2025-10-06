@@ -15,6 +15,7 @@ classdef monitor < handle
         children = []%
         monTimer
         lastReadTime datetime = datetime('now')%
+        listPropNam = 'lastRead'
     end
     properties (SetObservable) 
         lastRead %
@@ -37,7 +38,6 @@ classdef monitor < handle
                 % Initialize an array of listeners
                 obj.parentListener = event.listener.empty;
                 
-                
                 % obj.parentListener = addlistener(obj.parent, 'lastRead', 'PostSet', @obj.read);
 
                 % Handle both single objects and arrays
@@ -46,7 +46,7 @@ classdef monitor < handle
                 % Create a listener for each parent
                 for i = 1:numel(parents)
                     try
-                        newListener = addlistener(parents(i), 'lastRead', 'PostSet', @obj.read);
+                        newListener = addlistener(parents(i), obj.listPropNam, 'PostSet', @obj.read);
                         obj.parentListener(end+1) = newListener;
                     catch ME
                         warning('Failed to create listener for parent %d: %s', i, ME.message);
