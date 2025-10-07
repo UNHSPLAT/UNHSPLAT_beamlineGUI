@@ -10,6 +10,12 @@ function Ramp_ImgMCP(monMCP_Va,monMCP_vOut)
 
     definput = {chLastRead,'20','10'};
     answer = inputdlg(prompt,dlgtitle,fieldsize,definput);
+    
+    % abort if cancel button pressed
+    if isempty(answer)
+        fprintf('Ramp Aborted\n')
+        return
+    end
 
     vSet = abs(str2double(answer{1}));
     step = abs(str2double(answer{2}));
@@ -19,10 +25,13 @@ function Ramp_ImgMCP(monMCP_Va,monMCP_vOut)
         errordlg('A valid voltage value must be entered!','Invalid input!');
         return
     end    
+    monMCP_Va.lock = true;
+    monMCP_vOut.lock = true;
 
     % define coupled voltage set func
     function setVImgMCP(vA)
         vOut = vA*2100/2400;
+        monMCP_Va.parent.read();
         monMCP_Va.set(vA);
         monMCP_vOut.set(vOut);
     end

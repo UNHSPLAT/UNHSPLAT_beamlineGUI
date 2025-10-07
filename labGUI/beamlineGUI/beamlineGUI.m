@@ -9,6 +9,7 @@ classdef beamlineGUI < labGUI
         hCamGUI % Handle to camera control init button
         hCamButton % Handle to camera button
         hBeamMonFigure
+        mcpRampListener
     end
     
     properties (Access = protected)
@@ -270,7 +271,7 @@ classdef beamlineGUI < labGUI
                 set(self.guiHand,'String',curr_string);
             end
 
-            mcpRampListener = guiListener(obj.Monitors.voltCh2_mcpVA,'lock',...
+            obj.mcpRampListener = guiListener(obj.Monitors.voltCh2_mcpVA,'lock',...
                                         hMCPRamp,@ramp_stat);
 
             %Test Panel group
