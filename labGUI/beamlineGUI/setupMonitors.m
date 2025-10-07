@@ -26,21 +26,27 @@ function monitors = setupMonitors(instruments)
         end    
 
         function stop_func(src,evt)
-            self.read();
             self.lock = false;
+            delete(self.monTimer);
+        end
+        % define coupled voltage set func
+        function setV(volt)
+            display(volt);
+            self.parent.setVSet(volt);
+%             self.parent.read();
         end
         self.lock = true;
         %check the voltage being applied and ramp the voltage in steps if need be
-        minstep = 50;
+        minstep = 20;
         if abs(volt)-abs(self.lastRead)>minstep
             multivolt = linspace(self.lastRead,volt,ceil((abs(volt)-abs(self.lastRead))/minstep)+1);
             multivolt = multivolt(2:end);
-            self.monTimer = timer('Period',minstep/(2000/60),... %period
+            self.monTimer = timer('Period',1,... %period
                       'ExecutionMode','fixedSpacing',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
                       'BusyMode','queue',... %{drop, error, queue}
                       'TasksToExecute',numel(multivolt),...          
                       'StartDelay',0,...
-                      'TimerFcn',@(src,evt)self.parent.setVSet(multivolt(get(src,'TasksExecuted'))),...
+                      'TimerFcn',@(src,evt)setV(multivolt(get(src,'TasksExecuted'))),...
                       'StartFcn',@(src,evt)setfield( self , 'lock' , true ),...
                       'StopFcn',@stop_func,...
                       'ErrorFcn',@stop_func);

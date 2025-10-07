@@ -52,8 +52,6 @@ classdef beamlineGUI < labGUI
             obj.updateReadings();
             obj.hBeamMonFigure = beamlineMonitor(obj);
             obj.hBeamMonFigure.runSweep();
-            % Create and start status update timer
-            obj.createTimer();
         end
         
         function createHardware(obj)

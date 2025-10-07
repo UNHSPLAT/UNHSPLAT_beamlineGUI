@@ -840,7 +840,7 @@ classdef (Abstract) labGUI < handle
             
             % Create a table to display hardware information
             data = {};
-            headers = {'Hardware Name', 'Type', 'Model Number', 'Address', 'Connected', 'Timer Running', 'Other Properties'};
+            headers = {'Hardware Name', 'Type', 'Model Number', 'Address', 'Connected', 'Timer Running','Read Delay', 'Other Properties'};
             
             % Populate data for each hardware component
             for i = 1:length(hwFields)
@@ -885,6 +885,12 @@ classdef (Abstract) labGUI < handle
                 catch
                     timerRunning = 'N/A';
                 end
+
+                try
+                    read_delay = char(string(hw.read_delay));
+                catch
+                    read_delay = 'N/A';
+                end
                 
                 % Get remaining properties
                 props = properties(hw);
@@ -905,7 +911,7 @@ classdef (Abstract) labGUI < handle
                 end
                 
                 % Add row to data
-                data(end+1,:) = {hwFields{i}, hwType, modelNum, address, connected, timerRunning, propStr}; %#ok<AGROW>
+                data(end+1,:) = {hwFields{i}, hwType, modelNum, address, connected, timerRunning, read_delay, propStr}; %#ok<AGROW>
             end
             
             % Create the uitable with hardware information
@@ -914,8 +920,14 @@ classdef (Abstract) labGUI < handle
                 'ColumnName', headers, ...
                 'RowName', [], ...
                 'Position', [20 20 860 360], ...
-                'ColumnWidth', {120 100 100 100 80 100 240}, ...
+                'ColumnWidth', {120 100 100 100 80 100 80 240}, ...
                 'ColumnEditable', false);
+
+            % Add a refresh button
+            uicontrol(hwFig, 'Style', 'pushbutton', ...
+                'String', 'Refresh', ...
+                'Position', [20 385 100 20], ...
+                'Callback', @(~,~) obj.inspectHardwareCallback([],[],hwFig));
             
             % Make the figure visible and bring it to front
             figure(hwFig);
