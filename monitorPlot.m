@@ -12,7 +12,8 @@ classdef monitorPlot < handle
         xMonStr%
         yMonStr%
         xvals = []%
-        yvals = []
+        yvals = {}  % Cell array to store multiple y-value arrays
+        numYvals = 0  % Number of y-values to track
         panel%
         ax%
         hGUI %
@@ -40,33 +41,84 @@ classdef monitorPlot < handle
         
         function pltVal(obj)
             try
-            % Get current values
-            xval = obj.hGUI.Monitors.(obj.xMonStr).lastRead;
-            yval = obj.hGUI.Monitors.(obj.yMonStr).lastRead;
-            
-            if ~isempty(xval) && ~isempty(yval)
-                % Add to data arrays
-                obj.xvals(end+1) = xval;
-                obj.yvals(end+1) = yval;
+                % Get current values
+                xval = obj.hGUI.Monitors.(obj.xMonStr).lastRead;
+                yval = obj.hGUI.Monitors.(obj.yMonStr).lastRead;
                 
-                % Keep only last 1000 points to prevent memory issues
-                if length(obj.xvals) > 1000
-                    obj.xvals = obj.xvals(end-999:end);
-                    obj.yvals = obj.yvals(end-999:end);
-                end
-                
-                % Update plot
-                plot(obj.ax, obj.xvals, obj.yvals, 'b.-');
+                if ~isempty(xval) && ~isempty(yval)
+                    % Initialize arrays if this is the first data point
+                    if isempty(obj.yvals)
+                        obj.numYvals = length(yval);
+                        obj.yvals = cell(1, obj.numYvals);
+                        for i = 1:obj.numYvals
+                            obj.yvals{i} = [];
+                        end
+                    end
+                    
+                    % Add x value
+                    obj.xvals(end+1) = xval;
+                    
+                    % Add y values
+                    if isscalar(yval)
+                        % If scalar, add to first line only
+                        obj.yvals{1}(end+1) = yval;
+                        for i = 2:obj.numYvals
+                            obj.yvals{i}(end+1) = NaN;  % Fill others with NaN
+                        end
+                    else
+                        % Add each element of yval to its corresponding array
+                        for i = 1:obj.numYvals
+                            if i <= length(yval)
+                                obj.yvals{i}(end+1) = yval(i);
+                            else
+                                obj.yvals{i}(end+1) = NaN;  % Fill missing values with NaN
+                            end
+                        end
+                    end
+                    
+                    % Keep only last 1000 points to prevent memory issues
+                    if length(obj.xvals) > 1000
+                        obj.xvals = obj.xvals(end-999:end);
+                        for i = 1:obj.numYvals
+                            obj.yvals{i} = obj.yvals{i}(end-999:end);
+                        end
+                    end
+                    
+                    % Clear the axes
+                    cla(obj.ax);
+                    
+                    % Plot each line with a different color
+                    colors = {'b', 'r', 'g', 'm', 'c', 'k', 'y'};  % Color cycle
+                    hold(obj.ax, 'on');
+                    for i = 1:obj.numYvals
+                        color_idx = mod(i-1, length(colors)) + 1;
+                        plot(obj.ax, obj.xvals, obj.yvals{i}, [colors{color_idx} '.-']);
+                    end
+                    hold(obj.ax, 'off');
 
-                xlabel(obj.ax, obj.hGUI.Monitors.(obj.xMonStr).sPrint());
-                ylabel(obj.ax, obj.hGUI.Monitors.(obj.yMonStr).sPrint());
-                grid(obj.ax, 'on');
-                
-                % Update title with current values
-                title(obj.ax, sprintf('Current: [x,y]= [%s, %s]', ...
-                    obj.hGUI.Monitors.(obj.xMonStr).sPrintVal(), ...
-                    obj.hGUI.Monitors.(obj.yMonStr).sPrintVal()));
-            end
+                    xlabel(obj.ax, obj.hGUI.Monitors.(obj.xMonStr).sPrint());
+                    ylabel(obj.ax, obj.hGUI.Monitors.(obj.yMonStr).sPrint());
+                    grid(obj.ax, 'on');
+                    
+                    % Update title with current values
+                    if obj.numYvals == 1
+                        titleStr = sprintf('Current: [x,y]= [%s, %s]', ...
+                            obj.hGUI.Monitors.(obj.xMonStr).sPrintVal(), ...
+                            obj.hGUI.Monitors.(obj.yMonStr).sPrintVal());
+                    else
+                        titleStr = sprintf('Current: x=%s, y=[', ...
+                            obj.hGUI.Monitors.(obj.xMonStr).sPrintVal());
+                        yvals = obj.hGUI.Monitors.(obj.yMonStr).lastRead;
+                        for i = 1:length(yvals)
+                            if i > 1
+                                titleStr = [titleStr, ', '];
+                            end
+                            titleStr = [titleStr, sprintf('%.3g', yvals(i))];
+                        end
+                        titleStr = [titleStr, ']'];
+                    end
+                    title(obj.ax, titleStr);
+                end
             catch
                 % delete(obj.listo);
                 fprintf('[%s,%s] MonPlot Failed\n', ...

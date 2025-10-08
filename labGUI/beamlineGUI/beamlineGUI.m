@@ -50,8 +50,6 @@ classdef beamlineGUI < labGUI
             obj.createLayout();
 
             obj.updateReadings();
-            obj.hBeamMonFigure = beamlineMonitor(obj);
-            obj.hBeamMonFigure.runSweep();
         end
         
         function createHardware(obj)
