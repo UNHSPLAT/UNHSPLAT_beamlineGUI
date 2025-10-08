@@ -19,6 +19,11 @@ classdef (Abstract) labGUI < handle
         % Main GUI elements
         hFigure % Handle to GUI figure
         
+        % Tab controls
+        hTabGroup % Handle to the main tab group
+        hMainControlsTab % Handle to main controls tab
+        hMonitoringTab % Handle to monitoring tab
+        
         % Test control elements
         hRunBtn % Handle to run test button
         hSequenceEdit % Handle to test sequence field
@@ -72,7 +77,6 @@ classdef (Abstract) labGUI < handle
             obj.hFigure = figure('Name',guiLab,...
                 'NumberTitle','off',...
                 'MenuBar','none',...
-                'ToolBar','none',...
                 'Position',[100 100 800 600],...
                 'CloseRequestFcn',@obj.closeGUI);
             
@@ -104,6 +108,10 @@ classdef (Abstract) labGUI < handle
             uimenu(obj.hToolsMenu,'Text','Inspect Monitors',...
                 'MenuSelectedFcn',@obj.inspectMonitorsCallback);
                 
+            % Add hardware simulation option
+            uimenu(obj.hToolsMenu,'Text','Simulate Hardware',...
+                'MenuSelectedFcn',@obj.simHWCallback);
+                
             % Create Timer menu and all its menu items
             obj.createTimerMenu();            % Create timer to periodically update readings
             obj.createTimer();
@@ -118,7 +126,7 @@ classdef (Abstract) labGUI < handle
                         'group','status',...
                         'formatSpec', "%s" ...
                         );
-            obj.Monitors.T = monitor('readFunc', @(x) now(), ...
+            obj.Monitors.T = monitor('readFunc', @(x) round(now()*1e6), ...
                             'textLabel', 'Time', ...
                             'unit', 'DateNum', ...
                             'group','status',...
@@ -130,7 +138,15 @@ classdef (Abstract) labGUI < handle
                             'group','status',...
                             'formatSpec', "%d" ...
                             );
+
+            % Create tab group
+            obj.hTabGroup = uitabgroup('Parent', obj.hFigure);
+
+            % Create first tab for existing controls
+            obj.hMainControlsTab = uitab('Parent', obj.hTabGroup, 'Title', 'Main Controls');
             
+            % Create tabs for monitor groups
+            obj.makeMonTabs2();
         end
         
         function stopTimer(obj,~,~)
@@ -449,6 +465,87 @@ classdef (Abstract) labGUI < handle
     end
 
     methods (Access = protected)
+        function simHWCallback(obj, ~, ~, simFig)
+            %SIMHWCALLBACK Opens a window to simulate hardware readings with random values
+            
+            % Create or refresh the figure
+            if nargin < 4 || ~isvalid(simFig)
+                simFig = figure('Name', 'Hardware Simulation', ...
+                    'NumberTitle', 'off', ...
+                    'MenuBar', 'none', ...
+                    'ToolBar', 'none', ...
+                    'Position', [100 100 600 400]);
+            end
+
+            % Get hardware fields
+            hwFields = fieldnames(obj.Hardware);
+            
+            % Prepare data for table
+            data = cell(length(hwFields), 3); % 3 columns: Name, Current, Random
+            celdata = cell(length(hwFields), 3); % 3 columns: Name, Current, Random
+            for i = 1:length(hwFields)
+                hw = obj.Hardware.(hwFields{i});
+                if isprop(hw, 'lastRead')
+                    currentVal = hw.lastRead;
+                    % Generate random value within ±20% of current value
+                    randomVal = randi(300,length(currentVal),1);
+                else
+                    currentVal = 'N/A';
+                    randomVal = rand();
+                end
+                data{i,1} = hwFields{i};
+                data{i,2} = currentVal;
+                data{i,3} = randomVal;
+
+                celdata{i,1} = hwFields{i};
+                celdata{i,2} = sprintf('%f,',currentVal);
+                celdata{i,3} = sprintf('%f,',randomVal);
+                
+            end
+            
+            % Create table
+            t = uitable(simFig, ...
+                'Data', celdata, ...
+                'ColumnName', {'Hardware', 'Current Value', 'Random Value'}, ...
+                'RowName', [], ...
+                'Position', [20 60 560 320], ...
+                'ColumnWidth', {150 150 150}, ...
+                'ColumnEditable', [false false true]); % Allow editing random values
+            
+            % Add Send Values button
+            uicontrol(simFig, 'Style', 'pushbutton', ...
+                'String', 'Send Values', ...
+                'Position', [20 20 100 30], ...
+                'Callback', @(~,~)sendValues(obj, data));
+            
+            % Add Refresh Random button
+            uicontrol(simFig, 'Style', 'pushbutton', ...
+                'String', 'New Random', ...
+                'Position', [140 20 100 30], ...
+                'Callback', @(~,~)obj.simHWCallback([],[],simFig));
+            
+            % Add Close button
+            uicontrol(simFig, 'Style', 'pushbutton', ...
+                'String', 'Close', ...
+                'Position', [260 20 100 30], ...
+                'Callback', @(~,~)close(simFig));
+
+            % Helper function to send values to hardware
+            function sendValues(obj, data)
+                hwFields = data(:,1);
+                newValues = data(:,3);
+                
+                % Update each hardware device
+                for idx = 1:length(hwFields)
+                    try
+                        obj.Hardware.(hwFields{idx}).lastRead = newValues{idx};
+                    catch ME
+                        warning('Failed to set %s: %s', hwFields{idx}, ME.message);
+                    end
+                end
+            end
+        end
+
         %% Timer management
         function createTimer(obj)
             %CREATETIMER Creates timer to periodically update readings
@@ -704,10 +801,15 @@ classdef (Abstract) labGUI < handle
 
         end
 
-        function guiPanelTest(obj,position)
+        function guiPanelTest(obj, position, figure)
             %===================================================================================
             % Create test control panel
-            obj.hTestPanel = uipanel(obj.hFigure,...
+            % If figure is not provided, use obj.hFigure
+            if nargin < 3
+                figure = obj.hFigure;
+            end
+            
+            obj.hTestPanel = uipanel(figure,...
                 'Title', 'Testing',...
                 'FontWeight', 'bold',...
                 'FontSize', 12,...
@@ -1071,5 +1173,38 @@ classdef (Abstract) labGUI < handle
             end
         end
         
+    end
+    
+    methods (Access = protected)
+        function makeMonTabs2(obj)
+            %MAKEMONTABS Creates tabs for each unique monitor group
+            %   This function creates tabs for each unique monitor group in the 
+            %   monitors collection, excluding the "status" group. Each tab will
+            %   contain a panel showing the monitors for that group.
+            
+            
+            % Find unique groups (excluding 'status')
+            groups = unique(structfun(@(x)x.group,obj.Monitors));
+            
+            function MonPlt(mon,obj,groupTab)
+                grp = mon.group;
+                if strcmp(grp,groups{i})
+                    monitorPlot(obj,groupTab,'T',mon.Tag);
+                end
+            end
+            % Create tab for each group
+            for i = 1:length(groups)
+                if ~strcmp(groups{i}, 'status')
+                    % Create tab
+                    groupTab = uitab('Parent', obj.hTabGroup, ...
+                                'Title', ['mon', upper(groups{i})]);
+                    structfun(@(x)MonPlt(x,obj,groupTab),obj.Monitors);
+                end
+            end
+            
+            % Auto-scale figure after adding tabs
+            obj.guiAutoScale(obj.hFigure);
+        end
+
     end
 end
