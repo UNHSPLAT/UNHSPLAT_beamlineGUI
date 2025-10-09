@@ -64,7 +64,7 @@ function monitors = setupSWIPSMonitors(instruments)
     function set_caen_volt(self,chan,volt)
         % set voltage and account for lock
         self.lock = true;
-        self.parent.setVSet(chan,volt);
+        self.parent.setVset(chan,volt);
         self.lock = false;
     end
 %     function set_caen_volt(self,chan,volt)
