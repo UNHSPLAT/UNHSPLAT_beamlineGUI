@@ -122,6 +122,15 @@ classdef beamlineGUI < labGUI
         function createLayout(obj)
             %CREATEGUI Create main GUI window and menus
 
+            % Create CAEN HV Control submenu
+            hCaenMenu = uimenu(obj.hToolsMenu,'Text','CAEN HV Control');
+
+             % Add menu items for each HV channel
+            uimenu(hCaenMenu,'Text','voltCh1_mcpVout',...
+                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh1_mcpVout',0));
+            uimenu(hCaenMenu,'Text','voltCh2_mcpVA',...
+                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh2_mcpVA',1));
+
             %define relative posiiton so we only need to change one number when adding/removing buttons
             yBorderBuffer = 30 ;
             ypanelBuffer = 20;
@@ -280,6 +289,38 @@ classdef beamlineGUI < labGUI
         end
     end
     methods (Access = private)
+        function HVenableCallback(obj, channelName,chan)
+            % Get the monitor for this channel
+            if ~isfield(obj.Monitors, channelName)
+                errordlg(['Channel ' channelName ' not found'], 'Error');
+                return;
+            end
+            monitor = obj.Monitors.(channelName);
+            % Create confirmation dialog with channel-specific message
+            channelLabel = monitor.textLabel;
+            choice = questdlg([sprintf('%s:',channelLabel) channelName], ...
+                'Enable/Disable HV', ...
+                'Enable','Disable','Disable');
+            
+            % Handle response
+            if strcmp(choice, 'Enable')
+                fprintf('Enabling %s\n', channelLabel);
+                try
+                    monitor.set(0); % Set to 0V when enabling
+                    monitor.parent.setON(chan);
+                catch ME
+                    errordlg(['Error enabling ' channelLabel ': ' ME.message], 'Error');
+                end
+            elseif strcmp(choice, 'Disable')
+                fprintf('Disabling %s\n', channelLabel);
+                try
+                    monitor.parent.setOFF(chan);
+                catch ME
+                    errordlg(['Error disabling ' channelLabel ': ' ME.message], 'Error');
+                end
+            end
+        end
+
         function mcpRampCallback(obj,~,~)
             mcpMon = obj.Monitors.voltCh2_mcpVA;
             if mcpMon.lock
