@@ -100,7 +100,7 @@ classdef (Abstract) labGUI < handle
                 'MenuSelectedFcn',@obj.selectDataDirCallback);
 
             uimenu(obj.hFileMenu,'Text','New Test Sequence',...
-                'MenuSelectedFcn',@obj.genTestSequence);
+                'MenuSelectedFcn',@(~,~) obj.genTestSequence);
 
             % Create tools menu
             obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
