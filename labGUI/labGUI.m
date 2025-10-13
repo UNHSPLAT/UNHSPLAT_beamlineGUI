@@ -80,6 +80,11 @@ classdef (Abstract) labGUI < handle
                 'Position',[100 100 800 600],...
                 'CloseRequestFcn',@obj.closeGUI);
             
+            % start matlab diary
+            diary(fullfile(obj.DataLoc,sprintf('%s_log.txt',guiLab)))
+            % Configure inp to show timestamp
+            setPrompt([datestr(now,'mm/dd/yyyy HH:MM PM') ' >> '])
+
             % Generate initial test sequence, date, and data directory
             obj.genTestSequence;
             
