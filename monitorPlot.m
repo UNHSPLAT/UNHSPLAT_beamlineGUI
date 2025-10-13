@@ -31,7 +31,11 @@ classdef monitorPlot < handle
             
             % Create and position the new axis
             obj.ax = obj.addAxes();
+            axtoolbar(obj.ax,{'zoomin','zoomout','restoreview','pan','datacursor','export'});
 
+            grid(obj.ax, 'on');
+%             set(obj.ax, 'YScale', 'log');
+            
             % Add listener for y monitor value changes
             obj.listo = addlistener(obj.hGUI.Monitors.(obj.yMonStr), 'lastRead', 'PostSet', @(src,evt)obj.pltVal());
             
@@ -98,7 +102,6 @@ classdef monitorPlot < handle
 
                     xlabel(obj.ax, obj.hGUI.Monitors.(obj.xMonStr).sPrint());
                     ylabel(obj.ax, obj.hGUI.Monitors.(obj.yMonStr).sPrint());
-                    grid(obj.ax, 'on');
                     
                     % Update title with current values
                     if obj.numYvals == 1
