@@ -24,7 +24,7 @@ function instruments = setupSWIPSInstruments()
 
     %Connect and configure Newport stage
     instruments.newportStage.connectDevice();
-    instruments.newportStage.initDevice();
+%     instruments.newportStage.initDevice();
 %     instruments.newportStage.Home();
     
     function self = config_newport(self)
