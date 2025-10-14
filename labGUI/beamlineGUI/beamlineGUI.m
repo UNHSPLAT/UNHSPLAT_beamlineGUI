@@ -9,7 +9,6 @@ classdef beamlineGUI < labGUI
         hCamGUI % Handle to camera control init button
         hCamButton % Handle to camera button
         hBeamMonFigure
-        mcpRampListener
     end
     
     properties (Access = protected)
@@ -22,6 +21,9 @@ classdef beamlineGUI < labGUI
         hHWConnBtn % Handle to hardware connection refresh button
 
         hControlMenu % Handle to control top menu dropdown
+
+        mcpRampListener
+        cemRampListener
     end
 
     properties (SetObservable)
@@ -246,17 +248,27 @@ classdef beamlineGUI < labGUI
             
             %====================================================================================
             % Panel column 3
-            % Imaging MCP control panel
-            p3colSizes =[90,100,60,60,60];
+
             pan3x =out.Position(1)+out.Position(3)+xBorderBuffer;
+            p3colSizes =[90,100,60,60,60];
+            %====================================================================================
+            %Test Panel group
+            % Set positions for right-side GUI components
+            
+            obj.guiPanelTest([pan3x,...
+                                yBorderBuffer,360, 250],obj.hMainControlsTab);
+            out = obj.hTestPanel;
+
+            %====================================================================================
+            % Imaging MCP control panel
             imgMCP = obj.guiPanelMake(obj.hMainControlsTab,...
                 pan3x, ...
-                yBorderBuffer,...
+                out.Position(4)+out.Position(2),...
                 'ImgMCP',...
                 'colSizes',p3colSizes,...
                 'monitorGroup', 'ImgMCP');
 
-             %===================================================================================
+             %=========================================
              % MCP ramp activate and abort button
             hMCPRamp = uicontrol(imgMCP, ...
                 'Style','pushbutton',...
@@ -278,17 +290,53 @@ classdef beamlineGUI < labGUI
 
             obj.mcpRampListener = guiListener(obj.Monitors.voltCh2_mcpVA,'lock',...
                                         hMCPRamp,@ramp_stat);
+            out = imgMCP;
 
-            %Test Panel group
-            % Set positions for right-side GUI components
+            %===================================================================================
+             % Control and mon for CEM
+            panCEM = obj.guiPanelMake(obj.hMainControlsTab,...
+                pan3x, ...
+                out.Position(4)+out.Position(2),...
+                'CEM',...
+                'colSizes',p3colSizes,...
+                'monitorGroup', 'CEM');
+
+             %=========================================
+             % CEM ramp activate and abort button
+            butCemRamp = uicontrol(panCEM, ...
+                'Style','pushbutton',...
+               'Position',[sum(p3colSizes(1:3))+xgap*3,ygap,sum(p3colSizes(4:end))+xgap*2,obj.ysize],...
+               'String','Ramp CEM',...
+               'FontSize',12,...
+               'FontWeight','bold',...
+                'HorizontalAlignment','center',...
+                'Callback',@obj.cemRampCallback);
+
+            function ramp_CEMstat(self)
+                if self.parent.lock
+                    curr_string = 'Abort Ramp';
+                else
+                    curr_string = 'Ramp CEM';
+                end
+                set(self.guiHand,'String',curr_string);
+            end
+
+            obj.cemRampListener = guiListener(obj.Monitors.voltCh4_cemVA,'lock',...
+                                        butCemRamp,@ramp_CEMstat);
             
-            obj.guiPanelTest([pan3x,...
-                                imgMCP.Position(4)+imgMCP.Position(2)+yBorderBuffer,360, 250],obj.hMainControlsTab);
-
             obj.guiAutoScale(obj.hFigure);
         end
     end
     methods (Access = private)
+        function cemRampCallback(obj,~,~)
+            mcpMon = obj.Monitors.voltCh4_cemVA;
+            if mcpMon.lock
+                stop(mcpMon.monTimer);
+            else
+                Ramp_MCPHVPS(mcpMon);
+            end
+        end
+
         function HVenableCallback(obj, channelName,chan)
             % Get the monitor for this channel
             if ~isfield(obj.Monitors, channelName)
