@@ -237,8 +237,11 @@ classdef (Abstract) labGUI < handle
             %CLOSEGUI Clean up when GUI is closed            
 
             % Delete the object
-            obj.delete();
-            delete(obj);
+            try
+                obj.delete();
+                delete(obj);
+            catch
+            end
         end
 
         function delete(obj)
@@ -954,7 +957,8 @@ classdef (Abstract) labGUI < handle
             
             % Create a table to display hardware information
             data = {};
-            headers = {'Hardware Name', 'Type', 'Model Number', 'Address', 'Connected', 'Timer Running','Read Delay', 'Other Properties'};
+            headers = {'Hardware Name', 'Type', 'Model Number', 'Address', 'Connected',...
+                     'Timer Running','Read Delay', 'Last Read Time', 'Other Properties'};
             
             % Populate data for each hardware component
             for i = 1:length(hwFields)
@@ -1005,6 +1009,16 @@ classdef (Abstract) labGUI < handle
                 catch
                     read_delay = 'N/A';
                 end
+
+                try
+                    if isfield(hw, 'lastReadTime') && ~isempty(hw.lastReadTime)
+                        lastReadTime = datestr(hw.lastReadTime, 'HH:MM:SS');
+                    else
+                        lastReadTime = 'N/A';
+                    end
+                catch
+                    lastReadTime = 'N/A';
+                end
                 
                 % Get remaining properties
                 props = properties(hw);
@@ -1025,7 +1039,8 @@ classdef (Abstract) labGUI < handle
                 end
                 
                 % Add row to data
-                data(end+1,:) = {hwFields{i}, hwType, modelNum, address, connected, timerRunning, read_delay, propStr}; %#ok<AGROW>
+                data(end+1,:) = {hwFields{i}, hwType, modelNum, address, connected, timerRunning, ...
+                        read_delay, lastReadTime, propStr}; %#ok<AGROW>
             end
             
             % Create the uitable with hardware information
@@ -1033,8 +1048,8 @@ classdef (Abstract) labGUI < handle
                 'Data', data, ...
                 'ColumnName', headers, ...
                 'RowName', [], ...
-                'Position', [20 20 860 360], ...
-                'ColumnWidth', {120 100 100 100 80 100 80 240}, ...
+                'Position', [20 20 960 360], ...
+                'ColumnWidth', {120 100 100 100 80 100 80 80 200}, ...
                 'ColumnEditable', false);
 
             % Add a refresh button
