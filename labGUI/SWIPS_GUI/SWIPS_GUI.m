@@ -15,6 +15,7 @@ classdef SWIPS_GUI < labGUI
     properties (Access = protected)
         caenMenu    % Handle to CAEN menu handler
         newportMenu % Handle to Newport stage menu
+        OKMenu      % Handle to Opal Kelly menu handler
         % Override operator and acquisition lists
    end
 
@@ -38,6 +39,9 @@ classdef SWIPS_GUI < labGUI
                                         ["Upper Deflection", "Lower Deflection", "Flux Red.", "Inner Dome"]);
 
             obj.newportMenu = newport_gui_menu(obj.Hardware.newportStage, obj.hHardwareMenu);
+
+            obj.OKMenu = swips_ok_gui_menu(obj.Hardware.Opal_Kelly, obj.hHardwareMenu);
+
             % Create GUI components and layout
             obj.createLayout();
 
@@ -60,13 +64,6 @@ classdef SWIPS_GUI < labGUI
 
         function createLayout(obj)
             
-            % Create Opal Kelly Settings submenu
-            hOpalMenu = uimenu(obj.hToolsMenu,'Text','Opal Kelly Settings');
-            
-            % Add acquisition time control
-            uimenu(hOpalMenu,'Text','Set Acquisition Time',...
-                'MenuSelectedFcn',@obj.setAcqTimeCallback);
-
             % Implementation of abstract method from labGUI
             %CREATEGUI Create SWIPS GUI components
             
@@ -188,29 +185,6 @@ classdef SWIPS_GUI < labGUI
 
 
 
-        function setAcqTimeCallback(obj, ~, ~)
-            % Create dialog for acquisition time selection
-            choice = questdlg('Select Acquisition Time:', ...
-                'Set Acquisition Time', ...
-                '1 second','10 seconds','1 second');
-            
-            % Get the Opal Kelly device
-            ok_device = obj.Hardware.Opal_Kelly;
-            
-            % Handle response
-            if ~isempty(choice)
-                try
-                    if strcmp(choice, '1 second')
-                        ok_device.acq_time = 0;
-                    else  % 10 seconds
-                        ok_device.acq_time = 1;
-                    end
-                    ok_device.configurePPA_ok(); % Apply the new setting
-                catch ME
-                    errordlg(['Error setting acquisition time: ' ME.message], 'Error');
-                end
-            end
-        end
     end
 
 end
