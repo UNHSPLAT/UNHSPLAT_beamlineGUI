@@ -84,8 +84,11 @@ classdef (Abstract) labGUI < handle
             % start matlab diary
             diary(fullfile(obj.DataLoc,sprintf('%s_log.txt',guiLab)))
             % Configure inp to show timestamp
-            setPrompt([datestr(now,'mm/dd/yyyy HH:MM PM') ' >> '])
-
+            try
+                setPrompt([datestr(now,'mm/dd/yyyy HH:MM PM') ' >> '])
+            catch
+                % pass to avoid error if setPrompt unavailable
+            end
             % Generate initial test sequence, date, and data directory
             obj.genTestSequence;
             
