@@ -3,6 +3,7 @@ classdef SWIPS_GUI < labGUI
     
     properties
         % SWIPS-specific properties
+        hHardwareMenu % Handle to hardware menu
         hStatusGrp % Handle to status uicontrol group
         hHVStatusGrp % Handle to high voltage status uicontrol group
         hPosStatusGrp % Handle to position status panel group
@@ -12,6 +13,8 @@ classdef SWIPS_GUI < labGUI
     end
     
     properties (Access = protected)
+        caenMenu    % Handle to CAEN menu handler
+        newportMenu % Handle to Newport stage menu
         % Override operator and acquisition lists
    end
 
@@ -27,6 +30,14 @@ classdef SWIPS_GUI < labGUI
 
             obj.AcquisitionList = {'Sweep 1D','Sweep 2D'};
 
+            obj.hHardwareMenu = uimenu(obj.hFigure,'Text','Hardware');
+
+            % Create CAEN menu handler
+            obj.caenMenu = caen_gui_menu(obj.Hardware.caen_HVPS1, obj.hHardwareMenu, ...
+                                        [0,1,2,3], ...
+                                        ["Upper Deflection", "Lower Deflection", "Flux Red.", "Inner Dome"]);
+
+            obj.newportMenu = newport_gui_menu(obj.Hardware.newportStage, obj.hHardwareMenu);
             % Create GUI components and layout
             obj.createLayout();
 
@@ -48,8 +59,6 @@ classdef SWIPS_GUI < labGUI
     methods (Access = public)
 
         function createLayout(obj)
-            % Create CAEN HV Control submenu
-            hCaenMenu = uimenu(obj.hToolsMenu,'Text','CAEN HV Control');
             
             % Create Opal Kelly Settings submenu
             hOpalMenu = uimenu(obj.hToolsMenu,'Text','Opal Kelly Settings');
@@ -57,16 +66,6 @@ classdef SWIPS_GUI < labGUI
             % Add acquisition time control
             uimenu(hOpalMenu,'Text','Set Acquisition Time',...
                 'MenuSelectedFcn',@obj.setAcqTimeCallback);
-            
-            % Add menu items for each HV channel
-            uimenu(hCaenMenu,'Text','Ch0:Upper Deflector',...
-                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh0_upDefl',0));
-            uimenu(hCaenMenu,'Text','Ch1:Lower Deflector',...
-                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh1_lowDefl',1));
-            uimenu(hCaenMenu,'Text','Ch2:Flux Reducer',...
-                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh2_flRed',2));
-            uimenu(hCaenMenu,'Text','Ch3:Inner Dome',...
-                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh3_inDome',3));
 
             % Implementation of abstract method from labGUI
             %CREATEGUI Create SWIPS GUI components
@@ -187,39 +186,8 @@ classdef SWIPS_GUI < labGUI
             end
         end
 
-        function HVenableCallback(obj, channelName,chan)
-            % Get the monitor for this channel
-            if ~isfield(obj.Monitors, channelName)
-                errordlg(['Channel ' channelName ' not found'], 'Error');
-                return;
-            end
-            monitor = obj.Monitors.(channelName);
-            % Create confirmation dialog with channel-specific message
-            channelLabel = monitor.textLabel;
-            choice = questdlg([sprintf('%s:',channelLabel) channelName], ...
-                'Enable/Disable HV', ...
-                'Enable','Disable','Disable');
-            
-            % Handle response
-            if strcmp(choice, 'Enable')
-                fprintf('Enabling %s\n', channelLabel);
-                try
-                    monitor.set(0); % Set to 0V when enabling
-                    monitor.parent.setON(chan);
-                catch ME
-                    errordlg(['Error enabling ' channelLabel ': ' ME.message], 'Error');
-                end
-            elseif strcmp(choice, 'Disable')
-                fprintf('Disabling %s\n', channelLabel);
-                try
-                    monitor.parent.setOFF(chan);
-                catch ME
-                    errordlg(['Error disabling ' channelLabel ': ' ME.message], 'Error');
-                end
-            end
-        end
 
-        
+
         function setAcqTimeCallback(obj, ~, ~)
             % Create dialog for acquisition time selection
             choice = questdlg('Select Acquisition Time:', ...
