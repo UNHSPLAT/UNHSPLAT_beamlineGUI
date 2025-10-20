@@ -24,6 +24,7 @@ classdef beamlineGUI < labGUI
 
         mcpRampListener
         cemRampListener
+        caenMenu    % Handle to CAEN menu handler
     end
 
     properties (SetObservable)
@@ -48,6 +49,14 @@ classdef beamlineGUI < labGUI
             obj@labGUI('Beamline GUI');
             % Initialize hardware and monitors
             
+             % Create CAEN HV Control submenu
+            hCaenMenu = uimenu(obj.hToolsMenu,'Text','CAEN HV Control');
+
+             % Create CAEN menu handler
+            obj.caenMenu = caen_gui_menu(obj.Hardware.caen_HVPS2, obj.hHardwareMenu, ...
+                                        [0,1,3], ...
+                                        ["mcpVout", "mcpVa", "CEM"]);
+
             % Create GUI components and layout
             obj.createLayout();
 
@@ -124,14 +133,7 @@ classdef beamlineGUI < labGUI
         function createLayout(obj)
             %CREATEGUI Create main GUI window and menus
 
-            % Create CAEN HV Control submenu
-            hCaenMenu = uimenu(obj.hToolsMenu,'Text','CAEN HV Control');
-
-             % Add menu items for each HV channel
-            uimenu(hCaenMenu,'Text','voltCh1_mcpVout',...
-                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh1_mcpVout',0));
-            uimenu(hCaenMenu,'Text','voltCh2_mcpVA',...
-                'MenuSelectedFcn',@(~,~) obj.HVenableCallback('voltCh2_mcpVA',1));
+           
 
             %define relative posiiton so we only need to change one number when adding/removing buttons
             yBorderBuffer = 30 ;
@@ -333,39 +335,7 @@ classdef beamlineGUI < labGUI
             if mcpMon.lock
                 stop(mcpMon.monTimer);
             else
-                Ramp_MCPHVPS(mcpMon);
-            end
-        end
-
-        function HVenableCallback(obj, channelName,chan)
-            % Get the monitor for this channel
-            if ~isfield(obj.Monitors, channelName)
-                errordlg(['Channel ' channelName ' not found'], 'Error');
-                return;
-            end
-            monitor = obj.Monitors.(channelName);
-            % Create confirmation dialog with channel-specific message
-            channelLabel = monitor.textLabel;
-            choice = questdlg([sprintf('%s:',channelLabel) channelName], ...
-                'Enable/Disable HV', ...
-                'Enable','Disable','Disable');
-            
-            % Handle response
-            if strcmp(choice, 'Enable')
-                fprintf('Enabling %s\n', channelLabel);
-                try
-                    monitor.set(0); % Set to 0V when enabling
-                    monitor.parent.setON(chan);
-                catch ME
-                    errordlg(['Error enabling ' channelLabel ': ' ME.message], 'Error');
-                end
-            elseif strcmp(choice, 'Disable')
-                fprintf('Disabling %s\n', channelLabel);
-                try
-                    monitor.parent.setOFF(chan);
-                catch ME
-                    errordlg(['Error disabling ' channelLabel ': ' ME.message], 'Error');
-                end
+                ramp_singleChanCaen(mcpMon);
             end
         end
 
