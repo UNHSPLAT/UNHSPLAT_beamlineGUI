@@ -23,8 +23,8 @@ function instruments = setupSWIPSInstruments()
     instruments.caen_HVPS1.connectDevice();
 
     %Connect and configure Newport stage
-    instruments.newportStage.connectDevice();
-    instruments.newportStage.initDevice();
+    % instruments.newportStage.connectDevice();
+    % instruments.newportStage.initDevice();
 %     instruments.newportStage.Home();
     
     function self = config_newport(self)
@@ -34,7 +34,7 @@ function instruments = setupSWIPSInstruments()
             self.myxps.PositionerUserTravelLimitsSet('Group3.Pos',-45,45);
         end
     end
-    config_newport(instruments.newportStage);
+    instruments.newportStage.funcConfig = @config_newport;
 
     %Connect and config opalkelly
     instruments.Opal_Kelly.connectDevice();
