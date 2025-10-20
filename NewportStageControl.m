@@ -192,7 +192,7 @@ classdef NewportStageControl < handle
                         val = vals.double; 
                         code = err;
                         if code ~= 0
-                            fprintf('Failed to get position: Err = %s, Trynum = %d',string(errnum),trynum);
+                            fprintf('Failed to get position: Err = %s, Trynum = %d\n',string(errnum),trynum);
                             trynum = trynum+1;
                         else
                             return

@@ -24,7 +24,7 @@ function instruments = setupSWIPSInstruments()
 
     %Connect and configure Newport stage
     instruments.newportStage.connectDevice();
-%     instruments.newportStage.initDevice();
+    instruments.newportStage.initDevice();
 %     instruments.newportStage.Home();
     
     function self = config_newport(self)
@@ -34,15 +34,17 @@ function instruments = setupSWIPSInstruments()
             self.myxps.PositionerUserTravelLimitsSet('Group3.Pos',-45,45);
         end
     end
-%     config_newport(instruments.newportStage);
+    config_newport(instruments.newportStage);
 
     %Connect and config opalkelly
     instruments.Opal_Kelly.connectDevice();
 
     % @2000V - 
-    instruments.Opal_Kelly.configurePPA_ok([68,60,60,60, 60,60,60,60, 60,60,60,61, 60,60,60,76]);
+    % instruments.Opal_Kelly.configurePPA_ok([68,60,60,60, 60,60,60,60, 60,60,60,61, 60,60,60,76]);
     % @2100V -
     % instruments.Opal_Kelly.configurePPA_ok([110,80,60,60, 75,60,72,60, 60,60,61,74, 86,84,87,115]);
+    % @2200V post-vib -
+    instruments.Opal_Kelly.configurePPA_ok([110,80,72,72, 72,76,69,76, 75,75,85,95, 107,108,108,115]);
     
      
     %assign tags to instrument structures
