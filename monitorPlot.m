@@ -34,7 +34,15 @@ classdef monitorPlot < handle
             axtoolbar(obj.ax,{'zoomin','zoomout','restoreview','pan','datacursor','export'});
 
             grid(obj.ax, 'on');
-%             set(obj.ax, 'YScale', 'log');
+            
+            % Create a single checkbox for log scale
+            uicontrol('Parent', obj.panel,...
+                'Style', 'checkbox',...
+                'String', 'Log Scale',...
+                'Units', 'normalized',...
+                'Position', [0.02 0.02 0.1 0.04],... % Small checkbox in bottom-left corner
+                'Value', 0,... % Start with linear scale
+                'Callback', @(~,~)obj.yScaleChanged());
             
             % Add listener for y monitor value changes
             obj.listo = addlistener(obj.hGUI.Monitors.(obj.yMonStr), 'lastRead', 'PostSet', @(src,evt)obj.pltVal());
@@ -130,6 +138,15 @@ classdef monitorPlot < handle
             end
         end
         
+        function yScaleChanged(obj)
+            %YSCALECHANGED Callback for y-axis scale checkbox
+            if get(gcbo, 'Value') % If checkbox is checked
+                set(obj.ax, 'YScale', 'log');
+            else
+                set(obj.ax, 'YScale', 'linear');
+            end
+        end
+
         function ax = addAxes(obj)
             % ADDAXES Creates a new axis in the panel and adjusts layout of existing axes
             %   ax = obj.addAxes() adds a new axis to the panel and returns its handle.
