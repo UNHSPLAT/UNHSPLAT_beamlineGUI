@@ -35,12 +35,15 @@ classdef monitorPlot < handle
 
             grid(obj.ax, 'on');
             
-            % Create a single checkbox for log scale
+            % Get the axes position
+            axPos = get(obj.ax, 'Position');
+            
+            % Create a single checkbox for log scale, positioned relative to the axes
             uicontrol('Parent', obj.panel,...
                 'Style', 'checkbox',...
                 'String', 'Log Scale',...
                 'Units', 'normalized',...
-                'Position', [0.02 0.02 0.1 0.04],... % Small checkbox in bottom-left corner
+                'Position', [axPos(1) axPos(2)-0.04 0.1 0.03],... % Position below the axes
                 'Value', 0,... % Start with linear scale
                 'Callback', @(~,~)obj.yScaleChanged());
             
