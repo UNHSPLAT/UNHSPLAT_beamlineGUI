@@ -24,7 +24,8 @@ classdef beamlineGUI < labGUI
 
         mcpRampListener
         cemRampListener
-        caenMenu    % Handle to CAEN menu handler
+        hcaenMenu    % Handle to CAEN menu handler
+        hHardwareMenu
     end
 
     properties (SetObservable)
@@ -49,11 +50,9 @@ classdef beamlineGUI < labGUI
             obj@labGUI('Beamline GUI');
             % Initialize hardware and monitors
             
-             % Create CAEN HV Control submenu
-            hCaenMenu = uimenu(obj.hToolsMenu,'Text','CAEN HV Control');
-
+            obj.hHardwareMenu = uimenu(obj.hFigure,'Text','Hardware');
              % Create CAEN menu handler
-            obj.caenMenu = caen_gui_menu(obj.Hardware.caen_HVPS2, obj.hHardwareMenu, ...
+            obj.hcaenMenu = caen_gui_menu(obj.Hardware.caen_HVPS2, obj.hHardwareMenu, ...
                                         [0,1,3], ...
                                         ["mcpVout", "mcpVa", "CEM"]);
 
