@@ -25,7 +25,6 @@ function instruments = setupSWIPSInstruments()
     %Connect and configure Newport stage
     instruments.newportStage.connectDevice();
     instruments.newportStage.initDevice();
-%     instruments.newportStage.Home();
     
     function self = config_newport(self)
         if self.Connected
@@ -34,6 +33,7 @@ function instruments = setupSWIPSInstruments()
             self.myxps.PositionerUserTravelLimitsSet('Group3.Pos',-45,45);
         end
     end
+    instruments.newportStage.funcConfig = @config_newport;
     config_newport(instruments.newportStage);
 
     %Connect and config opalkelly
