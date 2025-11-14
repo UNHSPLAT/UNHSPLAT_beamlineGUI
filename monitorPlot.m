@@ -32,20 +32,15 @@ classdef monitorPlot < handle
             % Create and position the new axis
             obj.ax = obj.addAxes();
             axtoolbar(obj.ax,{'zoomin','zoomout','restoreview','pan','datacursor','export'});
+            
 
             grid(obj.ax, 'on');
             
-            % Get the axes position
-            axPos = get(obj.ax, 'Position');
-            
-            % Create a single checkbox for log scale, positioned relative to the axes
-            uicontrol('Parent', obj.panel,...
-                'Style', 'checkbox',...
-                'String', 'Log Scale',...
-                'Units', 'normalized',...
-                'Position', [axPos(1) axPos(2)-0.04 0.1 0.03],... % Position below the axes
-                'Value', 0,... % Start with linear scale
-                'Callback', @(~,~)obj.yScaleChanged());
+            % Create right-click context menu for plot options
+            contextMenu = uicontextmenu(obj.hGUI.hFigure);
+            uimenu(contextMenu, 'Text', 'Toggle Y Log Scale', 'Callback', @(~,~)obj.toggleYLogScale());
+            uimenu(contextMenu, 'Text', 'Clear Buffer', 'Callback', @(~,~)obj.clearBuffer(), 'Separator', 'on');
+            set(obj.ax, 'UIContextMenu', contextMenu);
             
             % Add listener for y monitor value changes
             obj.listo = addlistener(obj.hGUI.Monitors.(obj.yMonStr), 'lastRead', 'PostSet', @(src,evt)obj.pltVal());
@@ -116,11 +111,11 @@ classdef monitorPlot < handle
                     
                     % Update title with current values
                     if obj.numYvals == 1
-                        titleStr = sprintf('Current: [x,y]= [%s, %s]', ...
+                        titleStr = sprintf('[x,y]= [%s, %s]', ...
                             obj.hGUI.Monitors.(obj.xMonStr).sPrintVal(), ...
                             obj.hGUI.Monitors.(obj.yMonStr).sPrintVal());
                     else
-                        titleStr = sprintf('Current: x=%s, y=[', ...
+                        titleStr = sprintf('x=%s, y=[', ...
                             obj.hGUI.Monitors.(obj.xMonStr).sPrintVal());
                         yvals = obj.hGUI.Monitors.(obj.yMonStr).lastRead;
                         for i = 1:length(yvals)
@@ -141,13 +136,28 @@ classdef monitorPlot < handle
             end
         end
         
-        function yScaleChanged(obj)
-            %YSCALECHANGED Callback for y-axis scale checkbox
-            if get(gcbo, 'Value') % If checkbox is checked
+        function toggleYLogScale(obj)
+            %TOGGLEYLOGSCALE Toggle Y-axis between linear and log scale
+            if strcmp(get(obj.ax, 'YScale'), 'linear')
                 set(obj.ax, 'YScale', 'log');
             else
                 set(obj.ax, 'YScale', 'linear');
             end
+        end
+        
+        function clearBuffer(obj)
+            %CLEARBUFFER Clear the plot data buffers (xvals and yvals)
+            obj.xvals = [];
+            obj.yvals = {};
+            obj.numYvals = 0;
+            
+            % Clear the current plot
+            cla(obj.ax);
+            
+            % Reset axes labels
+            xlabel(obj.ax, obj.hGUI.Monitors.(obj.xMonStr).sPrint());
+            ylabel(obj.ax, obj.hGUI.Monitors.(obj.yMonStr).sPrint());
+            title(obj.ax, 'Buffer Cleared - Waiting for new data...');
         end
 
         function ax = addAxes(obj)

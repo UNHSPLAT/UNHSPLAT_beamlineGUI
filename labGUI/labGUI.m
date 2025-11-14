@@ -35,6 +35,8 @@ classdef (Abstract) labGUI < handle
         % Acquisition control
         hAcquisitionEdit % Handle to acquisition type popupmenu
         Acquisitions = [] % Storage for acquisition instances
+
+        hMonitorPlots % Storage for monitor plot instances
     end
 
     properties (SetAccess = protected)
@@ -1216,7 +1218,11 @@ classdef (Abstract) labGUI < handle
             function MonPlt(mon,obj,groupTab)
                 grp = mon.group;
                 if strcmp(grp,groups{i})
-                    monitorPlot(obj,groupTab,'T',mon.Tag);
+                    if isempty(obj.hMonitorPlots)
+                        obj.hMonitorPlots = monitorPlot(obj,groupTab,'T',mon.Tag);
+                    else
+                        obj.hMonitorPlots(end+1) = monitorPlot(obj,groupTab,'T',mon.Tag);
+                    end
                 end
             end
             % Create tab for each group
