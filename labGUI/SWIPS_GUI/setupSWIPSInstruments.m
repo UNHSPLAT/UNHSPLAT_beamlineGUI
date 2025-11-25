@@ -46,8 +46,8 @@ function instruments = setupSWIPSInstruments()
     % @2200V post-vib -
     % instruments.Opal_Kelly.configurePPA_ok([110,80,72,72, 72,76,69,76, 75,75,75,75, 75,75,75,115]);
     % @2200V new exit grid mask -
-    instruments.Opal_Kelly.configurePPA_ok([110,91,84,77, 65,77,72,77, 78,78,96,110, 110,110,110,115]);
-     
+    instruments.Opal_Kelly.configurePPA_ok([154,119,107,97, 67,67,67,67, 69,68,95,112, 123,183,179,255]);
+    
     %assign tags to instrument structures
     fields = fieldnames(instruments);
     for i=1:numel(fields)

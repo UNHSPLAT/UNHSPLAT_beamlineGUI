@@ -82,15 +82,15 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
             mon.set(currentVal);
             
             % Display progress at the start of each cycle
-            if patternIndex == 1
-                cycleNum = floor((currentStep - 1) / numSteps) + 1;
-                fprintf('Starting cycle %d\n', cycleNum);
-            end
-            
-            % Periodic progress display within cycle
-            if mod(patternIndex - 1, max(1, floor(numSteps/5))) == 0
-                fprintf('  Step %d/%d: Set to %.3f\n', patternIndex, numSteps, currentVal);
-            end
+%             if patternIndex == 1
+%                 cycleNum = floor((currentStep - 1) / numSteps) + 1;
+%                 fprintf('Starting cycle %d\n', cycleNum);
+%             end
+%             
+%             % Periodic progress display within cycle
+%             if mod(patternIndex - 1, max(1, floor(numSteps/5))) == 0
+%                 fprintf('  Step %d/%d: Set to %.3f\n', patternIndex, numSteps, currentVal);
+%             end
         catch ME
             fprintf('Error setting monitor value: %s\n', ME.message);
             stop(src);
