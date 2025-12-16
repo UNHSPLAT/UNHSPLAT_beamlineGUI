@@ -477,6 +477,9 @@ classdef (Abstract) labGUI < handle
                         'FontSize',9,...
                         'HorizontalAlignment','center',...
                         'Callback',@mon.guiSetCallback);
+                    
+                    % Create lock listener to disable button when locked
+                    mon.createLockListener();
                 end
                 
                 % Update vertical position for next control
@@ -578,15 +581,29 @@ classdef (Abstract) labGUI < handle
                 return;
             end
             
-            % Create dialog for selecting monitor and parameters
-            prompt = {'Select Monitor:', ...
-                      'Upper Value:', ...
+            % First, show dropdown to select monitor
+            [monIdx, tf] = listdlg('ListString', monFields, ...
+                                   'SelectionMode', 'single', ...
+                                   'PromptString', 'Select a monitor to raster:', ...
+                                   'Name', 'Select Monitor', ...
+                                   'ListSize', [300 400]);
+            
+            % Check if user cancelled
+            if ~tf
+                return;
+            end
+            
+            % Get selected monitor name
+            monName = monFields{monIdx};
+            
+            % Now prompt for raster parameters
+            prompt = {'Upper Value:', ...
                       'Lower Value:', ...
                       'Number of Steps:', ...
                       'Dwell Time (s):'};
-            dlgtitle = 'Raster Monitor';
+            dlgtitle = ['Raster Monitor: ' monName];
             dims = [1 50];
-            definput = {monFields{1}, '100', '0', '20', '1.0'};
+            definput = {'100', '0', '20', '1.0'};
             
             answer = inputdlg(prompt, dlgtitle, dims, definput);
             
@@ -596,18 +613,12 @@ classdef (Abstract) labGUI < handle
             end
             
             % Parse inputs
-            monName = answer{1};
-            upperVal = str2double(answer{2});
-            lowerVal = str2double(answer{3});
-            stepNum = str2double(answer{4});
-            dwellTime = str2double(answer{5});
+            upperVal = str2double(answer{1});
+            lowerVal = str2double(answer{2});
+            stepNum = str2double(answer{3});
+            dwellTime = str2double(answer{4});
             
             % Validate inputs
-            if ~isfield(obj.Monitors, monName)
-                errordlg(['Monitor "' monName '" not found.'], 'Invalid Monitor');
-                return;
-            end
-            
             if isnan(upperVal) || isnan(lowerVal) || isnan(stepNum) || isnan(dwellTime)
                 errordlg('All parameters must be valid numbers.', 'Invalid Input');
                 return;
