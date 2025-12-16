@@ -477,9 +477,6 @@ classdef (Abstract) labGUI < handle
                         'FontSize',9,...
                         'HorizontalAlignment','center',...
                         'Callback',@mon.guiSetCallback);
-                    
-                    % Create lock listener to disable button when locked
-                    mon.createLockListener();
                 end
                 
                 % Update vertical position for next control
@@ -581,8 +578,22 @@ classdef (Abstract) labGUI < handle
                 return;
             end
             
+            % Filter for only active (controllable) monitors
+            activeMonFields = {};
+            for i = 1:length(monFields)
+                if obj.Monitors.(monFields{i}).active
+                    activeMonFields{end+1} = monFields{i}; %#ok<AGROW>
+                end
+            end
+            
+            % Check if there are any active monitors
+            if isempty(activeMonFields)
+                errordlg('No active (controllable) monitors available to raster.', 'No Active Monitors');
+                return;
+            end
+            
             % First, show dropdown to select monitor
-            [monIdx, tf] = listdlg('ListString', monFields, ...
+            [monIdx, tf] = listdlg('ListString', activeMonFields, ...
                                    'SelectionMode', 'single', ...
                                    'PromptString', 'Select a monitor to raster:', ...
                                    'Name', 'Select Monitor', ...
@@ -594,7 +605,7 @@ classdef (Abstract) labGUI < handle
             end
             
             % Get selected monitor name
-            monName = monFields{monIdx};
+            monName = activeMonFields{monIdx};
             
             % Now prompt for raster parameters
             prompt = {'Upper Value:', ...

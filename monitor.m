@@ -16,7 +16,6 @@ classdef monitor < handle
         monTimer
         lastReadTime datetime = datetime('now')%
         listenProp = 'lastRead'
-        lockListener % Listener for lock property changes
     end
     properties (SetObservable) 
         lastRead %
@@ -74,7 +73,11 @@ classdef monitor < handle
             % if all([obj.parent.Connected])
             obj.setFunc(obj,val);
             % end
-            set(obj.guiHand.statusGrpSetField,'String',num2str(val));
+            % Update GUI field if it exists
+            if ~isempty(obj.guiHand) && isfield(obj.guiHand, 'statusGrpSetField') && ...
+               isvalid(obj.guiHand.statusGrpSetField)
+                set(obj.guiHand.statusGrpSetField,'String',num2str(val));
+            end
         end
 
         function guiSetCallback(obj,~,~)
@@ -84,29 +87,6 @@ classdef monitor < handle
             %need to insert some error handling here
             obj.set(setVal);
             set(obj.guiHand.statusGrpSetField,'String','');
-        end
-
-        function createLockListener(obj)
-            %CREATELOCKLISTENER Creates a listener for the lock property
-            % This listener updates the GUI button enable state based on lock status
-            if ~isempty(obj.guiHand) && isfield(obj.guiHand, 'statusGrpSetBtn') && ...
-               isvalid(obj.guiHand.statusGrpSetBtn)
-                obj.lockListener = addlistener(obj, 'lock', 'PostSet', @obj.updateLockState);
-                % Set initial state
-                obj.updateLockState();
-            end
-        end
-
-        function updateLockState(obj, ~, ~)
-            %UPDATELOCKSTATE Updates GUI button state based on lock property
-            if ~isempty(obj.guiHand) && isfield(obj.guiHand, 'statusGrpSetBtn') && ...
-               isvalid(obj.guiHand.statusGrpSetBtn)
-                if obj.lock
-                    set(obj.guiHand.statusGrpSetBtn, 'Enable', 'off');
-                else
-                    set(obj.guiHand.statusGrpSetBtn, 'Enable', 'on');
-                end
-            end
         end
 
         function setfield(obj,field,val)

@@ -68,6 +68,40 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
         mon.lock = true;
     end
     
+    % Change button to ABORT if GUI button exists
+    if ~isempty(mon.guiHand) && isfield(mon.guiHand, 'statusGrpSetBtn') && ...
+       isvalid(mon.guiHand.statusGrpSetBtn)
+        % Store original button text and callback
+        originalText = get(mon.guiHand.statusGrpSetBtn, 'String');
+        originalCallback = get(mon.guiHand.statusGrpSetBtn, 'Callback');
+        
+        % Change button to ABORT
+        set(mon.guiHand.statusGrpSetBtn, 'String', 'ABORT');
+        set(mon.guiHand.statusGrpSetBtn, 'Callback', @(~,~)abortRaster());
+    end
+    
+    % Abort function to stop timer and restore button
+    function abortRaster()
+        if isprop(mon, 'monTimer') && ~isempty(mon.monTimer) && isvalid(mon.monTimer)
+            stop(mon.monTimer);
+            delete(mon.monTimer);
+        end
+        
+        % Restore button to original state
+        if ~isempty(mon.guiHand) && isfield(mon.guiHand, 'statusGrpSetBtn') && ...
+           isvalid(mon.guiHand.statusGrpSetBtn)
+            set(mon.guiHand.statusGrpSetBtn, 'String', originalText);
+            set(mon.guiHand.statusGrpSetBtn, 'Callback', originalCallback);
+        end
+        
+        % Unlock monitor
+        if isprop(mon, 'lock')
+            mon.lock = false;
+        end
+        
+        fprintf('Raster aborted by user.\n');
+    end
+    
     % Timer callback function
     function timerCallback(src, ~)
         % Get current task number (1-indexed)
@@ -81,16 +115,6 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
         try
             mon.set(currentVal);
             
-            % Display progress at the start of each cycle
-%             if patternIndex == 1
-%                 cycleNum = floor((currentStep - 1) / numSteps) + 1;
-%                 fprintf('Starting cycle %d\n', cycleNum);
-%             end
-%             
-%             % Periodic progress display within cycle
-%             if mod(patternIndex - 1, max(1, floor(numSteps/5))) == 0
-%                 fprintf('  Step %d/%d: Set to %.3f\n', patternIndex, numSteps, currentVal);
-%             end
         catch ME
             fprintf('Error setting monitor value: %s\n', ME.message);
             stop(src);
@@ -110,6 +134,14 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
         if isprop(mon, 'lock')
             mon.lock = false;
         end
+        
+        % Restore button to original state when timer stops
+        if ~isempty(mon.guiHand) && isfield(mon.guiHand, 'statusGrpSetBtn') && ...
+           isvalid(mon.guiHand.statusGrpSetBtn)
+            set(mon.guiHand.statusGrpSetBtn, 'String', originalText);
+            set(mon.guiHand.statusGrpSetBtn, 'Callback', originalCallback);
+        end
+        
         fprintf('Raster timer stopped. Total steps executed: %d\n', get(src, 'TasksExecuted'));
     end
     
