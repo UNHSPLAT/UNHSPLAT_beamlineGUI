@@ -72,7 +72,7 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
     if ~isempty(mon.guiHand) && isfield(mon.guiHand, 'statusGrpSetBtn') && ...
        isvalid(mon.guiHand.statusGrpSetBtn)
         % % Store original button text and callback
-        % originalText = get(mon.guiHand.statusGrpSetBtn, 'String');
+        originalText = get(mon.guiHand.statusGrpSetBtn, 'String');
         % originalCallback = get(mon.guiHand.statusGrpSetBtn, 'Callback');
         
         % Change button to ABORT
