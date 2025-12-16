@@ -71,9 +71,9 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
     % Change button to ABORT if GUI button exists
     if ~isempty(mon.guiHand) && isfield(mon.guiHand, 'statusGrpSetBtn') && ...
        isvalid(mon.guiHand.statusGrpSetBtn)
-        % % Store original button text and callback
-        originalText = get(mon.guiHand.statusGrpSetBtn, 'String');
-        % originalCallback = get(mon.guiHand.statusGrpSetBtn, 'Callback');
+        % Store original button text and callback
+        originalText = 'Set';
+        originalCallback = @mon.guiSetCallback;
         
         % Change button to ABORT
         set(mon.guiHand.statusGrpSetBtn, 'String', 'ABORT');
@@ -91,7 +91,7 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
         if ~isempty(mon.guiHand) && isfield(mon.guiHand, 'statusGrpSetBtn') && ...
            isvalid(mon.guiHand.statusGrpSetBtn)
             set(mon.guiHand.statusGrpSetBtn, 'String', originalText);
-            set(mon.guiHand.statusGrpSetBtn, 'Callback', @mon.guiHand.guiSetCallback);
+            set(mon.guiHand.statusGrpSetBtn, 'Callback', originalCallback);
         end
         
         % Unlock monitor
