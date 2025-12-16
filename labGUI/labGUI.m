@@ -123,6 +123,10 @@ classdef (Abstract) labGUI < handle
             uimenu(obj.hToolsMenu,'Text','Simulate Hardware',...
                 'MenuSelectedFcn',@obj.simHWCallback);
                 
+            % Add raster monitor option
+            uimenu(obj.hToolsMenu,'Text','Raster Monitor',...
+                'MenuSelectedFcn',@obj.rasterMonCallback);
+                
             % Create Timer menu and all its menu items
             obj.createTimerMenu();            % Create timer to periodically update readings
             obj.createTimer();
@@ -560,6 +564,75 @@ classdef (Abstract) labGUI < handle
                         warning('Failed to set %s: %s', hwFields{idx}, ME.message);
                     end
                 end
+            end
+        end
+
+        function rasterMonCallback(obj, ~, ~)
+            %RASTERMONCALLBACK Opens a dialog to configure and start monitor rastering
+            
+            % Get monitor fields
+            monFields = fieldnames(obj.Monitors);
+            
+            if isempty(monFields)
+                errordlg('No monitors available to raster.', 'No Monitors');
+                return;
+            end
+            
+            % Create dialog for selecting monitor and parameters
+            prompt = {'Select Monitor:', ...
+                      'Upper Value:', ...
+                      'Lower Value:', ...
+                      'Number of Steps:', ...
+                      'Dwell Time (s):'};
+            dlgtitle = 'Raster Monitor';
+            dims = [1 50];
+            definput = {monFields{1}, '100', '0', '20', '1.0'};
+            
+            answer = inputdlg(prompt, dlgtitle, dims, definput);
+            
+            % Check if user cancelled
+            if isempty(answer)
+                return;
+            end
+            
+            % Parse inputs
+            monName = answer{1};
+            upperVal = str2double(answer{2});
+            lowerVal = str2double(answer{3});
+            stepNum = str2double(answer{4});
+            dwellTime = str2double(answer{5});
+            
+            % Validate inputs
+            if ~isfield(obj.Monitors, monName)
+                errordlg(['Monitor "' monName '" not found.'], 'Invalid Monitor');
+                return;
+            end
+            
+            if isnan(upperVal) || isnan(lowerVal) || isnan(stepNum) || isnan(dwellTime)
+                errordlg('All parameters must be valid numbers.', 'Invalid Input');
+                return;
+            end
+            
+            if stepNum < 2
+                errordlg('Number of steps must be at least 2.', 'Invalid Input');
+                return;
+            end
+            
+            if dwellTime <= 0
+                errordlg('Dwell time must be positive.', 'Invalid Input');
+                return;
+            end
+            
+            % Get the monitor object
+            mon = obj.Monitors.(monName);
+            
+            % Call rasterMon function
+            try
+                rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime);
+                msgbox(['Raster started for ' monName '. Use stop(obj.Monitors.' monName '.monTimer) to stop.'], ...
+                       'Raster Started');
+            catch ME
+                errordlg(['Error starting raster: ' ME.message], 'Raster Error');
             end
         end
 
