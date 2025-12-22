@@ -86,7 +86,7 @@ classdef monitor < handle
             setVal = str2double(obj.guiHand.statusGrpSetField.String);
             %need to insert some error handling here
             obj.set(setVal);
-            set(obj.guiHand.statusGrpSetField,'String','');
+            %set(obj.guiHand.statusGrpSetField,'String','');
         end
 
         function setfield(obj,field,val)
