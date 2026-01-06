@@ -225,9 +225,9 @@ classdef (Abstract) labGUI < handle
             csvName = strrep(fname,'.mat','.csv');
 
             if isfile(csvName)
-                writetable(struct2table(obj.LastRead), csvName,'WriteMode','append','WriteVariableNames',false);
+                writetable(struct2table(obj.LastRead,'AsArray',true), csvName,'WriteMode','append','WriteVariableNames',false);
             else
-                writetable(struct2table(obj.LastRead), csvName);
+                writetable(struct2table(obj.LastRead,'AsArray',true), csvName);
             end
         end
 
