@@ -102,8 +102,8 @@
             val =  self.measV;
      end
 
-     function val = read_counter(self)
-            val =  self.measure;
+     function read_counter(self)
+            self.measure_async;
      end
 
      readStruct = struct("leyboldPressure1",@read_pressure,...
