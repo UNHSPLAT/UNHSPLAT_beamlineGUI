@@ -152,56 +152,20 @@ classdef beamlineGUI < labGUI
 
             %===================================================================================
             % Create instrument connection status uicontrol group
-
-            % Set positions for components
+            
+            % Set positions for components (used by multiple panels)
             ysize = 22;
             ygap = 6;
-            ystart = ypanelBuffer;
-            ypos = ystart;
             xgap = 15;
             xstart = 10;
             colSize = [180];
-
-            obj.hHWConnStatusGrp = uipanel(obj.hMainControlsTab,...
-                'Title','Hardware Conectivity',...
-                'FontWeight','bold',...
-                'FontSize',12,...
-                'Units','pixels',...
-                'Position',[xBorderBuffer,yBorderBuffer,sum(colSize)+xgap*numel(colSize),10]);
-
-            obj.HWConnStatusListeners.Panel = obj.hHWConnStatusGrp;
-            function x = guiHWConnStatusGrpSet(x)    
-                colInd = 1;
-                xColStart = xstart;
-                button = uicontrol(obj.hHWConnStatusGrp,'Style','radiobutton',...
-                'Position',[xColStart,ypos,colSize(colInd),ysize],...
-                'String',sprintf('%s',x.Tag),...
-                'FontWeight','bold','Value',x.Connected);
-                set(button,'enable','off');
-                ypos = ypos+ysize+ygap;
-
-                %         set(hwStats(i),'Value',obj.Hardware.(nam).Connected)
-                % % Define listener to auto update status text when parameter is changed
-                obj.HWConnStatusListeners.(x.Tag) = guiListener(x,'Connected',...
-                                                                    button,...
-                                            @(self) set(self.guiHand,'Value',self.parent.Connected));
-            end
-
-            structfun(@guiHWConnStatusGrpSet,obj.Hardware,'UniformOutput',false)
-
             colInd = 1;
             xColStart = xstart;
-            obj.hHWConnBtn = uicontrol(obj.hHWConnStatusGrp, ...
-                'Style','pushbutton',...
-               'Position',[xColStart,ypos,colSize(colInd),ysize],...
-               'String','Refresh',...
-               'FontSize',12,...
-               'FontWeight','bold',...
-                'HorizontalAlignment','center',...
-                'Callback',@obj.HwRefreshCallback);
-            ypos = ypos+ysize+ygap;
-            obj.hHWConnStatusGrp.Position(4) = ypos+yBorderBuffer;
-            ypos = obj.hHWConnStatusGrp.Position(2)+obj.hHWConnStatusGrp.Position(4);
+            
+            [obj.hHWConnStatusGrp, obj.HWConnStatusListeners, obj.hHWConnBtn] = ...
+                createHWConnectionStatusPanel(obj.hMainControlsTab, obj.Hardware, ...
+                                              xBorderBuffer, yBorderBuffer, @obj.HwRefreshCallback);
+            ypos = obj.hHWConnStatusGrp.Position(2) + obj.hHWConnStatusGrp.Position(4);
 
             %===================================================================================
             % Create imaging MCP control group
