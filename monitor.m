@@ -73,6 +73,11 @@ classdef monitor < handle
             % if all([obj.parent.Connected])
             obj.setFunc(obj,val);
             % end
+            % Update GUI field if it exists
+            if ~isempty(obj.guiHand) && isfield(obj.guiHand, 'statusGrpSetField') && ...
+               isvalid(obj.guiHand.statusGrpSetField)
+                set(obj.guiHand.statusGrpSetField,'String',num2str(val));
+            end
         end
 
         function guiSetCallback(obj,~,~)
@@ -81,7 +86,7 @@ classdef monitor < handle
             setVal = str2double(obj.guiHand.statusGrpSetField.String);
             %need to insert some error handling here
             obj.set(setVal);
-            set(obj.guiHand.statusGrpSetField,'String','');
+            %set(obj.guiHand.statusGrpSetField,'String','');
         end
 
         function setfield(obj,field,val)
