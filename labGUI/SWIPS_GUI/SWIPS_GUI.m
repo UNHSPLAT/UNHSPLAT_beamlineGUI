@@ -10,6 +10,9 @@ classdef SWIPS_GUI < labGUI
         hInstGrp % Handle to instrument monitors panel
         mcpRampListener
         hMCPRamp
+        hHWConnStatusGrp % Handle to hardware connection status panel
+        HWConnStatusListeners % Listeners for hardware connection status
+        hHWConnBtn % Handle to hardware connection refresh button
     end
     
     properties (Access = protected)
@@ -83,9 +86,19 @@ classdef SWIPS_GUI < labGUI
             colSize = [130,140,60,60,60];  % [Label, Value, Units, Set Value, Set Button]
             panelWidth = sum(colSize)+xgap*numel(colSize);
             
-            % Create HV status panel at the bottom
+            %===================================================================================
+            % Create hardware connection status panel in leftmost column
+            [obj.hHWConnStatusGrp, obj.HWConnStatusListeners, obj.hHWConnBtn] = ...
+                createHWConnectionStatusPanel(obj.hMainControlsTab, obj.Hardware, ...
+                                              leftMargin, 30);
+            
+            % Define column 2 starting position (after hardware connection status panel)
+            col2Start = obj.hHWConnStatusGrp.Position(1) + obj.hHWConnStatusGrp.Position(3) + panelGap;
+            
+            %===================================================================================
+            % Create HV status panel in column 2
             obj.hHVStatusGrp = obj.guiPanelMake(obj.hMainControlsTab,...
-                leftMargin, 30,...
+                col2Start, 30,...
                 'HVPS',...
                 'colSizes',colSize,...
                 'monitorGroup', 'HV');
@@ -114,9 +127,9 @@ classdef SWIPS_GUI < labGUI
 
             % Panel height is automatically adjusted by guiPanelMake
 
-            % Create position status panel with monitors
+            % Create position status panel with monitors in column 2
             obj.hPosStatusGrp = obj.guiPanelMake(obj.hMainControlsTab,...
-                leftMargin, ...
+                col2Start, ...
                 obj.hHVStatusGrp.Position(4)+obj.hHVStatusGrp.Position(2),...
                 'StagePosition',...
                 'colSizes',colSize,...
@@ -147,10 +160,10 @@ classdef SWIPS_GUI < labGUI
             obj.hPosStatusGrp.Position(4) = controlsHeight+imageHeight;  % Add some padding at the bottom
 
          %===================================================================================
-            % create column 2
+            % create column 3
             
-            % Define second column position
-            rightColStart = leftMargin*2 + panelWidth;
+            % Define third column position
+            rightColStart = col2Start + panelWidth + panelGap;
             
             % Create instrument monitor panel in right column
             ypos = 10;  % Reset Y position for new panel

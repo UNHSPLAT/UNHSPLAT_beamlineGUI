@@ -1,14 +1,13 @@
-function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parentPanel, Hardware, xPosition, yPosition, callback)
+function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parentPanel, Hardware, xPosition, yPosition)
 %CREATEHWCONNECTIONSTATUSPANEL Create hardware connection status panel
 %   Creates a panel with radio buttons showing connection status for each
-%   hardware device and a refresh button
+%   hardware device and a refresh button with built-in callback
 %
 %   Inputs:
 %       parentPanel - Parent UI container for the panel
 %       Hardware - Structure containing hardware devices
 %       xPosition - X position for the panel
 %       yPosition - Y position for the panel
-%       callback - Callback function for the refresh button
 %
 %   Outputs:
 %       hPanel - Handle to the created panel
@@ -55,6 +54,21 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
     % Create status buttons for all hardware devices
     structfun(@guiHWConnStatusGrpSet, Hardware, 'UniformOutput', false);
 
+    % Internal callback function for refresh button
+    function HwRefreshCallback(~,~)
+        % Refresh hardware connection status
+        hwStats = hPanel.Children;
+        tags = fieldnames(Hardware);
+        for i = 1:numel(hwStats)
+            nam = hwStats(i).String;
+            disp(nam)
+            if any(strcmp(tags, nam))
+                Hardware.(nam).connectDevice();
+                Hardware.(nam).restartTimer();
+            end
+        end
+    end
+
     % Create refresh button
     colInd = 1;
     xColStart = xstart;
@@ -65,7 +79,7 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
         'FontSize',12,...
         'FontWeight','bold',...
         'HorizontalAlignment','center',...
-        'Callback', callback);
+        'Callback', @HwRefreshCallback);
     
     ypos = ypos + ysize + ygap;
     

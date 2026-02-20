@@ -164,7 +164,7 @@ classdef beamlineGUI < labGUI
             
             [obj.hHWConnStatusGrp, obj.HWConnStatusListeners, obj.hHWConnBtn] = ...
                 createHWConnectionStatusPanel(obj.hMainControlsTab, obj.Hardware, ...
-                                              xBorderBuffer, yBorderBuffer, @obj.HwRefreshCallback);
+                                              xBorderBuffer, yBorderBuffer);
             ypos = obj.hHWConnStatusGrp.Position(2) + obj.hHWConnStatusGrp.Position(4);
 
             %===================================================================================
@@ -328,19 +328,6 @@ classdef beamlineGUI < labGUI
             else
                 obj.Hardware.newportStage.run();
                 obj.hStageButton.set('String','Stop');
-            end
-        end
-
-        function HwRefreshCallback(obj,~,~)
-            hwStats = obj.hHWConnStatusGrp.Children;
-            tags = fieldnames(obj.Hardware);
-            for i = 1:numel(hwStats)
-                nam = hwStats(i).String;
-                disp(nam)
-                if any(strcmp(tags,nam))
-                    obj.Hardware.(nam).connectDevice();
-                    obj.Hardware.(nam).restartTimer();
-                end
             end
         end
 
