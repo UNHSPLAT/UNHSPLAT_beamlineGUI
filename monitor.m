@@ -58,8 +58,10 @@ classdef monitor < handle
         function val = read(obj,src,evnt) 
             try
                 val = obj.readFunc(obj);
-                if isempty(obj.parent) || all([obj.parent.Connected]) 
+                if isempty(obj.parent)
                     obj.lastReadTime = datetime('now');
+                elseif all([obj.parent.Connected]) 
+                    obj.lastReadTime = obj.parent.lastReadTime;
                 else
                     obj.lastReadTime = datetime('NaT');
                 end
