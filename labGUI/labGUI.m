@@ -1108,11 +1108,7 @@ classdef (Abstract) labGUI < handle
                 end
 
                 try
-                    if isfield(hw, 'lastReadTime') && ~isempty(hw.lastReadTime)
-                        lastReadTime = datestr(hw.lastReadTime, 'HH:MM:SS');
-                    else
-                        lastReadTime = 'N/A';
-                    end
+                    lastReadTime = datestr(hw.lastReadTime, 'HH:MM:SS');
                 catch
                     lastReadTime = 'N/A';
                 end
