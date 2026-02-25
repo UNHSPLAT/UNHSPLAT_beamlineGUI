@@ -181,7 +181,7 @@ classdef SWIPS_GUI < labGUI
                 'monitorGroup', 'status');
             
             obj.guiPanelTest([rightColStart, obj.hStatusGrp.Position(4)+obj.hStatusGrp.Position(2)+20, 360, 250],obj.hMainControlsTab);
-            % Adjust figure size to fit all panels
+            % Adjust figure size to fit all panels  
             % Calculate required figure size based on panels
             obj.guiAutoScale(obj.hFigure);
             
