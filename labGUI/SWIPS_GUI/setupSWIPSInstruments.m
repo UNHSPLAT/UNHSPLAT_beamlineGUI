@@ -59,7 +59,7 @@ function instruments = setupSWIPSInstruments()
      function val = read_pico(self)
             val  = self.readDev();
      end
-     instruments.picoFaraday.readFunc = @read_pico;
+     instruments.picoPHD.readFunc = @read_pico;
 
      % connect to devices
     instruments.caen_HVPS1.connectDevice();
