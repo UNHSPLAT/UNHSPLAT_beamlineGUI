@@ -61,12 +61,7 @@ function instruments = setupSWIPSInstruments()
      end
      instruments.picoPHD.readFunc = @read_pico;
 
-     % connect to devices
-    instruments.caen_HVPS1.connectDevice();
-
-    %Connect and configure Newport stage
-    instruments.newportStage.connectDevice();
-    instruments.newportStage.initDevice();
+    %configure Newport stage
     
     function self = config_newport(self)
         if self.Connected
@@ -76,10 +71,15 @@ function instruments = setupSWIPSInstruments()
         end
     end
     instruments.newportStage.funcConfig = @config_newport;
-    config_newport(instruments.newportStage);
 
-    %Connect and config opalkelly
-    instruments.Opal_Kelly.connectDevice();
+     %configure Opal Kelly PPA settings
+     function self = config_ok(self)
+         if self.Connected
+             self.configurePPA_ok([107,60,60,60, 60,60,60,60, 60,60,91,107, 146,117,109,150]);
+         end
+     end
+     instruments.Opal_Kelly.funcConfig = @config_ok;
+
 
     % @2000V - 
     % instruments.Opal_Kelly.configurePPA_ok([68,60,60,60, 60,60,60,60, 60,60,60,61, 60,60,60,76]);
@@ -90,7 +90,7 @@ function instruments = setupSWIPSInstruments()
     % @2200V new exit grid mask -
     %instruments.Opal_Kelly.configurePPA_ok([154,119,107,97, 67,67,67,67, 69,68,95,112, 123,183,179,255]);
     % @2400V new exit grid mask Jan072026 -
-    instruments.Opal_Kelly.configurePPA_ok([107,60,60,60, 60,60,60,60, 60,60,91,107, 146,117,109,150]);
+    % instruments.Opal_Kelly.configurePPA_ok([107,60,60,60, 60,60,60,60, 60,60,91,107, 146,117,109,150]);
     
     %assign tags to instrument structures
     fields = fieldnames(instruments);
