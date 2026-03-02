@@ -67,7 +67,7 @@ function instruments = setupSWIPSInstruments()
         if self.Connected
             self.myxps.PositionerUserTravelLimitsSet('Group1.Pos',-70,70);
             self.myxps.PositionerUserTravelLimitsSet('Group2.Pos',-150,150);
-            self.myxps.PositionerUserTravelLimitsSet('Group3.Pos',-45,45);
+            self.myxps.PositionerUserTravelLimitsSet('Group3.Pos',-135,45);
         end
     end
     instruments.newportStage.funcConfig = @config_newport;
