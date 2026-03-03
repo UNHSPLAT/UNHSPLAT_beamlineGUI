@@ -22,6 +22,9 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         LogXCheckBox            matlab.ui.control.CheckBox
         LogYCheckBox            matlab.ui.control.CheckBox
         LegendCheckBox          matlab.ui.control.CheckBox
+        SmoothingLabel          matlab.ui.control.Label
+        SmoothingSlider         matlab.ui.control.Slider
+        SmoothingValueLabel     matlab.ui.control.Label
     end
 
     properties (Access = private)
@@ -29,6 +32,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         DataFilePath % Path to loaded data file
         PlotHandles % Handles to plot lines
         DefaultDataDir % Default directory for file picker
+        SmoothingSpan = 1 % Smoothing window span (1 = no smoothing)
     end
 
     methods (Access = private)
@@ -235,6 +239,12 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     % Sort Y data according to X sort order
                     yDataSorted = yData(sortIdx);
                     
+                    % Apply smoothing if enabled
+                    if app.SmoothingSpan > 1
+                        % Use smooth function with moving average
+                        yDataSorted = smooth(yDataSorted, app.SmoothingSpan, 'moving');
+                    end
+                    
                     % Plot the data
                     h = plot(app.UIAxes, xDataSorted, yDataSorted, '-o', 'DisplayName', yColumn, ...
                         'LineWidth', 1.5, 'MarkerSize', 4);
@@ -331,6 +341,18 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 legend(app.UIAxes, 'Location', 'best', 'Interpreter', 'none');
             else
                 legend(app.UIAxes, 'off');
+            end
+        end
+
+        % Value changed function: SmoothingSlider
+        function SmoothingSliderValueChanged(app, ~)
+            app.SmoothingSpan = round(app.SmoothingSlider.Value);
+            app.SmoothingValueLabel.Text = sprintf('Window: %d', app.SmoothingSpan);
+            
+            % Re-plot if data exists
+            if ~isempty(app.DataTable) && ~isempty(app.PlotHandles)
+                app.ClearPlotButtonPushed();
+                app.PlotButtonPushed();
             end
         end
     end
@@ -430,6 +452,27 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.LegendCheckBox.Text = 'Show Legend';
             app.LegendCheckBox.Position = [10 85 230 22];
             app.LegendCheckBox.Value = true;
+
+            % Create SmoothingLabel
+            app.SmoothingLabel = uilabel(app.LeftPanel);
+            app.SmoothingLabel.Position = [10 60 230 22];
+            app.SmoothingLabel.Text = 'Data Smoothing:';
+            app.SmoothingLabel.FontWeight = 'bold';
+
+            % Create SmoothingSlider
+            app.SmoothingSlider = uislider(app.LeftPanel);
+            app.SmoothingSlider.Limits = [1 100];
+            app.SmoothingSlider.Value = 1;
+            app.SmoothingSlider.Position = [10 50 170 3];
+            app.SmoothingSlider.ValueChangedFcn = createCallbackFcn(app, @SmoothingSliderValueChanged, true);
+            app.SmoothingSlider.MajorTicks = [1 25 50 75 100];
+            app.SmoothingSlider.MinorTicks = [];
+
+            % Create SmoothingValueLabel
+            app.SmoothingValueLabel = uilabel(app.LeftPanel);
+            app.SmoothingValueLabel.Position = [185 45 55 22];
+            app.SmoothingValueLabel.Text = 'Window: 1';
+            app.SmoothingValueLabel.FontSize = 9;
 
             % Create PlotButton
             app.PlotButton = uibutton(app.LeftPanel, 'push');
