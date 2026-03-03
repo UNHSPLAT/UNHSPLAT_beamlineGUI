@@ -379,6 +379,8 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.LeftPanel.Layout.Row = 1;
             app.LeftPanel.Layout.Column = 1;
             app.LeftPanel.FontWeight = 'bold';
+            app.LeftPanel.Scrollable = 'on';
+            app.LeftPanel.AutoResizeChildren = 'off';
 
             % Create LoadDataButton
             app.LoadDataButton = uibutton(app.LeftPanel, 'push');
@@ -450,12 +452,12 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.LegendCheckBox = uicheckbox(app.LeftPanel);
             app.LegendCheckBox.ValueChangedFcn = createCallbackFcn(app, @LegendCheckBoxValueChanged, true);
             app.LegendCheckBox.Text = 'Show Legend';
-            app.LegendCheckBox.Position = [10 85 230 22];
+            app.LegendCheckBox.Position = [10 125 230 22];
             app.LegendCheckBox.Value = true;
 
             % Create SmoothingLabel
             app.SmoothingLabel = uilabel(app.LeftPanel);
-            app.SmoothingLabel.Position = [10 60 230 22];
+            app.SmoothingLabel.Position = [10 100 230 22];
             app.SmoothingLabel.Text = 'Data Smoothing:';
             app.SmoothingLabel.FontWeight = 'bold';
 
@@ -463,14 +465,14 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.SmoothingSlider = uislider(app.LeftPanel);
             app.SmoothingSlider.Limits = [1 100];
             app.SmoothingSlider.Value = 1;
-            app.SmoothingSlider.Position = [10 50 170 3];
+            app.SmoothingSlider.Position = [10 85 170 3];
             app.SmoothingSlider.ValueChangedFcn = createCallbackFcn(app, @SmoothingSliderValueChanged, true);
             app.SmoothingSlider.MajorTicks = [1 25 50 75 100];
             app.SmoothingSlider.MinorTicks = [];
 
             % Create SmoothingValueLabel
             app.SmoothingValueLabel = uilabel(app.LeftPanel);
-            app.SmoothingValueLabel.Position = [185 45 55 22];
+            app.SmoothingValueLabel.Position = [185 80 55 22];
             app.SmoothingValueLabel.Text = 'Window: 1';
             app.SmoothingValueLabel.FontSize = 9;
 
