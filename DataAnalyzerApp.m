@@ -703,39 +703,64 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         function createFilterDialog(app)
             % Create dialog window
             filterDlg = uifigure('Name', 'Filter Data', ...
-                'Position', [300 300 350 250]);
+                'Position', [300 300 350 330]);
+            
+            % Quick select from plotted lines section
+            uilabel(filterDlg, ...
+                'Text', 'Quick select from plotted lines:', ...
+                'Position', [20 290 310 22], ...
+                'FontWeight', 'bold');
+            
+            % Get currently selected Y columns
+            yColumns = app.YAxisListBox.Value;
+            if ~iscell(yColumns)
+                yColumns = {yColumns};
+            end
+            
+            % Create listbox for plotted lines
+            plottedLinesBox = uilistbox(filterDlg, ...
+                'Items', yColumns, ...
+                'Position', [20 245 310 40]);
             
             % Column selection label
             uilabel(filterDlg, ...
-                'Text', 'Select column to filter:', ...
-                'Position', [20 200 310 22], ...
+                'Text', 'Or select any column:', ...
+                'Position', [20 215 310 22], ...
                 'FontWeight', 'bold');
             
             % Column dropdown
             columnNames = app.DataTable.Properties.VariableNames;
             columnDropdown = uidropdown(filterDlg, ...
                 'Items', columnNames, ...
-                'Position', [20 170 310 22]);
+                'Position', [20 185 310 22]);
             
             if ~isempty(app.FilterColumn) && ismember(app.FilterColumn, columnNames)
                 columnDropdown.Value = app.FilterColumn;
+                % Also select in plotted lines if it's there
+                if ismember(app.FilterColumn, yColumns)
+                    plottedLinesBox.Value = app.FilterColumn;
+                end
             else
                 columnDropdown.Value = columnNames{1};
             end
             
+            % Sync selections between plotted lines and dropdown
+            plottedLinesBox.ValueChangedFcn = @(src, ~) set(columnDropdown, 'Value', src.Value);
+            columnDropdown.ValueChangedFcn = @(src, ~) syncPlottedLinesSelection(src.Value, plottedLinesBox, yColumns);
+            
             % Range filter section
             uilabel(filterDlg, ...
                 'Text', 'Filter Range:', ...
-                'Position', [20 130 310 22], ...
+                'Position', [20 145 310 22], ...
                 'FontWeight', 'bold');
             
             % Minimum value
             uilabel(filterDlg, ...
                 'Text', 'Minimum:', ...
-                'Position', [20 100 80 22]);
+                'Position', [20 115 80 22]);
             
             minEdit = uieditfield(filterDlg, 'text', ...
-                'Position', [100 100 100 22], ...
+                'Position', [100 115 100 22], ...
                 'Value', '');
             if ~isempty(app.FilterMin)
                 minEdit.Value = num2str(app.FilterMin);
@@ -744,10 +769,10 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             % Maximum value
             uilabel(filterDlg, ...
                 'Text', 'Maximum:', ...
-                'Position', [20 70 80 22]);
+                'Position', [20 85 80 22]);
             
             maxEdit = uieditfield(filterDlg, 'text', ...
-                'Position', [100 70 100 22], ...
+                'Position', [100 85 100 22], ...
                 'Value', '');
             if ~isempty(app.FilterMax)
                 maxEdit.Value = num2str(app.FilterMax);
@@ -756,13 +781,13 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             % Info label
             uilabel(filterDlg, ...
                 'Text', 'Leave empty for no limit on that end', ...
-                'Position', [20 40 310 22], ...
+                'Position', [20 55 310 22], ...
                 'FontSize', 9, ...
                 'FontAngle', 'italic');
             
             % Button panel
             buttonPanel = uipanel(filterDlg, ...
-                'Position', [20 5 310 30], ...
+                'Position', [20 20 310 30], ...
                 'BorderType', 'none');
             
             % Apply button
@@ -782,6 +807,13 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 'Text', 'Close', ...
                 'Position', [205 2 90 25], ...
                 'ButtonPushedFcn', @(~,~) close(filterDlg));
+            
+            % Nested function to sync plotted lines selection
+            function syncPlottedLinesSelection(value, listbox, items)
+                if ismember(value, items)
+                    listbox.Value = value;
+                end
+            end
         end
 
         % Apply data filter
@@ -867,9 +899,6 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     app.PlotButtonPushed();
                 end
                 
-                % Close dialog
-                close(dialogHandle);
-                
             catch ME
                 uialert(dialogHandle, ...
                     ['Error applying filter: ' ME.message], ...
@@ -896,9 +925,6 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             end
             
             uialert(app.UIFigure, 'Filter cleared', 'Filter Cleared', 'Icon', 'info');
-            
-            % Close dialog
-            close(dialogHandle);
         end
     end
 
