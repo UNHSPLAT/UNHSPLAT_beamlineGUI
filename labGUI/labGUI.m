@@ -127,6 +127,10 @@ classdef (Abstract) labGUI < handle
             uimenu(obj.hToolsMenu,'Text','Raster Monitor',...
                 'MenuSelectedFcn',@obj.rasterMonCallback);
                 
+            % Add data analyzer option
+            uimenu(obj.hToolsMenu,'Text','Data Analyzer',...
+                'MenuSelectedFcn',@obj.dataAnalyzerCallback);
+                
             % Create Timer menu and all its menu items
             obj.createTimerMenu();            % Create timer to periodically update readings
             obj.createTimer();
@@ -655,6 +659,15 @@ classdef (Abstract) labGUI < handle
                        'Raster Started');
             catch ME
                 errordlg(['Error starting raster: ' ME.message], 'Raster Error');
+            end
+        end
+
+        function dataAnalyzerCallback(obj, ~, ~)
+            %DATAANALYZERCALLBACK Opens the data analyzer app
+            try
+                DataAnalyzerApp;
+            catch ME
+                errordlg(['Error launching Data Analyzer: ' ME.message], 'Launch Error');
             end
         end
 
