@@ -684,22 +684,23 @@ classdef (Abstract) labGUI < handle
             switch choice
                 case 'New MATLAB Instance (Independent)'
                     try
-                        % Launch in new MATLAB instance (Windows)
+                        % Launch in new MATLAB instance
+                        % Using -batch mode to skip startup.m, with waitfor to keep instance alive
                         if ispc
                             matlabPath = fullfile(matlabroot, 'bin', 'matlab.exe');
-                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp(''%s'')" -nosplash &', ...
+                            cmd = sprintf('"%s" -batch "cd(''%s''); app=DataAnalyzerApp(''%s''); waitfor(app.UIFigure);" &', ...
                                 matlabPath, fileparts(appPath), obj.DataLoc);
                             system(cmd);
                         elseif ismac
                             % macOS
                             matlabPath = fullfile(matlabroot, 'bin', 'matlab');
-                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp(''%s'')" -nosplash &', ...
+                            cmd = sprintf('"%s" -batch "cd(''%s''); app=DataAnalyzerApp(''%s''); waitfor(app.UIFigure);" &', ...
                                 matlabPath, fileparts(appPath), obj.DataLoc);
                             system(cmd);
                         else
                             % Linux
                             matlabPath = fullfile(matlabroot, 'bin', 'matlab');
-                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp(''%s'')" -nosplash &', ...
+                            cmd = sprintf('"%s" -batch "cd(''%s''); app=DataAnalyzerApp(''%s''); waitfor(app.UIFigure);" &', ...
                                 matlabPath, fileparts(appPath), obj.DataLoc);
                             system(cmd);
                         end
