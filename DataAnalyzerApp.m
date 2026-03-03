@@ -177,6 +177,26 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             end
         end
 
+        % Helper function for moving average smoothing
+        function smoothedData = movingAverage(~, data, windowSize)
+            % Simple moving average implementation
+            % data: input vector
+            % windowSize: number of points in the averaging window
+            
+            n = length(data);
+            smoothedData = zeros(size(data));
+            halfWindow = floor(windowSize / 2);
+            
+            for i = 1:n
+                % Calculate window bounds
+                startIdx = max(1, i - halfWindow);
+                endIdx = min(n, i + halfWindow);
+                
+                % Compute average over window
+                smoothedData(i) = mean(data(startIdx:endIdx));
+            end
+        end
+
         % Button pushed function: PlotButton
         function PlotButtonPushed(app, ~)
             if isempty(app.DataTable)
@@ -241,8 +261,8 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     
                     % Apply smoothing if enabled
                     if app.SmoothingSpan > 1
-                        % Use smooth function with moving average
-                        yDataSorted = smooth(yDataSorted, app.SmoothingSpan, 'moving');
+                        % Use simple moving average
+                        yDataSorted = app.movingAverage(yDataSorted, app.SmoothingSpan);
                     end
                     
                     % Plot the data
