@@ -79,14 +79,14 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                         return; % User cancelled
                     end
                     
-                    % Find all readings_*.csv and readings_*.mat files
-                    csvFiles = dir(fullfile(path, 'readings_*.csv'));
-                    matFiles = dir(fullfile(path, 'readings_*.mat'));
+                    % Find all readings_*.csv and readings_*.mat files recursively
+                    csvFiles = dir(fullfile(path, '**', 'readings_*.csv'));
+                    matFiles = dir(fullfile(path, '**', 'readings_*.mat'));
                     allFiles = [csvFiles; matFiles];
                     
                     if isempty(allFiles)
                         uialert(app.UIFigure, ...
-                            'No readings_* files found in selected folder', ...
+                            'No readings_* files found in selected folder or subfolders', ...
                             'No Files Found', 'Icon', 'warning');
                         return;
                     end
