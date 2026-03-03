@@ -34,6 +34,9 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         OptionsWindow % Handle to plot options window
         XLimits = [] % X axis limits [min max], empty = auto
         YLimits = [] % Y axis limits [min max], empty = auto
+        CustomXLabel = '' % Custom X axis label
+        CustomYLabel = '' % Custom Y axis label
+        CustomTitle = '' % Custom plot title
     end
 
     methods (Access = private)
@@ -274,10 +277,29 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 
                 hold(app.UIAxes, 'off');
                 
-                % Set labels
-                xlabel(app.UIAxes, xColumn, 'Interpreter', 'none');
-                ylabel(app.UIAxes, 'Value', 'Interpreter', 'none');
-                title(app.UIAxes, 'Data Analysis Plot', 'Interpreter', 'none');
+                % Set labels (use custom labels if set)
+                if isempty(app.CustomXLabel)
+                    xLabelText = xColumn;
+                else
+                    xLabelText = app.CustomXLabel;
+                end
+                if isempty(app.CustomYLabel)
+                    yLabelText = 'Value';
+                else
+                    yLabelText = app.CustomYLabel;
+                end
+                if isempty(app.CustomTitle)
+                    titleText = 'Data Analysis Plot';
+                else
+                    titleText = app.CustomTitle;
+                end
+                
+                hXLabel = xlabel(app.UIAxes, xLabelText, 'Interpreter', 'none');
+                hYLabel = ylabel(app.UIAxes, yLabelText, 'Interpreter', 'none');
+                hTitle = title(app.UIAxes, titleText, 'Interpreter', 'none');
+                
+                % Make labels editable on double-click
+                app.makeLabelsEditable(hXLabel, hYLabel, hTitle);
                 
                 % Apply grid setting
                 if app.ShowGrid
@@ -350,7 +372,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         % Create plot options window
         function createOptionsWindow(app)
             app.OptionsWindow = uifigure('Name', 'Plot Options', ...
-                'Position', [100 100 300 500]);
+                'Position', [100 100 300 540]);
             
             % Grid checkbox
             gridCheck = uicheckbox(app.OptionsWindow, ...
@@ -475,10 +497,24 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 'FontAngle', 'italic', ...
                 'HorizontalAlignment', 'center');
             
+            % Note about editable labels
+            uilabel(app.OptionsWindow, ...
+                'Text', 'Double-click labels on plot to edit', ...
+                'Position', [20 75 260 22], ...
+                'FontSize', 9, ...
+                'FontAngle', 'italic', ...
+                'HorizontalAlignment', 'center');
+            
+            % Reset Labels button
+            uibutton(app.OptionsWindow, 'push', ...
+                'Text', 'Reset Labels to Default', ...
+                'Position', [60 45 180 25], ...
+                'ButtonPushedFcn', @(~,~) app.resetLabels());
+            
             % Close button
             uibutton(app.OptionsWindow, 'push', ...
                 'Text', 'Close', ...
-                'Position', [100 20 100 30], ...
+                'Position', [100 10 100 30], ...
                 'ButtonPushedFcn', @(~,~) close(app.OptionsWindow));
         end
 
@@ -581,6 +617,64 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 if ~isempty(app.PlotHandles)
                     ylim(app.UIAxes, app.YLimits);
                 end
+            end
+        end
+
+        % Make axis labels and title editable on double-click
+        function makeLabelsEditable(app, hXLabel, hYLabel, hTitle)
+            % Set ButtonDownFcn for X label
+            set(hXLabel, 'ButtonDownFcn', @(src, ~) app.editLabel(src, 'X'));
+            
+            % Set ButtonDownFcn for Y label
+            set(hYLabel, 'ButtonDownFcn', @(src, ~) app.editLabel(src, 'Y'));
+            
+            % Set ButtonDownFcn for Title
+            set(hTitle, 'ButtonDownFcn', @(src, ~) app.editLabel(src, 'Title'));
+        end
+
+        % Edit label callback
+        function editLabel(app, labelHandle, labelType)
+            % Get current text
+            currentText = get(labelHandle, 'String');
+            
+            % Prompt user for new text
+            switch labelType
+                case 'X'
+                    promptText = 'Enter new X-axis label:';
+                case 'Y'
+                    promptText = 'Enter new Y-axis label:';
+                case 'Title'
+                    promptText = 'Enter new plot title:';
+            end
+            
+            answer = inputdlg(promptText, ['Edit ' labelType ' Label'], [1 50], {currentText});
+            
+            if ~isempty(answer)
+                newText = answer{1};
+                set(labelHandle, 'String', newText);
+                
+                % Store custom label
+                switch labelType
+                    case 'X'
+                        app.CustomXLabel = newText;
+                    case 'Y'
+                        app.CustomYLabel = newText;
+                    case 'Title'
+                        app.CustomTitle = newText;
+                end
+            end
+        end
+
+        % Reset labels to default
+        function resetLabels(app)
+            app.CustomXLabel = '';
+            app.CustomYLabel = '';
+            app.CustomTitle = '';
+            
+            % Re-plot if data exists
+            if ~isempty(app.DataTable) && ~isempty(app.PlotHandles)
+                app.ClearPlotButtonPushed();
+                app.PlotButtonPushed();
             end
         end
     end
