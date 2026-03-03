@@ -433,26 +433,26 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.GridCheckBox = uicheckbox(app.LeftPanel);
             app.GridCheckBox.ValueChangedFcn = createCallbackFcn(app, @GridCheckBoxValueChanged, true);
             app.GridCheckBox.Text = 'Show Grid';
-            app.GridCheckBox.Position = [10 160 230 22];
+            app.GridCheckBox.Position = [10 180 230 22];
             app.GridCheckBox.Value = true;
 
             % Create LogXCheckBox
             app.LogXCheckBox = uicheckbox(app.LeftPanel);
             app.LogXCheckBox.ValueChangedFcn = createCallbackFcn(app, @LogXCheckBoxValueChanged, true);
             app.LogXCheckBox.Text = 'Log X Scale';
-            app.LogXCheckBox.Position = [10 135 230 22];
+            app.LogXCheckBox.Position = [10 155 230 22];
 
             % Create LogYCheckBox
             app.LogYCheckBox = uicheckbox(app.LeftPanel);
             app.LogYCheckBox.ValueChangedFcn = createCallbackFcn(app, @LogYCheckBoxValueChanged, true);
             app.LogYCheckBox.Text = 'Log Y Scale';
-            app.LogYCheckBox.Position = [10 110 230 22];
+            app.LogYCheckBox.Position = [10 130 230 22];
 
             % Create LegendCheckBox
             app.LegendCheckBox = uicheckbox(app.LeftPanel);
             app.LegendCheckBox.ValueChangedFcn = createCallbackFcn(app, @LegendCheckBoxValueChanged, true);
             app.LegendCheckBox.Text = 'Show Legend';
-            app.LegendCheckBox.Position = [10 125 230 22];
+            app.LegendCheckBox.Position = [10 105 230 22];
             app.LegendCheckBox.Value = true;
 
             % Create SmoothingLabel
@@ -465,21 +465,21 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.SmoothingSlider = uislider(app.LeftPanel);
             app.SmoothingSlider.Limits = [1 100];
             app.SmoothingSlider.Value = 1;
-            app.SmoothingSlider.Position = [10 85 170 3];
+            app.SmoothingSlider.Position = [10 80 170 3];
             app.SmoothingSlider.ValueChangedFcn = createCallbackFcn(app, @SmoothingSliderValueChanged, true);
             app.SmoothingSlider.MajorTicks = [1 25 50 75 100];
             app.SmoothingSlider.MinorTicks = [];
 
             % Create SmoothingValueLabel
             app.SmoothingValueLabel = uilabel(app.LeftPanel);
-            app.SmoothingValueLabel.Position = [185 80 55 22];
+            app.SmoothingValueLabel.Position = [185 75 55 22];
             app.SmoothingValueLabel.Text = 'Window: 1';
             app.SmoothingValueLabel.FontSize = 9;
 
             % Create PlotButton
             app.PlotButton = uibutton(app.LeftPanel, 'push');
             app.PlotButton.ButtonPushedFcn = createCallbackFcn(app, @PlotButtonPushed, true);
-            app.PlotButton.Position = [10 45 230 30];
+            app.PlotButton.Position = [10 40 230 30];
             app.PlotButton.Text = 'Plot Data';
             app.PlotButton.FontSize = 14;
             app.PlotButton.FontWeight = 'bold';
@@ -488,13 +488,13 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             % Create ClearPlotButton
             app.ClearPlotButton = uibutton(app.LeftPanel, 'push');
             app.ClearPlotButton.ButtonPushedFcn = createCallbackFcn(app, @ClearPlotButtonPushed, true);
-            app.ClearPlotButton.Position = [10 10 110 30];
+            app.ClearPlotButton.Position = [10 5 110 30];
             app.ClearPlotButton.Text = 'Clear Plot';
 
             % Create ExportFigureButton
             app.ExportFigureButton = uibutton(app.LeftPanel, 'push');
             app.ExportFigureButton.ButtonPushedFcn = createCallbackFcn(app, @ExportFigureButtonPushed, true);
-            app.ExportFigureButton.Position = [130 10 110 30];
+            app.ExportFigureButton.Position = [130 5 110 30];
             app.ExportFigureButton.Text = 'Export Figure';
 
             % Create RightPanel
