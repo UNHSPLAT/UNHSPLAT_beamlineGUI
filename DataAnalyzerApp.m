@@ -18,13 +18,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         ExportFigureButton      matlab.ui.control.Button
         RightPanel              matlab.ui.container.Panel
         UIAxes                  matlab.ui.control.UIAxes
-        GridCheckBox            matlab.ui.control.CheckBox
-        LogXCheckBox            matlab.ui.control.CheckBox
-        LogYCheckBox            matlab.ui.control.CheckBox
-        LegendCheckBox          matlab.ui.control.CheckBox
-        SmoothingLabel          matlab.ui.control.Label
-        SmoothingSlider         matlab.ui.control.Slider
-        SmoothingValueLabel     matlab.ui.control.Label
+        PlotOptionsButton       matlab.ui.control.Button
     end
 
     properties (Access = private)
@@ -33,6 +27,11 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         PlotHandles % Handles to plot lines
         DefaultDataDir % Default directory for file picker
         SmoothingSpan = 1 % Smoothing window span (1 = no smoothing)
+        ShowGrid = true % Grid display option
+        LogXScale = false % Log scale for X axis
+        LogYScale = false % Log scale for Y axis
+        ShowLegend = true % Legend display option
+        OptionsWindow % Handle to plot options window
     end
 
     methods (Access = private)
@@ -279,27 +278,27 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 title(app.UIAxes, 'Data Analysis Plot', 'Interpreter', 'none');
                 
                 % Apply grid setting
-                if app.GridCheckBox.Value
+                if app.ShowGrid
                     grid(app.UIAxes, 'on');
                 else
                     grid(app.UIAxes, 'off');
                 end
                 
                 % Apply log scale settings
-                if app.LogXCheckBox.Value
+                if app.LogXScale
                     set(app.UIAxes, 'XScale', 'log');
                 else
                     set(app.UIAxes, 'XScale', 'linear');
                 end
                 
-                if app.LogYCheckBox.Value
+                if app.LogYScale
                     set(app.UIAxes, 'YScale', 'log');
                 else
                     set(app.UIAxes, 'YScale', 'linear');
                 end
                 
                 % Show legend if enabled
-                if app.LegendCheckBox.Value
+                if app.ShowLegend
                     legend(app.UIAxes, 'Location', 'best', 'Interpreter', 'none');
                 end
                 
@@ -328,46 +327,115 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             set(newFig, 'MenuBar', 'figure', 'ToolBar', 'figure');
         end
 
-        % Value changed function: GridCheckBox
-        function GridCheckBoxValueChanged(app, ~)
-            if app.GridCheckBox.Value
-                grid(app.UIAxes, 'on');
+        % Button pushed function: PlotOptionsButton
+        function PlotOptionsButtonPushed(app, ~)
+            % Create or bring forward the options window
+            if isempty(app.OptionsWindow) || ~isvalid(app.OptionsWindow)
+                app.createOptionsWindow();
             else
-                grid(app.UIAxes, 'off');
+                figure(app.OptionsWindow);
             end
         end
 
-        % Value changed function: LogXCheckBox
-        function LogXCheckBoxValueChanged(app, ~)
-            if app.LogXCheckBox.Value
-                set(app.UIAxes, 'XScale', 'log');
-            else
-                set(app.UIAxes, 'XScale', 'linear');
+        % Create plot options window
+        function createOptionsWindow(app)
+            app.OptionsWindow = uifigure('Name', 'Plot Options', ...
+                'Position', [100 100 300 350]);
+            
+            % Grid checkbox
+            gridCheck = uicheckbox(app.OptionsWindow, ...
+                'Text', 'Show Grid', ...
+                'Position', [20 300 260 22], ...
+                'Value', app.ShowGrid);
+            gridCheck.ValueChangedFcn = @(src, ~) app.updatePlotOption('Grid', src.Value);
+            
+            % Log X checkbox
+            logXCheck = uicheckbox(app.OptionsWindow, ...
+                'Text', 'Log X Scale', ...
+                'Position', [20 270 260 22], ...
+                'Value', app.LogXScale);
+            logXCheck.ValueChangedFcn = @(src, ~) app.updatePlotOption('LogX', src.Value);
+            
+            % Log Y checkbox
+            logYCheck = uicheckbox(app.OptionsWindow, ...
+                'Text', 'Log Y Scale', ...
+                'Position', [20 240 260 22], ...
+                'Value', app.LogYScale);
+            logYCheck.ValueChangedFcn = @(src, ~) app.updatePlotOption('LogY', src.Value);
+            
+            % Legend checkbox
+            legendCheck = uicheckbox(app.OptionsWindow, ...
+                'Text', 'Show Legend', ...
+                'Position', [20 210 260 22], ...
+                'Value', app.ShowLegend);
+            legendCheck.ValueChangedFcn = @(src, ~) app.updatePlotOption('Legend', src.Value);
+            
+            % Smoothing label
+            uilabel(app.OptionsWindow, ...
+                'Text', 'Data Smoothing:', ...
+                'Position', [20 170 260 22], ...
+                'FontWeight', 'bold');
+            
+            % Smoothing slider
+            smoothSlider = uislider(app.OptionsWindow, ...
+                'Position', [20 140 220 3], ...
+                'Limits', [1 100], ...
+                'Value', app.SmoothingSpan, ...
+                'MajorTicks', [1 25 50 75 100]);
+            
+            % Smoothing value label
+            smoothLabel = uilabel(app.OptionsWindow, ...
+                'Text', sprintf('Window: %d', app.SmoothingSpan), ...
+                'Position', [240 135 50 22], ...
+                'FontSize', 9);
+            
+            smoothSlider.ValueChangedFcn = @(src, ~) app.updateSmoothing(src.Value, smoothLabel);
+            
+            % Close button
+            uibutton(app.OptionsWindow, 'push', ...
+                'Text', 'Close', ...
+                'Position', [100 20 100 30], ...
+                'ButtonPushedFcn', @(~,~) close(app.OptionsWindow));
+        end
+
+        % Update plot option callback
+        function updatePlotOption(app, option, value)
+            switch option
+                case 'Grid'
+                    app.ShowGrid = value;
+                    if value
+                        grid(app.UIAxes, 'on');
+                    else
+                        grid(app.UIAxes, 'off');
+                    end
+                case 'LogX'
+                    app.LogXScale = value;
+                    if value
+                        set(app.UIAxes, 'XScale', 'log');
+                    else
+                        set(app.UIAxes, 'XScale', 'linear');
+                    end
+                case 'LogY'
+                    app.LogYScale = value;
+                    if value
+                        set(app.UIAxes, 'YScale', 'log');
+                    else
+                        set(app.UIAxes, 'YScale', 'linear');
+                    end
+                case 'Legend'
+                    app.ShowLegend = value;
+                    if value && ~isempty(app.PlotHandles)
+                        legend(app.UIAxes, 'Location', 'best', 'Interpreter', 'none');
+                    else
+                        legend(app.UIAxes, 'off');
+                    end
             end
         end
 
-        % Value changed function: LogYCheckBox
-        function LogYCheckBoxValueChanged(app, ~)
-            if app.LogYCheckBox.Value
-                set(app.UIAxes, 'YScale', 'log');
-            else
-                set(app.UIAxes, 'YScale', 'linear');
-            end
-        end
-
-        % Value changed function: LegendCheckBox
-        function LegendCheckBoxValueChanged(app, ~)
-            if app.LegendCheckBox.Value && ~isempty(app.PlotHandles)
-                legend(app.UIAxes, 'Location', 'best', 'Interpreter', 'none');
-            else
-                legend(app.UIAxes, 'off');
-            end
-        end
-
-        % Value changed function: SmoothingSlider
-        function SmoothingSliderValueChanged(app, ~)
-            app.SmoothingSpan = round(app.SmoothingSlider.Value);
-            app.SmoothingValueLabel.Text = sprintf('Window: %d', app.SmoothingSpan);
+        % Update smoothing callback
+        function updateSmoothing(app, value, label)
+            app.SmoothingSpan = round(value);
+            label.Text = sprintf('Window: %d', app.SmoothingSpan);
             
             % Re-plot if data exists
             if ~isempty(app.DataTable) && ~isempty(app.PlotHandles)
@@ -449,57 +517,17 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.YAxisListBox.Position = [10 190 230 110];
             app.YAxisListBox.Multiselect = 'on';
 
-            % Create GridCheckBox
-            app.GridCheckBox = uicheckbox(app.LeftPanel);
-            app.GridCheckBox.ValueChangedFcn = createCallbackFcn(app, @GridCheckBoxValueChanged, true);
-            app.GridCheckBox.Text = 'Show Grid';
-            app.GridCheckBox.Position = [10 180 230 22];
-            app.GridCheckBox.Value = true;
-
-            % Create LogXCheckBox
-            app.LogXCheckBox = uicheckbox(app.LeftPanel);
-            app.LogXCheckBox.ValueChangedFcn = createCallbackFcn(app, @LogXCheckBoxValueChanged, true);
-            app.LogXCheckBox.Text = 'Log X Scale';
-            app.LogXCheckBox.Position = [10 155 230 22];
-
-            % Create LogYCheckBox
-            app.LogYCheckBox = uicheckbox(app.LeftPanel);
-            app.LogYCheckBox.ValueChangedFcn = createCallbackFcn(app, @LogYCheckBoxValueChanged, true);
-            app.LogYCheckBox.Text = 'Log Y Scale';
-            app.LogYCheckBox.Position = [10 130 230 22];
-
-            % Create LegendCheckBox
-            app.LegendCheckBox = uicheckbox(app.LeftPanel);
-            app.LegendCheckBox.ValueChangedFcn = createCallbackFcn(app, @LegendCheckBoxValueChanged, true);
-            app.LegendCheckBox.Text = 'Show Legend';
-            app.LegendCheckBox.Position = [10 105 230 22];
-            app.LegendCheckBox.Value = true;
-
-            % Create SmoothingLabel
-            app.SmoothingLabel = uilabel(app.LeftPanel);
-            app.SmoothingLabel.Position = [10 100 230 22];
-            app.SmoothingLabel.Text = 'Data Smoothing:';
-            app.SmoothingLabel.FontWeight = 'bold';
-
-            % Create SmoothingSlider
-            app.SmoothingSlider = uislider(app.LeftPanel);
-            app.SmoothingSlider.Limits = [1 100];
-            app.SmoothingSlider.Value = 1;
-            app.SmoothingSlider.Position = [10 80 170 3];
-            app.SmoothingSlider.ValueChangedFcn = createCallbackFcn(app, @SmoothingSliderValueChanged, true);
-            app.SmoothingSlider.MajorTicks = [1 25 50 75 100];
-            app.SmoothingSlider.MinorTicks = [];
-
-            % Create SmoothingValueLabel
-            app.SmoothingValueLabel = uilabel(app.LeftPanel);
-            app.SmoothingValueLabel.Position = [185 75 55 22];
-            app.SmoothingValueLabel.Text = 'Window: 1';
-            app.SmoothingValueLabel.FontSize = 9;
+            % Create PlotOptionsButton
+            app.PlotOptionsButton = uibutton(app.LeftPanel, 'push');
+            app.PlotOptionsButton.ButtonPushedFcn = createCallbackFcn(app, @PlotOptionsButtonPushed, true);
+            app.PlotOptionsButton.Position = [10 180 230 30];
+            app.PlotOptionsButton.Text = 'Plot Options';
+            app.PlotOptionsButton.FontSize = 12;
 
             % Create PlotButton
             app.PlotButton = uibutton(app.LeftPanel, 'push');
             app.PlotButton.ButtonPushedFcn = createCallbackFcn(app, @PlotButtonPushed, true);
-            app.PlotButton.Position = [10 40 230 30];
+            app.PlotButton.Position = [10 140 230 30];
             app.PlotButton.Text = 'Plot Data';
             app.PlotButton.FontSize = 14;
             app.PlotButton.FontWeight = 'bold';
@@ -508,13 +536,13 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             % Create ClearPlotButton
             app.ClearPlotButton = uibutton(app.LeftPanel, 'push');
             app.ClearPlotButton.ButtonPushedFcn = createCallbackFcn(app, @ClearPlotButtonPushed, true);
-            app.ClearPlotButton.Position = [10 5 110 30];
+            app.ClearPlotButton.Position = [10 100 110 30];
             app.ClearPlotButton.Text = 'Clear Plot';
 
             % Create ExportFigureButton
             app.ExportFigureButton = uibutton(app.LeftPanel, 'push');
             app.ExportFigureButton.ButtonPushedFcn = createCallbackFcn(app, @ExportFigureButtonPushed, true);
-            app.ExportFigureButton.Position = [130 5 110 30];
+            app.ExportFigureButton.Position = [130 100 110 30];
             app.ExportFigureButton.Text = 'Export Figure';
 
             % Create RightPanel
