@@ -32,6 +32,8 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         LogYScale = false % Log scale for Y axis
         ShowLegend = true % Legend display option
         OptionsWindow % Handle to plot options window
+        XLimits = [] % X axis limits [min max], empty = auto
+        YLimits = [] % Y axis limits [min max], empty = auto
     end
 
     methods (Access = private)
@@ -302,6 +304,14 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     legend(app.UIAxes, 'Location', 'best', 'Interpreter', 'none');
                 end
                 
+                % Apply axis limits if set
+                if ~isempty(app.XLimits)
+                    xlim(app.UIAxes, app.XLimits);
+                end
+                if ~isempty(app.YLimits)
+                    ylim(app.UIAxes, app.YLimits);
+                end
+                
             catch ME
                 uialert(app.UIFigure, ...
                     ['Error plotting data: ' ME.message], ...
@@ -340,7 +350,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         % Create plot options window
         function createOptionsWindow(app)
             app.OptionsWindow = uifigure('Name', 'Plot Options', ...
-                'Position', [100 100 300 350]);
+                'Position', [100 100 300 500]);
             
             % Grid checkbox
             gridCheck = uicheckbox(app.OptionsWindow, ...
@@ -391,11 +401,79 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             
             smoothSlider.ValueChangedFcn = @(src, ~) app.updateSmoothing(src.Value, smoothLabel);
             
-            % Close button
+            % X Axis Limits section
+            uilabel(app.OptionsWindow, ...
+                'Text', 'X Axis Limits:', ...
+                'Position', [20 100 260 22], ...
+                'FontWeight', 'bold');
+            
+            uilabel(app.OptionsWindow, ...
+                'Text', 'Min:', ...
+                'Position', [20 75 40 22]);
+            
+            xMinEdit = uieditfield(app.OptionsWindow, 'text', ...
+                'Position', [60 75 60 22], ...
+                'Value', '');
+            if ~isempty(app.XLimits)
+                xMinEdit.Value = num2str(app.XLimits(1));
+            end
+            
+            uilabel(app.OptionsWindow, ...
+                'Text', 'Max:', ...
+                'Position', [130 75 40 22]);
+            
+            xMaxEdit = uieditfield(app.OptionsWindow, 'text', ...
+                'Position', [170 75 60 22], ...
+                'Value', '');
+            if ~isempty(app.XLimits)
+                xMaxEdit.Value = num2str(app.XLimits(2));
+            end
+            
             uibutton(app.OptionsWindow, 'push', ...
-                'Text', 'Close', ...
-                'Position', [100 20 100 30], ...
-                'ButtonPushedFcn', @(~,~) close(app.OptionsWindow));
+                'Text', 'Apply', ...
+                'Position', [240 75 40 22], ...
+                'ButtonPushedFcn', @(~,~) app.applyXLimits(xMinEdit.Value, xMaxEdit.Value));
+            
+            % Y Axis Limits section
+            uilabel(app.OptionsWindow, ...
+                'Text', 'Y Axis Limits:', ...
+                'Position', [20 45 260 22], ...
+                'FontWeight', 'bold');
+            
+            uilabel(app.OptionsWindow, ...
+                'Text', 'Min:', ...
+                'Position', [20 20 40 22]);
+            
+            yMinEdit = uieditfield(app.OptionsWindow, 'text', ...
+                'Position', [60 20 60 22], ...
+                'Value', '');
+            if ~isempty(app.YLimits)
+                yMinEdit.Value = num2str(app.YLimits(1));
+            end
+            
+            uilabel(app.OptionsWindow, ...
+                'Text', 'Max:', ...
+                'Position', [130 20 40 22]);
+            
+            yMaxEdit = uieditfield(app.OptionsWindow, 'text', ...
+                'Position', [170 20 60 22], ...
+                'Value', '');
+            if ~isempty(app.YLimits)
+                yMaxEdit.Value = num2str(app.YLimits(2));
+            end
+            
+            uibutton(app.OptionsWindow, 'push', ...
+                'Text', 'Apply', ...
+                'Position', [240 20 40 22], ...
+                'ButtonPushedFcn', @(~,~) app.applyYLimits(yMinEdit.Value, yMaxEdit.Value));
+            
+            % Info label
+            uilabel(app.OptionsWindow, ...
+                'Text', 'Leave limits empty for auto-scale', ...
+                'Position', [20 450 260 22], ...
+                'FontSize', 9, ...
+                'FontAngle', 'italic', ...
+                'HorizontalAlignment', 'center');
         end
 
         % Update plot option callback
@@ -441,6 +519,62 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             if ~isempty(app.DataTable) && ~isempty(app.PlotHandles)
                 app.ClearPlotButtonPushed();
                 app.PlotButtonPushed();
+            end
+        end
+
+        % Apply X limits
+        function applyXLimits(app, minStr, maxStr)
+            if isempty(minStr) && isempty(maxStr)
+                app.XLimits = [];
+                if ~isempty(app.PlotHandles)
+                    xlim(app.UIAxes, 'auto');
+                end
+            else
+                minVal = str2double(minStr);
+                maxVal = str2double(maxStr);
+                
+                if isnan(minVal) || isnan(maxVal)
+                    uialert(app.OptionsWindow, 'Please enter valid numeric values', 'Invalid Input');
+                    return;
+                end
+                
+                if minVal >= maxVal
+                    uialert(app.OptionsWindow, 'Min value must be less than Max value', 'Invalid Range');
+                    return;
+                end
+                
+                app.XLimits = [minVal maxVal];
+                if ~isempty(app.PlotHandles)
+                    xlim(app.UIAxes, app.XLimits);
+                end
+            end
+        end
+
+        % Apply Y limits
+        function applyYLimits(app, minStr, maxStr)
+            if isempty(minStr) && isempty(maxStr)
+                app.YLimits = [];
+                if ~isempty(app.PlotHandles)
+                    ylim(app.UIAxes, 'auto');
+                end
+            else
+                minVal = str2double(minStr);
+                maxVal = str2double(maxStr);
+                
+                if isnan(minVal) || isnan(maxVal)
+                    uialert(app.OptionsWindow, 'Please enter valid numeric values', 'Invalid Input');
+                    return;
+                end
+                
+                if minVal >= maxVal
+                    uialert(app.OptionsWindow, 'Min value must be less than Max value', 'Invalid Range');
+                    return;
+                end
+                
+                app.YLimits = [minVal maxVal];
+                if ~isempty(app.PlotHandles)
+                    ylim(app.UIAxes, app.YLimits);
+                end
             end
         end
     end
