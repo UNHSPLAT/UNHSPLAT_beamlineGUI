@@ -14,6 +14,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         PlotButton              matlab.ui.control.Button
         ClearPlotButton         matlab.ui.control.Button
         ExportFigureButton      matlab.ui.control.Button
+        FilterDataButton        matlab.ui.control.Button
         RightPanel              matlab.ui.container.Panel
         UIAxes                  matlab.ui.control.UIAxes
         PlotOptionsButton       matlab.ui.control.Button
@@ -35,6 +36,11 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         CustomXLabel = '' % Custom X axis label
         CustomYLabel = '' % Custom Y axis label
         CustomTitle = '' % Custom plot title
+        FilteredDataTable % Data table after applying filters
+        FilterColumn = '' % Column name being filtered
+        FilterMin = [] % Minimum value for filter range
+        FilterMax = [] % Maximum value for filter range
+        FilterActive = false % Whether filter is currently active
     end
 
     methods (Access = private)
@@ -205,6 +211,13 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 return;
             end
             
+            % Use filtered data if filter is active, otherwise use original data
+            if app.FilterActive && ~isempty(app.FilteredDataTable)
+                dataToPlot = app.FilteredDataTable;
+            else
+                dataToPlot = app.DataTable;
+            end
+            
             xColumn = app.XAxisDropDown.Value;
             yColumns = app.YAxisListBox.Value;
             
@@ -220,7 +233,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             
             try
                 % Get X data
-                xData = app.DataTable.(xColumn);
+                xData = dataToPlot.(xColumn);
                 
                 % Handle non-numeric X data
                 if ~isnumeric(xData)
@@ -245,7 +258,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 
                 for i = 1:length(yColumns)
                     yColumn = yColumns{i};
-                    yData = app.DataTable.(yColumn);
+                    yData = dataToPlot.(yColumn);
                     
                     % Handle non-numeric Y data
                     if ~isnumeric(yData)
@@ -674,6 +687,219 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 app.PlotButtonPushed();
             end
         end
+
+        % Button pushed function: FilterDataButton
+        function FilterDataButtonPushed(app, ~)
+            if isempty(app.DataTable)
+                uialert(app.UIFigure, 'Please load data first', 'No Data', 'Icon', 'warning');
+                return;
+            end
+            
+            % Create filter dialog
+            app.createFilterDialog();
+        end
+
+        % Create filter dialog window
+        function createFilterDialog(app)
+            % Create dialog window
+            filterDlg = uifigure('Name', 'Filter Data', ...
+                'Position', [300 300 350 250]);
+            
+            % Column selection label
+            uilabel(filterDlg, ...
+                'Text', 'Select column to filter:', ...
+                'Position', [20 200 310 22], ...
+                'FontWeight', 'bold');
+            
+            % Column dropdown
+            columnNames = app.DataTable.Properties.VariableNames;
+            columnDropdown = uidropdown(filterDlg, ...
+                'Items', columnNames, ...
+                'Position', [20 170 310 22]);
+            
+            if ~isempty(app.FilterColumn) && ismember(app.FilterColumn, columnNames)
+                columnDropdown.Value = app.FilterColumn;
+            else
+                columnDropdown.Value = columnNames{1};
+            end
+            
+            % Range filter section
+            uilabel(filterDlg, ...
+                'Text', 'Filter Range:', ...
+                'Position', [20 130 310 22], ...
+                'FontWeight', 'bold');
+            
+            % Minimum value
+            uilabel(filterDlg, ...
+                'Text', 'Minimum:', ...
+                'Position', [20 100 80 22]);
+            
+            minEdit = uieditfield(filterDlg, 'text', ...
+                'Position', [100 100 100 22], ...
+                'Value', '');
+            if ~isempty(app.FilterMin)
+                minEdit.Value = num2str(app.FilterMin);
+            end
+            
+            % Maximum value
+            uilabel(filterDlg, ...
+                'Text', 'Maximum:', ...
+                'Position', [20 70 80 22]);
+            
+            maxEdit = uieditfield(filterDlg, 'text', ...
+                'Position', [100 70 100 22], ...
+                'Value', '');
+            if ~isempty(app.FilterMax)
+                maxEdit.Value = num2str(app.FilterMax);
+            end
+            
+            % Info label
+            uilabel(filterDlg, ...
+                'Text', 'Leave empty for no limit on that end', ...
+                'Position', [20 40 310 22], ...
+                'FontSize', 9, ...
+                'FontAngle', 'italic');
+            
+            % Button panel
+            buttonPanel = uipanel(filterDlg, ...
+                'Position', [20 5 310 30], ...
+                'BorderType', 'none');
+            
+            % Apply button
+            uibutton(buttonPanel, 'push', ...
+                'Text', 'Apply Filter', ...
+                'Position', [5 2 90 25], ...
+                'ButtonPushedFcn', @(~,~) app.applyDataFilter(columnDropdown.Value, minEdit.Value, maxEdit.Value, filterDlg));
+            
+            % Clear filter button
+            uibutton(buttonPanel, 'push', ...
+                'Text', 'Clear Filter', ...
+                'Position', [105 2 90 25], ...
+                'ButtonPushedFcn', @(~,~) app.clearDataFilter(filterDlg));
+            
+            % Close button
+            uibutton(buttonPanel, 'push', ...
+                'Text', 'Close', ...
+                'Position', [205 2 90 25], ...
+                'ButtonPushedFcn', @(~,~) close(filterDlg));
+        end
+
+        % Apply data filter
+        function applyDataFilter(app, column, minStr, maxStr, dialogHandle)
+            try
+                % Get the data from selected column
+                columnData = app.DataTable.(column);
+                
+                % Try to convert to numeric if not already
+                if ~isnumeric(columnData)
+                    if isdatetime(columnData)
+                        % For datetime, convert strings to datetime
+                        if ~isempty(minStr)
+                            minVal = datetime(minStr);
+                        else
+                            minVal = min(columnData);
+                        end
+                        if ~isempty(maxStr)
+                            maxVal = datetime(maxStr);
+                        else
+                            maxVal = max(columnData);
+                        end
+                    else
+                        % Try numeric conversion
+                        columnData = str2double(string(columnData));
+                        if isempty(minStr)
+                            minVal = -inf;
+                        else
+                            minVal = str2double(minStr);
+                        end
+                        if isempty(maxStr)
+                            maxVal = inf;
+                        else
+                            maxVal = str2double(maxStr);
+                        end
+                    end
+                else
+                    % Numeric column
+                    if isempty(minStr)
+                        minVal = -inf;
+                    else
+                        minVal = str2double(minStr);
+                    end
+                    if isempty(maxStr)
+                        maxVal = inf;
+                    else
+                        maxVal = str2double(maxStr);
+                    end
+                end
+                
+                % Validate inputs
+                if (~isinf(minVal) && isnan(minVal)) || (~isinf(maxVal) && isnan(maxVal))
+                    uialert(dialogHandle, 'Please enter valid numeric values', 'Invalid Input');
+                    return;
+                end
+                
+                % Apply filter
+                filterMask = (columnData >= minVal) & (columnData <= maxVal);
+                app.FilteredDataTable = app.DataTable(filterMask, :);
+                
+                % Store filter settings
+                app.FilterColumn = column;
+                app.FilterMin = minVal;
+                app.FilterMax = maxVal;
+                app.FilterActive = true;
+                
+                % Update UI
+                rowsRemoved = height(app.DataTable) - height(app.FilteredDataTable);
+                uialert(app.UIFigure, ...
+                    sprintf('Filter applied: %d rows remaining (%d removed)', ...
+                    height(app.FilteredDataTable), rowsRemoved), ...
+                    'Filter Applied', 'Icon', 'success');
+                
+                % Update file path label to show filter is active
+                currentText = app.FilePathLabel.Text;
+                if ~contains(currentText, '[FILTERED]')
+                    app.FilePathLabel.Text = ['[FILTERED] ' currentText];
+                end
+                
+                % Re-plot if there are existing plots
+                if ~isempty(app.PlotHandles)
+                    app.ClearPlotButtonPushed();
+                    app.PlotButtonPushed();
+                end
+                
+                % Close dialog
+                close(dialogHandle);
+                
+            catch ME
+                uialert(dialogHandle, ...
+                    ['Error applying filter: ' ME.message], ...
+                    'Filter Error', 'Icon', 'error');
+            end
+        end
+
+        % Clear data filter
+        function clearDataFilter(app, dialogHandle)
+            app.FilteredDataTable = [];
+            app.FilterColumn = '';
+            app.FilterMin = [];
+            app.FilterMax = [];
+            app.FilterActive = false;
+            
+            % Update file path label to remove filter indicator
+            currentText = app.FilePathLabel.Text;
+            app.FilePathLabel.Text = strrep(currentText, '[FILTERED] ', '');
+            
+            % Re-plot if there are existing plots
+            if ~isempty(app.PlotHandles)
+                app.ClearPlotButtonPushed();
+                app.PlotButtonPushed();
+            end
+            
+            uialert(app.UIFigure, 'Filter cleared', 'Filter Cleared', 'Icon', 'info');
+            
+            % Close dialog
+            close(dialogHandle);
+        end
     end
 
     % Component initialization
@@ -744,10 +970,17 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.PlotOptionsButton.Text = 'Plot Options';
             app.PlotOptionsButton.FontSize = 12;
 
+            % Create FilterDataButton
+            app.FilterDataButton = uibutton(app.LeftPanel, 'push');
+            app.FilterDataButton.ButtonPushedFcn = createCallbackFcn(app, @FilterDataButtonPushed, true);
+            app.FilterDataButton.Position = [10 210 230 30];
+            app.FilterDataButton.Text = 'Filter Data';
+            app.FilterDataButton.FontSize = 12;
+
             % Create PlotButton
             app.PlotButton = uibutton(app.LeftPanel, 'push');
             app.PlotButton.ButtonPushedFcn = createCallbackFcn(app, @PlotButtonPushed, true);
-            app.PlotButton.Position = [10 210 230 30];
+            app.PlotButton.Position = [10 170 230 30];
             app.PlotButton.Text = 'Plot Data';
             app.PlotButton.FontSize = 14;
             app.PlotButton.FontWeight = 'bold';
@@ -756,13 +989,13 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             % Create ClearPlotButton
             app.ClearPlotButton = uibutton(app.LeftPanel, 'push');
             app.ClearPlotButton.ButtonPushedFcn = createCallbackFcn(app, @ClearPlotButtonPushed, true);
-            app.ClearPlotButton.Position = [10 170 110 30];
+            app.ClearPlotButton.Position = [10 130 110 30];
             app.ClearPlotButton.Text = 'Clear Plot';
 
             % Create ExportFigureButton
             app.ExportFigureButton = uibutton(app.LeftPanel, 'push');
             app.ExportFigureButton.ButtonPushedFcn = createCallbackFcn(app, @ExportFigureButtonPushed, true);
-            app.ExportFigureButton.Position = [130 170 110 30];
+            app.ExportFigureButton.Position = [130 130 110 30];
             app.ExportFigureButton.Text = 'Export Figure';
 
             % Create RightPanel
