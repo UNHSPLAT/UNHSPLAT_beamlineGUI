@@ -663,11 +663,61 @@ classdef (Abstract) labGUI < handle
         end
 
         function dataAnalyzerCallback(obj, ~, ~)
-            %DATAANALYZERCALLBACK Opens the data analyzer app
-            try
-                DataAnalyzerApp;
-            catch ME
-                errordlg(['Error launching Data Analyzer: ' ME.message], 'Launch Error');
+            %DATAANALYZERCALLBACK Opens the data analyzer app in a separate MATLAB instance
+            
+            % Get the path to the DataAnalyzerApp
+            appPath = which('DataAnalyzerApp');
+            
+            if isempty(appPath)
+                errordlg('DataAnalyzerApp.m not found on path', 'File Not Found');
+                return;
+            end
+            
+            % Ask user whether to launch in new instance or current session
+            choice = questdlg('Launch Data Analyzer in:', ...
+                'Launch Options', ...
+                'New MATLAB Instance (Independent)', ...
+                'Current Session (Shares Resources)', ...
+                'Cancel', ...
+                'New MATLAB Instance (Independent)');
+            
+            switch choice
+                case 'New MATLAB Instance (Independent)'
+                    try
+                        % Launch in new MATLAB instance (Windows)
+                        if ispc
+                            matlabPath = fullfile(matlabroot, 'bin', 'matlab.exe');
+                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp" -nosplash &', ...
+                                matlabPath, fileparts(appPath));
+                            system(cmd);
+                        elseif ismac
+                            % macOS
+                            matlabPath = fullfile(matlabroot, 'bin', 'matlab');
+                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp" -nosplash &', ...
+                                matlabPath, fileparts(appPath));
+                            system(cmd);
+                        else
+                            % Linux
+                            matlabPath = fullfile(matlabroot, 'bin', 'matlab');
+                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp" -nosplash &', ...
+                                matlabPath, fileparts(appPath));
+                            system(cmd);
+                        end
+                        msgbox('Data Analyzer launching in new MATLAB instance...', ...
+                            'Launching', 'help');
+                    catch ME
+                        errordlg(['Error launching in new instance: ' ME.message], 'Launch Error');
+                    end
+                    
+                case 'Current Session (Shares Resources)'
+                    try
+                        DataAnalyzerApp;
+                    catch ME
+                        errordlg(['Error launching Data Analyzer: ' ME.message], 'Launch Error');
+                    end
+                    
+                case 'Cancel'
+                    return;
             end
         end
 
