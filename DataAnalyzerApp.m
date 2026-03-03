@@ -28,18 +28,26 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         DataTable % Loaded data table
         DataFilePath % Path to loaded data file
         PlotHandles % Handles to plot lines
+        DefaultDataDir % Default directory for file picker
     end
 
     methods (Access = private)
 
         % Button pushed function: LoadDataButton
         function LoadDataButtonPushed(app, ~)
+            % Determine starting directory
+            if ~isempty(app.DefaultDataDir) && isfolder(app.DefaultDataDir)
+                startDir = app.DefaultDataDir;
+            else
+                startDir = pwd;
+            end
+            
             % Open file picker for CSV or MAT files
             [file, path] = uigetfile({'*.csv;*.mat', 'Data Files (*.csv, *.mat)'; ...
                                       '*.csv', 'CSV Files (*.csv)'; ...
                                       '*.mat', 'MAT Files (*.mat)'; ...
                                       '*.*', 'All Files (*.*)'}, ...
-                                     'Select Data File');
+                                     'Select Data File', startDir);
             
             if isequal(file, 0)
                 return; % User cancelled
@@ -401,7 +409,14 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = DataAnalyzerApp
+        function app = DataAnalyzerApp(defaultDataDir)
+
+            % Set default data directory if provided
+            if nargin > 0 && ~isempty(defaultDataDir)
+                app.DefaultDataDir = defaultDataDir;
+            else
+                app.DefaultDataDir = '';
+            end
 
             % Create UIFigure and components
             createComponents(app)

@@ -687,20 +687,20 @@ classdef (Abstract) labGUI < handle
                         % Launch in new MATLAB instance (Windows)
                         if ispc
                             matlabPath = fullfile(matlabroot, 'bin', 'matlab.exe');
-                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp" -nosplash &', ...
-                                matlabPath, fileparts(appPath));
+                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp(''%s'')" -nosplash &', ...
+                                matlabPath, fileparts(appPath), obj.DataLoc);
                             system(cmd);
                         elseif ismac
                             % macOS
                             matlabPath = fullfile(matlabroot, 'bin', 'matlab');
-                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp" -nosplash &', ...
-                                matlabPath, fileparts(appPath));
+                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp(''%s'')" -nosplash &', ...
+                                matlabPath, fileparts(appPath), obj.DataLoc);
                             system(cmd);
                         else
                             % Linux
                             matlabPath = fullfile(matlabroot, 'bin', 'matlab');
-                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp" -nosplash &', ...
-                                matlabPath, fileparts(appPath));
+                            cmd = sprintf('"%s" -r "cd(''%s''); DataAnalyzerApp(''%s'')" -nosplash &', ...
+                                matlabPath, fileparts(appPath), obj.DataLoc);
                             system(cmd);
                         end
                         msgbox('Data Analyzer launching in new MATLAB instance...', ...
@@ -711,7 +711,7 @@ classdef (Abstract) labGUI < handle
                     
                 case 'Current Session (Shares Resources)'
                     try
-                        DataAnalyzerApp;
+                        DataAnalyzerApp(obj.DataLoc);
                     catch ME
                         errordlg(['Error launching Data Analyzer: ' ME.message], 'Launch Error');
                     end
