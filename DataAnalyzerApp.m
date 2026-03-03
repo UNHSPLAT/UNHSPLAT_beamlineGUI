@@ -42,73 +42,134 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 startDir = pwd;
             end
             
-            % Open file picker for CSV or MAT files
-            [file, path] = uigetfile({'*.csv;*.mat', 'Data Files (*.csv, *.mat)'; ...
-                                      '*.csv', 'CSV Files (*.csv)'; ...
-                                      '*.mat', 'MAT Files (*.mat)'; ...
-                                      '*.*', 'All Files (*.*)'}, ...
-                                     'Select Data File', startDir);
+            % Ask user if they want to select a file or folder
+            choice = questdlg('Load data from:', ...
+                'Load Data', ...
+                'Single File', ...
+                'Folder (All readings_* files)', ...
+                'Cancel', ...
+                'Single File');
             
-            if isequal(file, 0)
-                return; % User cancelled
+            if strcmp(choice, 'Cancel') || isempty(choice)
+                return;
             end
             
-            app.DataFilePath = fullfile(path, file);
-            
-            % Load the data based on file type
-            [~, ~, ext] = fileparts(app.DataFilePath);
-            
             try
-                if strcmp(ext, '.csv')
-                    % Load CSV file
-                    app.DataTable = readtable(app.DataFilePath);
-                elseif strcmp(ext, '.mat')
-                    % Load MAT file
-                    data = load(app.DataFilePath);
-                    fields = fieldnames(data);
+                if strcmp(choice, 'Single File')
+                    % Open file picker for CSV or MAT files
+                    [file, path] = uigetfile({'*.csv;*.mat', 'Data Files (*.csv, *.mat)'; ...
+                                              '*.csv', 'CSV Files (*.csv)'; ...
+                                              '*.mat', 'MAT Files (*.mat)'; ...
+                                              '*.*', 'All Files (*.*)'}, ...
+                                             'Select Data File', startDir);
                     
-                    % Try to convert structure to table
-                    if ~isempty(fields)
-                        % If it's a single structure, convert it
-                        if isstruct(data.(fields{1}))
-                            app.DataTable = struct2table(data.(fields{1}), 'AsArray', true);
-                        else
-                            % Try to make a table from all variables
-                            app.DataTable = struct2table(data);
-                        end
-                    else
-                        error('No data found in MAT file');
+                    if isequal(file, 0)
+                        return; % User cancelled
                     end
-                else
-                    error('Unsupported file format');
+                    
+                    app.DataFilePath = fullfile(path, file);
+                    app.DataTable = app.loadSingleFile(app.DataFilePath);
+                    app.FilePathLabel.Text = ['Loaded: ' file];
+                    
+                else % Load all readings files from folder
+                    % Open folder picker
+                    path = uigetdir(startDir, 'Select Folder with readings_* files');
+                    
+                    if isequal(path, 0)
+                        return; % User cancelled
+                    end
+                    
+                    % Find all readings_*.csv and readings_*.mat files
+                    csvFiles = dir(fullfile(path, 'readings_*.csv'));
+                    matFiles = dir(fullfile(path, 'readings_*.mat'));
+                    allFiles = [csvFiles; matFiles];
+                    
+                    if isempty(allFiles)
+                        uialert(app.UIFigure, ...
+                            'No readings_* files found in selected folder', ...
+                            'No Files Found', 'Icon', 'warning');
+                        return;
+                    end
+                    
+                    % Load and combine all files
+                    app.DataTable = [];
+                    fileCount = 0;
+                    
+                    for i = 1:length(allFiles)
+                        filePath = fullfile(allFiles(i).folder, allFiles(i).name);
+                        try
+                            tempTable = app.loadSingleFile(filePath);
+                            if isempty(app.DataTable)
+                                app.DataTable = tempTable;
+                            else
+                                % Combine tables, matching columns
+                                app.DataTable = [app.DataTable; tempTable]; %#ok<AGROW>
+                            end
+                            fileCount = fileCount + 1;
+                        catch ME
+                            warning('Failed to load %s: %s', allFiles(i).name, ME.message);
+                        end
+                    end
+                    
+                    app.DataFilePath = path;
+                    app.FilePathLabel.Text = sprintf('Loaded %d files from folder', fileCount);
                 end
-                
-                % Update file path label
-                app.FilePathLabel.Text = ['Loaded: ' file];
                 
                 % Populate the data columns lists
-                columnNames = app.DataTable.Properties.VariableNames;
-                app.DataColumnsListBox.Items = columnNames;
-                app.XAxisDropDown.Items = columnNames;
-                app.YAxisListBox.Items = columnNames;
-                
-                % Set default selections
-                if ~isempty(columnNames)
-                    app.XAxisDropDown.Value = columnNames{1};
-                    if length(columnNames) > 1
-                        app.YAxisListBox.Value = columnNames{2};
+                if ~isempty(app.DataTable)
+                    columnNames = app.DataTable.Properties.VariableNames;
+                    app.DataColumnsListBox.Items = columnNames;
+                    app.XAxisDropDown.Items = columnNames;
+                    app.YAxisListBox.Items = columnNames;
+                    
+                    % Set default selections
+                    if ~isempty(columnNames)
+                        app.XAxisDropDown.Value = columnNames{1};
+                        if length(columnNames) > 1
+                            app.YAxisListBox.Value = columnNames{2};
+                        end
                     end
+                    
+                    uialert(app.UIFigure, ...
+                        sprintf('Successfully loaded %d rows and %d columns', ...
+                        height(app.DataTable), width(app.DataTable)), ...
+                        'Data Loaded', 'Icon', 'success');
                 end
-                
-                uialert(app.UIFigure, ...
-                    sprintf('Successfully loaded %d rows and %d columns', ...
-                    height(app.DataTable), width(app.DataTable)), ...
-                    'Data Loaded', 'Icon', 'success');
                 
             catch ME
                 uialert(app.UIFigure, ...
-                    ['Error loading file: ' ME.message], ...
+                    ['Error loading data: ' ME.message], ...
                     'Load Error', 'Icon', 'error');
+            end
+        end
+
+        % Helper function to load a single file
+        function dataTable = loadSingleFile(~, filePath)
+            % Load the data based on file type
+            [~, ~, ext] = fileparts(filePath);
+            
+            if strcmp(ext, '.csv')
+                % Load CSV file
+                dataTable = readtable(filePath);
+            elseif strcmp(ext, '.mat')
+                % Load MAT file
+                data = load(filePath);
+                fields = fieldnames(data);
+                
+                % Try to convert structure to table
+                if ~isempty(fields)
+                    % If it's a single structure, convert it
+                    if isstruct(data.(fields{1}))
+                        dataTable = struct2table(data.(fields{1}), 'AsArray', true);
+                    else
+                        % Try to make a table from all variables
+                        dataTable = struct2table(data);
+                    end
+                else
+                    error('No data found in MAT file');
+                end
+            else
+                error('Unsupported file format');
             end
         end
 
