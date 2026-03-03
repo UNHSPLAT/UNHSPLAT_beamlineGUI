@@ -208,6 +208,9 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     end
                 end
                 
+                % Sort data by X values
+                [xDataSorted, sortIdx] = sort(xData);
+                
                 % Plot each Y column
                 hold(app.UIAxes, 'on');
                 
@@ -229,8 +232,11 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                         end
                     end
                     
+                    % Sort Y data according to X sort order
+                    yDataSorted = yData(sortIdx);
+                    
                     % Plot the data
-                    h = plot(app.UIAxes, xData, yData, '-o', 'DisplayName', yColumn, ...
+                    h = plot(app.UIAxes, xDataSorted, yDataSorted, '-o', 'DisplayName', yColumn, ...
                         'LineWidth', 1.5, 'MarkerSize', 4);
                     app.PlotHandles(end+1) = h;
                 end
