@@ -707,7 +707,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             
             % Quick select from plotted lines section
             uilabel(filterDlg, ...
-                'Text', 'Quick select from plotted lines:', ...
+                'Text', 'Apply Filter to selected plotted lines:', ...
                 'Position', [20 290 310 22], ...
                 'FontWeight', 'bold');
             
@@ -724,7 +724,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             
             % Column selection label
             uilabel(filterDlg, ...
-                'Text', 'Or select any column:', ...
+                'Text', 'Select Filter Column:', ...
                 'Position', [20 215 310 22], ...
                 'FontWeight', 'bold');
             
@@ -893,11 +893,8 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     app.FilePathLabel.Text = ['[FILTERED] ' currentText];
                 end
                 
-                % Re-plot if there are existing plots
-                if ~isempty(app.PlotHandles)
-                    app.ClearPlotButtonPushed();
-                    app.PlotButtonPushed();
-                end
+                % Plot the filtered data (without clearing existing plots)
+                app.PlotButtonPushed();
                 
             catch ME
                 uialert(dialogHandle, ...
@@ -918,11 +915,8 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             currentText = app.FilePathLabel.Text;
             app.FilePathLabel.Text = strrep(currentText, '[FILTERED] ', '');
             
-            % Re-plot if there are existing plots
-            if ~isempty(app.PlotHandles)
-                app.ClearPlotButtonPushed();
-                app.PlotButtonPushed();
-            end
+            % Plot the unfiltered data (without clearing existing plots)
+            app.PlotButtonPushed();
             
             uialert(app.UIFigure, 'Filter cleared', 'Filter Cleared', 'Icon', 'info');
         end
