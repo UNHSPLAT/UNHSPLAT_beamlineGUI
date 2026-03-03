@@ -7,8 +7,6 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         LeftPanel               matlab.ui.container.Panel
         LoadDataButton          matlab.ui.control.Button
         FilePathLabel           matlab.ui.control.Label
-        DataColumnsListBox      matlab.ui.control.ListBox
-        DataColumnsLabel        matlab.ui.control.Label
         XAxisDropDown           matlab.ui.control.DropDown
         XAxisLabel              matlab.ui.control.Label
         YAxisListBox            matlab.ui.control.ListBox
@@ -126,7 +124,6 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 % Populate the data columns lists
                 if ~isempty(app.DataTable)
                     columnNames = app.DataTable.Properties.VariableNames;
-                    app.DataColumnsListBox.Items = columnNames;
                     app.XAxisDropDown.Items = columnNames;
                     app.YAxisListBox.Items = columnNames;
                     
@@ -719,49 +716,38 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.FilePathLabel.FontSize = 10;
             app.FilePathLabel.WordWrap = 'on';
 
-            % Create DataColumnsLabel
-            app.DataColumnsLabel = uilabel(app.LeftPanel);
-            app.DataColumnsLabel.Position = [10 475 230 22];
-            app.DataColumnsLabel.Text = 'Available Data Columns:';
-            app.DataColumnsLabel.FontWeight = 'bold';
-
-            % Create DataColumnsListBox
-            app.DataColumnsListBox = uilistbox(app.LeftPanel);
-            app.DataColumnsListBox.Position = [10 380 230 90];
-            app.DataColumnsListBox.Multiselect = 'on';
-
             % Create XAxisLabel
             app.XAxisLabel = uilabel(app.LeftPanel);
-            app.XAxisLabel.Position = [10 355 230 22];
+            app.XAxisLabel.Position = [10 475 230 22];
             app.XAxisLabel.Text = 'X-Axis:';
             app.XAxisLabel.FontWeight = 'bold';
 
             % Create XAxisDropDown
             app.XAxisDropDown = uidropdown(app.LeftPanel);
-            app.XAxisDropDown.Position = [10 330 230 22];
+            app.XAxisDropDown.Position = [10 450 230 22];
 
             % Create YAxisLabel
             app.YAxisLabel = uilabel(app.LeftPanel);
-            app.YAxisLabel.Position = [10 305 230 22];
+            app.YAxisLabel.Position = [10 420 230 22];
             app.YAxisLabel.Text = 'Y-Axis (multiple selection allowed):';
             app.YAxisLabel.FontWeight = 'bold';
 
             % Create YAxisListBox
             app.YAxisListBox = uilistbox(app.LeftPanel);
-            app.YAxisListBox.Position = [10 190 230 110];
+            app.YAxisListBox.Position = [10 290 230 125];
             app.YAxisListBox.Multiselect = 'on';
 
             % Create PlotOptionsButton
             app.PlotOptionsButton = uibutton(app.LeftPanel, 'push');
             app.PlotOptionsButton.ButtonPushedFcn = createCallbackFcn(app, @PlotOptionsButtonPushed, true);
-            app.PlotOptionsButton.Position = [10 180 230 30];
+            app.PlotOptionsButton.Position = [10 250 230 30];
             app.PlotOptionsButton.Text = 'Plot Options';
             app.PlotOptionsButton.FontSize = 12;
 
             % Create PlotButton
             app.PlotButton = uibutton(app.LeftPanel, 'push');
             app.PlotButton.ButtonPushedFcn = createCallbackFcn(app, @PlotButtonPushed, true);
-            app.PlotButton.Position = [10 140 230 30];
+            app.PlotButton.Position = [10 210 230 30];
             app.PlotButton.Text = 'Plot Data';
             app.PlotButton.FontSize = 14;
             app.PlotButton.FontWeight = 'bold';
@@ -770,13 +756,13 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             % Create ClearPlotButton
             app.ClearPlotButton = uibutton(app.LeftPanel, 'push');
             app.ClearPlotButton.ButtonPushedFcn = createCallbackFcn(app, @ClearPlotButtonPushed, true);
-            app.ClearPlotButton.Position = [10 100 110 30];
+            app.ClearPlotButton.Position = [10 170 110 30];
             app.ClearPlotButton.Text = 'Clear Plot';
 
             % Create ExportFigureButton
             app.ExportFigureButton = uibutton(app.LeftPanel, 'push');
             app.ExportFigureButton.ButtonPushedFcn = createCallbackFcn(app, @ExportFigureButtonPushed, true);
-            app.ExportFigureButton.Position = [130 100 110 30];
+            app.ExportFigureButton.Position = [130 170 110 30];
             app.ExportFigureButton.Text = 'Export Figure';
 
             % Create RightPanel
