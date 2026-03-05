@@ -1018,7 +1018,6 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 yMedian = median(yData);
                 yStd    = std(yData);
                 ySEM    = yStd / sqrt(n);
-                yRMS    = rms(yData);
                 yMin    = min(yData);
                 yMax    = max(yData);
                 yRange  = yMax - yMin;
@@ -1064,7 +1063,6 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     sprintf('  Median   : %+.6g', yMedian)
                     sprintf('  Std Dev  : %.6g',  yStd)
                     sprintf('  SEM      : %.6g',  ySEM)
-                    sprintf('  RMS      : %.6g',  yRMS)
                     sep
                     sprintf('  Min      : %+.6g  (at X = %.6g)', yMin, xAtMin)
                     sprintf('  Max      : %+.6g  (at X = %.6g)', yMax, xAtMax)
