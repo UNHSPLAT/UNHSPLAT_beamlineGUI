@@ -15,6 +15,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         ClearPlotButton         matlab.ui.control.Button
         ExportFigureButton      matlab.ui.control.Button
         FilterDataButton        matlab.ui.control.Button
+        CalculateButton         matlab.ui.control.Button
         RightPanel              matlab.ui.container.Panel
         UIAxes                  matlab.ui.control.UIAxes
         PlotOptionsButton       matlab.ui.control.Button
@@ -903,6 +904,188 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             end
         end
 
+        % Button pushed function: CalculateButton
+        function CalculateButtonPushed(app, ~)
+            if isempty(app.DataTable)
+                uialert(app.UIFigure, 'Please load data first', 'No Data', 'Icon', 'warning');
+                return;
+            end
+            app.createCalculateWindow();
+        end
+
+        % Create statistics/calculations window
+        function createCalculateWindow(app)
+            % Use filtered data if active, otherwise full data
+            if app.FilterActive && ~isempty(app.FilteredDataTable)
+                dataToUse = app.FilteredDataTable;
+                dataLabel = 'filtered';
+            else
+                dataToUse = app.DataTable;
+                dataLabel = 'full';
+            end
+
+            calcFig = uifigure('Name', 'Calculate', 'Position', [200 150 520 480]);
+
+            % ---- Column selector ----
+            uilabel(calcFig, 'Text', 'Y column:', ...
+                'Position', [15 440 70 22], 'FontWeight', 'bold');
+
+            % Populate with currently selected Y columns first, then all numeric
+            ySelected = app.YAxisListBox.Value;
+            if ~iscell(ySelected), ySelected = {ySelected}; end
+            allCols = app.DataTable.Properties.VariableNames;
+            numericCols = allCols(varfun(@isnumeric, dataToUse, 'OutputFormat', 'uniform'));
+            % Put selected Y cols first, then remaining numeric cols
+            orderedCols = [ySelected, numericCols(~ismember(numericCols, ySelected))];
+            if isempty(orderedCols)
+                uialert(calcFig, 'No numeric columns found', 'Error', 'Icon', 'error');
+                return;
+            end
+
+            colDropdown = uidropdown(calcFig, 'Items', orderedCols, ...
+                'Position', [90 440 200 22]);
+
+            % X column selector (for peak X location)
+            uilabel(calcFig, 'Text', 'X column:', ...
+                'Position', [300 440 70 22], 'FontWeight', 'bold');
+            xColDropdown = uidropdown(calcFig, 'Items', orderedCols, ...
+                'Position', [375 440 130 22]);
+            if ~isempty(app.XAxisDropDown.Value) && ismember(app.XAxisDropDown.Value, orderedCols)
+                xColDropdown.Value = app.XAxisDropDown.Value;
+            end
+
+            % Run button
+            uibutton(calcFig, 'push', 'Text', 'Calculate', ...
+                'Position', [15 405 100 25], ...
+                'ButtonPushedFcn', @(~,~) runCalculations());
+
+            % Copy-to-clipboard button
+            copyBtn = uibutton(calcFig, 'push', 'Text', 'Copy to Clipboard', ...
+                'Position', [125 405 130 25], ...
+                'ButtonPushedFcn', @(~,~) copyResults());
+            copyBtn.Enable = 'off';
+
+            % Data label
+            dataLbl = uilabel(calcFig, ...
+                'Text', sprintf('Dataset: %s data (%d rows)', dataLabel, height(dataToUse)), ...
+                'Position', [265 405 245 25], 'FontSize', 9, 'FontAngle', 'italic');
+
+            % Results text area
+            resultsArea = uitextarea(calcFig, ...
+                'Position', [15 15 490 380], ...
+                'Editable', 'off', ...
+                'FontName', 'Courier New', ...
+                'FontSize', 12, ...
+                'Value', {'Select columns and press Calculate.'});
+
+            % ---- Nested calculation function ----
+            function runCalculations()
+                yCol = colDropdown.Value;
+                xCol = xColDropdown.Value;
+
+                % Re-read in case filter changed
+                if app.FilterActive && ~isempty(app.FilteredDataTable)
+                    d = app.FilteredDataTable;
+                    dataLabel = 'filtered';
+                else
+                    d = app.DataTable;
+                    dataLabel = 'full';
+                end
+                dataLbl.Text = sprintf('Dataset: %s data (%d rows)', dataLabel, height(d));
+
+                yData = d.(yCol);
+                xData = d.(xCol);
+                if ~isnumeric(yData)
+                    yData = str2double(string(yData));
+                end
+                if ~isnumeric(xData)
+                    xData = str2double(string(xData));
+                end
+
+                % Remove NaNs
+                valid = ~isnan(yData) & ~isnan(xData);
+                yData = yData(valid);
+                xData = xData(valid);
+                n = numel(yData);
+
+                if n == 0
+                    resultsArea.Value = {'No valid numeric data in selected column.'};
+                    return;
+                end
+
+                % --- Compute statistics ---
+                yMean   = mean(yData);
+                yMedian = median(yData);
+                yStd    = std(yData);
+                ySEM    = yStd / sqrt(n);
+                yRMS    = rms(yData);
+                yMin    = min(yData);
+                yMax    = max(yData);
+                yRange  = yMax - yMin;
+
+                [~, iMax] = max(yData);
+                [~, iMin] = min(yData);
+                xAtMax   = xData(iMax);
+                xAtMin   = xData(iMin);
+
+                % FWHM (half-max relative to baseline = min)
+                halfMax = (yMax + yMin) / 2;
+                above   = yData >= halfMax;
+                idxAbove = find(above);
+                if numel(idxAbove) >= 2
+                    fwhm = abs(xData(idxAbove(end)) - xData(idxAbove(1)));
+                    fwhmStr = sprintf('%.6g', fwhm);
+                else
+                    fwhmStr = 'N/A';
+                end
+
+                % Integral (trapz)
+                [xSorted, si] = sort(xData);
+                ySorted = yData(si);
+                integVal = trapz(xSorted, ySorted);
+
+                % Centroid
+                posY = ySorted - min(ySorted);
+                if sum(posY) > 0
+                    centroid = sum(xSorted .* posY) / sum(posY);
+                    centStr = sprintf('%.6g', centroid);
+                else
+                    centStr = 'N/A';
+                end
+
+                % --- Format output ---
+                sep   = repmat('-', 1, 46);
+                lines = {
+                    sprintf('  Y column : %s', yCol)
+                    sprintf('  X column : %s', xCol)
+                    sprintf('  N points : %d', n)
+                    sep
+                    sprintf('  Mean     : %+.6g', yMean)
+                    sprintf('  Median   : %+.6g', yMedian)
+                    sprintf('  Std Dev  : %.6g',  yStd)
+                    sprintf('  SEM      : %.6g',  ySEM)
+                    sprintf('  RMS      : %.6g',  yRMS)
+                    sep
+                    sprintf('  Min      : %+.6g  (at X = %.6g)', yMin, xAtMin)
+                    sprintf('  Max      : %+.6g  (at X = %.6g)', yMax, xAtMax)
+                    sprintf('  Range    : %.6g',  yRange)
+                    sep
+                    sprintf('  Peak X   : %.6g',  xAtMax)
+                    sprintf('  FWHM     : %s',     fwhmStr)
+                    sprintf('  Centroid : %s',     centStr)
+                    sep
+                    sprintf('  Integral (trapz) : %.6g', integVal)
+                };
+                resultsArea.Value = lines;
+                copyBtn.Enable = 'on';
+            end
+
+            function copyResults()
+                txt = strjoin(resultsArea.Value, newline);
+                clipboard('copy', txt);
+            end
+        end
+
         % Clear data filter
         function clearDataFilter(app, dialogHandle)
             app.FilteredDataTable = [];
@@ -1006,16 +1189,23 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             app.PlotButton.FontWeight = 'bold';
             app.PlotButton.BackgroundColor = [0.4667 0.6745 0.1882];
 
+            % Create CalculateButton
+            app.CalculateButton = uibutton(app.LeftPanel, 'push');
+            app.CalculateButton.ButtonPushedFcn = createCallbackFcn(app, @CalculateButtonPushed, true);
+            app.CalculateButton.Position = [10 130 230 30];
+            app.CalculateButton.Text = 'Calculate';
+            app.CalculateButton.FontSize = 12;
+
             % Create ClearPlotButton
             app.ClearPlotButton = uibutton(app.LeftPanel, 'push');
             app.ClearPlotButton.ButtonPushedFcn = createCallbackFcn(app, @ClearPlotButtonPushed, true);
-            app.ClearPlotButton.Position = [10 130 110 30];
+            app.ClearPlotButton.Position = [10 90 110 30];
             app.ClearPlotButton.Text = 'Clear Plot';
 
             % Create ExportFigureButton
             app.ExportFigureButton = uibutton(app.LeftPanel, 'push');
             app.ExportFigureButton.ButtonPushedFcn = createCallbackFcn(app, @ExportFigureButtonPushed, true);
-            app.ExportFigureButton.Position = [130 130 110 30];
+            app.ExportFigureButton.Position = [130 90 110 30];
             app.ExportFigureButton.Text = 'Export Figure';
 
             % Create RightPanel
