@@ -284,7 +284,7 @@ classdef Sweep1d < acquisition
                 set(obj.hConfFigure,'Visible','off');
 
                 % Stop beamline timers (timer callback executed manually during test)
-                obj.hBeamlineGUI.stopTimer();
+                %obj.hBeamlineGUI.stopTimer();
 
                 % Create figures and axes
                 obj.hFigure = figure('NumberTitle','off',...
@@ -345,11 +345,16 @@ classdef Sweep1d < acquisition
                 end
                 
                 % Pause for ramp time
-                waitfor(obj.hBeamlineGUI.Monitors.(psTag),'lock',false);
+                while obj.hBeamlineGUI.Monitors.(psTag).lock == true
+                    pause(.1);
+                    drawnow();
+                end
+
+%                 waitfor(obj.hBeamlineGUI.Monitors.(psTag),'lock',false);
                 
                 % Obtain readings
                 fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
-                obj.hBeamlineGUI.readHardware();
+%                 obj.hBeamlineGUI.readHardware();
                 obj.hBeamlineGUI.updateLog([],[],fname);
                 
                 % Display set values
@@ -369,7 +374,7 @@ classdef Sweep1d < acquisition
                 plot(obj.hAxes1,obj.VPoints(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
                 xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
                 ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
-
+                drawnow();
                 if iV >= length(obj.VPoints)
                     obj.complete();
                 end
@@ -400,6 +405,7 @@ classdef Sweep1d < acquisition
                 set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
             end
+            obj.hBeamlineGUI.genTestSequence();
             % Restart beamline timers
             obj.hBeamlineGUI.restartTimer();
         end
