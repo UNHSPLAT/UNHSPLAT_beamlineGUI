@@ -255,6 +255,13 @@ classdef CallbackProfiler < handle
             yTick  = [];
             yLabel = {};
 
+            % Draw horizontal separator lines first so they sit behind bars
+            for k = 1:(nDev-1)
+                plot(obj.hGanttAxes, [-obj.windowSec, 2], [k+0.5, k+0.5], '-', ...
+                    'Color', [0.45 0.45 0.45], 'LineWidth', 0.8, ...
+                    'HandleVisibility', 'off');
+            end
+
             for k = 1:nDev
                 dev  = devices{k};
                 yPos = nDev - k + 1;
@@ -306,16 +313,6 @@ classdef CallbackProfiler < handle
             % Axes config
             set(obj.hGanttAxes, 'YTick', yTick, 'YTickLabel', yLabel,...
                 'TickLabelInterpreter','none','YDir','normal');
-            xlim(obj.hGanttAxes, [-obj.windowSec, 2]);
-            ylim(obj.hGanttAxes, [0.3, nDev+0.7]);
-
-            % Horizontal separator lines between device lanes
-            xLims = [-obj.windowSec, 2];
-            for k = 1:(nDev-1)
-                plot(obj.hGanttAxes, xLims, [k+0.5 k+0.5], '-', ...
-                    'Color', [0.35 0.35 0.35], 'LineWidth', 0.5, ...
-                    'HandleVisibility', 'off');
-            end
 
             % Legend patches (use [NaN NaN] vectors for compatibility)
             patch(obj.hGanttAxes, [NaN NaN],[NaN NaN],[0.2 0.85 0.4],'DisplayName','Normal');
@@ -326,6 +323,10 @@ classdef CallbackProfiler < handle
             legend(obj.hGanttAxes,'show','TextColor','w',...
                 'Color',[0.12 0.12 0.14],'EdgeColor',[.3 .3 .3],...
                 'Location','northeast','FontSize',7);
+
+            % Set limits last so nothing auto-rescales them away
+            xlim(obj.hGanttAxes, [-obj.windowSec, 2]);
+            ylim(obj.hGanttAxes, [0.3, nDev+0.7]);
 
             hold(obj.hGanttAxes,'off');
         end
