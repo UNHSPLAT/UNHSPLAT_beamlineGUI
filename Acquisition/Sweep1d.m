@@ -345,16 +345,16 @@ classdef Sweep1d < acquisition
                 end
                 
                 % Pause for ramp time
-                while obj.hBeamlineGUI.Monitors.(psTag).lock == true
-                    pause(.1);
-                    drawnow();
-                end
+%                 while obj.hBeamlineGUI.Monitors.(psTag).lock == true
+%                     pause(.1);
+%                     drawnow();
+%                 end
 
-%                 waitfor(obj.hBeamlineGUI.Monitors.(psTag),'lock',false);
+                waitfor(obj.hBeamlineGUI.Monitors.(psTag),'lock',false);
                 
                 % Obtain readings
                 fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
-                obj.hBeamlineGUI.readHardware();
+%                 obj.hBeamlineGUI.readHardware();
                 obj.hBeamlineGUI.updateLog([],[],fname);
                 
                 % Display set values
