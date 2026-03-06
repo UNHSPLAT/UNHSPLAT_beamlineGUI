@@ -173,19 +173,25 @@ classdef CallbackProfiler < handle
             try
                 obj.drawGantt(names, devices, now_t, palette);
             catch ME
-                obj.addWarning(['Gantt error: ' ME.message]);
+                loc = '';
+                if ~isempty(ME.stack), loc = sprintf(' (line %d in %s)', ME.stack(1).line, ME.stack(1).name); end
+                obj.addWarning(['Gantt error: ' ME.message loc]);
             end
 
             try
                 obj.drawDelayPlot(names, devices, now_t, palette);
             catch ME
-                obj.addWarning(['Delay plot error: ' ME.message]);
+                loc = '';
+                if ~isempty(ME.stack), loc = sprintf(' (line %d in %s)', ME.stack(1).line, ME.stack(1).name); end
+                obj.addWarning(['Delay plot error: ' ME.message loc]);
             end
 
             try
                 obj.drawTable(names, devices);
             catch ME
-                obj.addWarning(['Table error: ' ME.message]);
+                loc = '';
+                if ~isempty(ME.stack), loc = sprintf(' (line %d in %s)', ME.stack(1).line, ME.stack(1).name); end
+                obj.addWarning(['Table error: ' ME.message loc]);
             end
 
             try
@@ -304,18 +310,19 @@ classdef CallbackProfiler < handle
             ylim(obj.hGanttAxes, [0.3, nDev+0.7]);
 
             % Horizontal separator lines between device lanes
+            xLims = [-obj.windowSec, 2];
             for k = 1:(nDev-1)
-                yline(obj.hGanttAxes, k + 0.5, '-', ...
+                plot(obj.hGanttAxes, xLims, [k+0.5 k+0.5], '-', ...
                     'Color', [0.35 0.35 0.35], 'LineWidth', 0.5, ...
                     'HandleVisibility', 'off');
             end
 
-            % Legend patches
-            patch(obj.hGanttAxes, nan,nan,[0.2 0.85 0.4],'DisplayName','Normal');
-            patch(obj.hGanttAxes, nan,nan,[1 0.85 0.2], 'DisplayName','>50% duty');
-            patch(obj.hGanttAxes, nan,nan,[1 0.3 0.15], 'DisplayName','Lockup risk');
-            patch(obj.hGanttAxes, nan,nan,[0.4 0.4 0.4],'DisplayName','Disconnected');
-            patch(obj.hGanttAxes, nan,nan,[1 0.15 0.15],'DisplayName','Error');
+            % Legend patches (use [NaN NaN] vectors for compatibility)
+            patch(obj.hGanttAxes, [NaN NaN],[NaN NaN],[0.2 0.85 0.4],'DisplayName','Normal');
+            patch(obj.hGanttAxes, [NaN NaN],[NaN NaN],[1 0.85 0.2], 'DisplayName','>50% duty');
+            patch(obj.hGanttAxes, [NaN NaN],[NaN NaN],[1 0.3 0.15], 'DisplayName','Lockup risk');
+            patch(obj.hGanttAxes, [NaN NaN],[NaN NaN],[0.4 0.4 0.4],'DisplayName','Disconnected');
+            patch(obj.hGanttAxes, [NaN NaN],[NaN NaN],[1 0.15 0.15],'DisplayName','Error');
             legend(obj.hGanttAxes,'show','TextColor','w',...
                 'Color',[0.12 0.12 0.14],'EdgeColor',[.3 .3 .3],...
                 'Location','northeast','FontSize',7);
@@ -349,8 +356,10 @@ classdef CallbackProfiler < handle
 
                 % Draw period reference line
                 if isprop(dev,'Timer') && isvalid(dev.Timer)
-                    yline(obj.hDelayAxes, dev.Timer.Period, '--',...
-                        'Color', [palette(k,:) 0.35], 'LineWidth',0.8,...
+                    pVal = dev.Timer.Period;
+                    xLims = [-obj.windowSec, 2];
+                    plot(obj.hDelayAxes, xLims, [pVal pVal], '--',...
+                        'Color', palette(k,:)*0.5, 'LineWidth',0.8,...
                         'HandleVisibility','off');
                 end
             end
@@ -461,9 +470,14 @@ classdef CallbackProfiler < handle
                 existing = {existing};
             end
 
-            % Deduplicate: don't repeat the exact same message consecutively
-            if ~isempty(existing) && strcmp(existing{end}, str)
-                return;
+            % Deduplicate: strip timestamp for comparison to avoid
+            % repeating the same error every second with a new timestamp
+            if ~isempty(existing)
+                prevNoTs = regexprep(existing{end}, '^\[\d+:\d+:\d+\] ', '');
+                currNoTs = regexprep(str,           '^\[\d+:\d+:\d+\] ', '');
+                if strcmp(prevNoTs, currNoTs)
+                    return;
+                end
             end
 
             existing{end+1} = str;
