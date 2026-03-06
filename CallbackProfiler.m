@@ -235,6 +235,18 @@ classdef CallbackProfiler < handle
                 names{end+1}   = dName;   %#ok<AGROW>
                 devices{end+1} = dev;     %#ok<AGROW>
             end
+
+            % Also include the data log timer if present on the GUI
+            try
+                if isprop(obj.guiRef,'hLogTimer') && ~isempty(obj.guiRef.hLogTimer) && isvalid(obj.guiRef.hLogTimer)
+                    lt = obj.guiRef.hLogTimer;
+                    lName = lt.Name;
+                    if isempty(lName), lName = 'logTimer'; end
+                    names{end+1}   = lName;
+                    devices{end+1} = lt;    % plain timer object
+                end
+            catch
+            end
         end
 
         % =================================================================
@@ -267,6 +279,23 @@ classdef CallbackProfiler < handle
                 yPos = nDev - k + 1;
                 yTick(end+1)  = yPos; %#ok<AGROW>
                 yLabel{end+1} = names{k}; %#ok<AGROW>
+
+                % Log timer: no profLog — draw period tick marks instead
+                if isa(dev,'timer')
+                    try
+                        period = dev.Period;
+                        isRun  = strcmp(dev.Running,'on');
+                        clr    = palette(k,:);
+                        if ~isRun, clr = [0.4 0.4 0.4]; end
+                        ticks = (-floor(obj.windowSec/period)*period) : period : 0;
+                        for t = ticks
+                            plot(obj.hGanttAxes, [t t], [yPos-0.35, yPos+0.35], '-',...
+                                'Color', clr, 'LineWidth', 2, 'HandleVisibility','off');
+                        end
+                    catch
+                    end
+                    continue;
+                end
 
                 if ~isprop(dev,'profLog') || isempty(dev.profLog), continue; end
                 log = dev.profLog;
@@ -340,6 +369,7 @@ classdef CallbackProfiler < handle
 
             for k = 1:numel(devices)
                 dev = devices{k};
+                if isa(dev,'timer'), continue; end  % log timer has no profLog
                 if ~isprop(dev,'profLog'), continue; end
                 log = dev.profLog;
                 if isempty(log), continue; end
@@ -385,6 +415,19 @@ classdef CallbackProfiler < handle
             for k = 1:numel(devices)
                 try
                     dev = devices{k};
+
+                    % Plain timer (hLogTimer) — display period and running state only
+                    if isa(dev,'timer')
+                        period  = dev.Period;
+                        running = strcmp(dev.Running,'on');
+                        if running
+                            stStr = 'RUN';
+                        else
+                            stStr = 'STOP';
+                        end
+                        data(end+1,:) = {names{k}, sprintf('%.1f',period), '—', '—', 0, stStr}; %#ok<AGROW>
+                        continue;
+                    end
 
                     % Period
                     period    = NaN;
