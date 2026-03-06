@@ -129,6 +129,10 @@ classdef (Abstract) labGUI < handle
             % Add data analyzer option
             uimenu(obj.hToolsMenu,'Text','Data Analyzer',...
                 'MenuSelectedFcn',@obj.dataAnalyzerCallback);
+
+            % Add callback profiler option
+            uimenu(obj.hToolsMenu,'Text','Callback Profiler',...
+                'MenuSelectedFcn',@(~,~) CallbackProfiler(obj));
                 
             % Create Timer menu and all its menu items
             obj.createTimerMenu();            % Create timer to periodically update readings
