@@ -354,7 +354,7 @@ classdef Sweep1d < acquisition
                 
                 % Obtain readings
                 fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
-%                 obj.hBeamlineGUI.readHardware();
+                obj.hBeamlineGUI.readHardware();
                 obj.hBeamlineGUI.updateLog([],[],fname);
                 
                 % Display set values
@@ -407,7 +407,9 @@ classdef Sweep1d < acquisition
             end
             obj.hBeamlineGUI.genTestSequence();
             % Restart beamline timers
-            obj.hBeamlineGUI.restartTimer();
+            if isequal(myTimer.Running, 'off')
+                obj.hBeamlineGUI.restartTimer();
+            end
         end
 
     end
