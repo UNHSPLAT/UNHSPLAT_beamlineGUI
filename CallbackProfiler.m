@@ -311,7 +311,7 @@ classdef CallbackProfiler < handle
             end
 
             % Axes config
-            set(obj.hGanttAxes, 'YTick', yTick, 'YTickLabel', yLabel,...
+            set(obj.hGanttAxes, 'YTick', [], 'YTickLabel', {},...
                 'TickLabelInterpreter','none','YDir','normal');
 
             % Legend patches (use [NaN NaN] vectors for compatibility)
