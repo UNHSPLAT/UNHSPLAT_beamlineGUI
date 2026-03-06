@@ -96,7 +96,7 @@ classdef CallbackProfiler < handle
                 'Units','normalized','Position',[rightX 0.56 rightW 0.38],...
                 'ColumnName',colNames,...
                 'RowName',{},...
-                'ColumnWidth',{110,52,62,52,42,50},...
+                'ColumnWidth',{140,55,65,55,45,50},...
                 'FontSize',8,...
                 'BackgroundColor',[0.14 0.14 0.16; 0.18 0.18 0.20],...
                 'ForegroundColor',[0.92 0.92 0.92]);
@@ -163,40 +163,71 @@ classdef CallbackProfiler < handle
                 obj.close(); return;
             end
 
-            try
-                [names, devices] = obj.getDevices();
-                now_t  = now(); %#ok<TNOW1>
-                nDev   = numel(names);
-                palette = lines(max(nDev,1));
+            [names, devices] = obj.getDevices();
+            now_t  = now(); %#ok<TNOW1>
+            nDev   = numel(names);
+            palette = lines(max(nDev,1));
 
+            % Each panel is independently try/catch protected so one
+            % failure does not prevent the others from rendering.
+            try
                 obj.drawGantt(names, devices, now_t, palette);
-                obj.drawDelayPlot(names, devices, now_t, palette);
-                obj.drawTable(names, devices);
-                obj.updateStatusBar(now_t, nDev);
             catch ME
-                if isvalid(obj.hStatusBar)
-                    set(obj.hStatusBar,'String',['  Error: ' ME.message]);
-                end
+                obj.addWarning(['Gantt error: ' ME.message]);
+            end
+
+            try
+                obj.drawDelayPlot(names, devices, now_t, palette);
+            catch ME
+                obj.addWarning(['Delay plot error: ' ME.message]);
+            end
+
+            try
+                obj.drawTable(names, devices);
+            catch ME
+                obj.addWarning(['Table error: ' ME.message]);
+            end
+
+            try
+                obj.updateStatusBar(now_t, nDev);
+            catch
             end
         end
 
         % -----------------------------------------------------------------
         function [names, devices] = getDevices(obj)
+            % Return names and device handles for all Hardware entries that
+            % have the minimum interface: Connected property + Timer.
+            names   = {};
+            devices = {};
+
             hw = obj.guiRef.Hardware;
             if ~isstruct(hw)
-                names = {}; devices = {}; return;
+                return;
             end
+
             fnames = fieldnames(hw);
-            names   = cell(size(fnames));
-            devices = cell(size(fnames));
             for k = 1:numel(fnames)
                 dev = hw.(fnames{k});
-                if isprop(dev,'Timer') && isvalid(dev.Timer)
-                    names{k}   = dev.Timer.Name;
-                else
-                    names{k}   = fnames{k};
+
+                % Skip objects that lack the basic hwDevice interface
+                if ~isprop(dev, 'Connected') || ~isprop(dev, 'Timer')
+                    continue;
                 end
-                devices{k} = dev;
+
+                % Derive display name
+                try
+                    if isvalid(dev.Timer)
+                        dName = dev.Timer.Name;
+                    else
+                        dName = fnames{k};
+                    end
+                catch
+                    dName = fnames{k};
+                end
+
+                names{end+1}   = dName;   %#ok<AGROW>
+                devices{end+1} = dev;     %#ok<AGROW>
             end
         end
 
@@ -224,9 +255,8 @@ classdef CallbackProfiler < handle
                 yTick(end+1)  = yPos; %#ok<AGROW>
                 yLabel{end+1} = names{k}; %#ok<AGROW>
 
-                if ~isprop(dev,'profLog'), continue; end
+                if ~isprop(dev,'profLog') || isempty(dev.profLog), continue; end
                 log = dev.profLog;
-                if isempty(log), continue; end
 
                 % Filter to visible window
                 mask = log(:,1) >= cutoff;
@@ -241,7 +271,7 @@ classdef CallbackProfiler < handle
                     % Color by status
                     if st == 1
                         % Check duty cycle for this device
-                        period = dev.Timer.Period;
+                        try period = dev.Timer.Period; catch, period = Inf; end
                         if dur / period > obj.warnThresh
                             c = [1 0.3 0.15];   % red — lockup risk
                             obj.addWarning(sprintf('%s: %.3fs / %.1fs period (%.0f%%)', ...
@@ -336,52 +366,70 @@ classdef CallbackProfiler < handle
         function drawTable(obj, names, devices)
             data = {};
             for k = 1:numel(devices)
-                dev = devices{k};
+                try
+                    dev = devices{k};
 
-                % Period
-                if isprop(dev,'Timer') && isvalid(dev.Timer)
-                    period = dev.Timer.Period;
-                    running = strcmp(dev.Timer.Running,'on');
-                else
-                    period = NaN; running = false;
-                end
+                    % Period
+                    period    = NaN;
+                    running   = false;
+                    periodStr = '—';
+                    try
+                        if isprop(dev,'Timer') && isvalid(dev.Timer)
+                            period  = dev.Timer.Period;
+                            running = strcmp(dev.Timer.Running,'on');
+                            periodStr = sprintf('%.1f', period);
+                        end
+                    catch
+                    end
 
-                % Current delay
-                if isprop(dev,'read_delay')
-                    delay = dev.read_delay;
-                else
-                    delay = NaN;
-                end
+                    % Current delay
+                    delay    = NaN;
+                    delayStr = '—';
+                    try
+                        if isprop(dev,'read_delay')
+                            delay = dev.read_delay;
+                            if ~isnan(delay)
+                                delayStr = sprintf('%.3f', delay);
+                            end
+                        end
+                    catch
+                    end
 
-                % Duty cycle
-                if ~isnan(delay) && ~isnan(period) && period > 0
-                    duty = sprintf('%.1f', delay/period*100);
-                else
-                    duty = '—';
-                end
+                    % Duty cycle
+                    if ~isnan(delay) && ~isnan(period) && period > 0
+                        duty = sprintf('%.1f', delay/period*100);
+                    else
+                        duty = '—';
+                    end
 
-                % Drop count (if available)
-                if isprop(dev,'dropCount')
-                    drops = dev.dropCount;
-                else
+                    % Drop count (if available)
                     drops = 0;
-                end
+                    try
+                        if isprop(dev,'dropCount')
+                            drops = dev.dropCount;
+                        end
+                    catch
+                    end
 
-                % Status string
-                if ~dev.Connected
-                    statusStr = 'OFF';
-                elseif running
-                    statusStr = 'RUN';
-                else
-                    statusStr = 'STOP';
-                end
+                    % Status string
+                    statusStr = '?';
+                    try
+                        if isprop(dev,'Connected')
+                            if ~dev.Connected
+                                statusStr = 'OFF';
+                            elseif running
+                                statusStr = 'RUN';
+                            else
+                                statusStr = 'STOP';
+                            end
+                        end
+                    catch
+                    end
 
-                delayStr = '—';
-                if ~isnan(delay)
-                    delayStr = sprintf('%.3f', delay);
+                    data(end+1,:) = {names{k}, periodStr, delayStr, duty, drops, statusStr}; %#ok<AGROW>
+                catch
+                    data(end+1,:) = {names{k}, '?', '?', '?', 0, '?'}; %#ok<AGROW>
                 end
-
-                data(end+1,:) = {names{k}, period, delayStr, duty, drops, statusStr}; %#ok<AGROW>
             end
 
             if ~isempty(data)
