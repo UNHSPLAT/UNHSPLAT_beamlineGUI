@@ -42,7 +42,7 @@ classdef Sweep1d < acquisition
         PSList %
         resultList %
 
-        scanTimer timer%
+        scanTimer = []
         scan_mon %
         listo%
 
@@ -240,21 +240,24 @@ classdef Sweep1d < acquisition
                 % Retrieve config values
                 psTag = obj.PSList(obj.hSupplyEdit.Value);
                 obj.resultTag = obj.resultList(obj.hResultEdit.Value);
-                minVal = str2double(obj.hMinEdit.String);
-                maxVal = str2double(obj.hMaxEdit.String);
+                minVal  = str2double(obj.hMinEdit.String);
+                maxVal  = str2double(obj.hMaxEdit.String);
                 stepsVal = str2double(obj.hStepsEdit.String);
                 dwellVal = str2double(obj.hDwellEdit.String);
-                
+                rampPause = str2double(obj.hrampEdit.String);
     
-                % % Error checking
+                % Error checking
                 if isnan(minVal) || isnan(maxVal) || isnan(stepsVal) || isnan(dwellVal) || ~isfield(obj.hBeamlineGUI.Monitors,psTag)
                     errordlg('All fields must be filled with a valid numeric entry!','User input error!');
+                    obj.testRunning = false;
                     return
                 elseif dwellVal <= 0
                     errordlg('Invalid dwell time! Must be a positive value.','User input error!');
+                    obj.testRunning = false;
                     return
                 elseif uint64(stepsVal) ~= stepsVal || ~stepsVal
                     errordlg('Invalid number of steps! Must be a positive integer.','User input error!');
+                    obj.testRunning = false;
                     return
                 end
     
@@ -271,145 +274,130 @@ classdef Sweep1d < acquisition
                 else
                     vPoints = linspace(minVal,maxVal,stepsVal);
                 end
-                % Reshape to square output
-                obj.VPoints = reshape(vPoints,1,[]);
+                obj.VPoints  = reshape(vPoints,1,[]);
+                obj.DwellTime = dwellVal;
+                obj.rampDwell = rampPause;
 
                 % Save config info
-                save(fullfile(obj.hBeamlineGUI.DataDir,'config.mat'),'vPoints','minVal','maxVal','stepsVal','dwellVal','logSpacing','gasType','testSequence');
+                save(fullfile(obj.hBeamlineGUI.DataDir,'config.mat'),...
+                    'vPoints','minVal','maxVal','stepsVal','dwellVal','logSpacing','gasType','testSequence');
     
-                % Set DwellTime property
-                obj.DwellTime = dwellVal;
-    
-                % Set config figure to invisible
+                % Hide config figure
                 set(obj.hConfFigure,'Visible','off');
 
-                % Stop beamline timers (timer callback executed manually during test)
-                %obj.hBeamlineGUI.stopTimer();
-
-                % Create figures and axes
+                % Create result figure
                 obj.hFigure = figure('NumberTitle','off',...
-                                      'Name',sprintf('1D Sweep:[%s,%s]',psTag,obj.resultTag),...
-                                      'DeleteFcn',@obj.closeGUI);
+                                     'Name',sprintf('1D Sweep:[%s,%s]',psTag,obj.resultTag),...
+                                     'DeleteFcn',@obj.closeGUI);
                 obj.hAxes1 = axes(obj.hFigure);
 
-                % Preallocate arrays
+                % Preallocate scan_mon struct
                 obj.scan_mon = struct();
                 obj.scan_mon.(sprintf('%s_set',psTag)) = obj.VPoints';
                 fields = fieldnames(obj.hBeamlineGUI.Monitors);
-                for i=1:numel(fields)
-                    tag = fields{i};
-                    disp(tag);
+                for i = 1:numel(fields)
+                    tag     = fields{i};
                     monitor = obj.hBeamlineGUI.Monitors.(tag);
-                    mon_shape = length(obj.hBeamlineGUI.Monitors.(tag).lastRead);
+                    mon_shape = length(monitor.lastRead);
                     if contains(monitor.formatSpec,'%s')
-                        obj.scan_mon.(tag)=strings(length(obj.VPoints),mon_shape);
+                        obj.scan_mon.(tag) = strings(length(obj.VPoints), mon_shape);
                     else
-                        obj.scan_mon.(tag) = zeros(length(obj.VPoints),mon_shape)*nan;
+                        obj.scan_mon.(tag) = nan(length(obj.VPoints), mon_shape);
                     end
                 end
-                % add set vals to scan mon
-                 % Run sweep
-                vsetx = nan;
-                obj.scanTimer = timer('Period',obj.DwellTime,... %period
-                          'ExecutionMode','fixedDelay',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
-                          'BusyMode','drop',... %{drop, error, queue}
-                          'TasksToExecute',numel(obj.VPoints),...          
-                          'StartDelay',0,...
-                          'TimerFcn',@scan_step,...
-                          'StartFcn',[],...
-                          'StopFcn',[],...
-                          'ErrorFcn',[]);
-                start(obj.scanTimer);
+
+                % ---- Sweep loop ----------------------------------------
+                for iV = 1:numel(obj.VPoints)
+
+                    % Allow external cancellation via testRunning flag
+                    if ~obj.testRunning
+                        break;
+                    end
+
+                    % Recreate figure if user closed it mid-sweep
+                    if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
+                        obj.hFigure = figure('NumberTitle','off','Name','1D Sweep');
+                        obj.hAxes1  = axes(obj.hFigure); %#ok<LAXES>
+                    end
+
+                    % Set supply
+                    fprintf('Setting %s to %.2f %s...\n', psTag, obj.VPoints(iV), ...
+                        obj.hBeamlineGUI.Monitors.(psTag).unit);
+                    obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(iV));
+
+                    % Wait for voltage ramp lock to clear
+                    while obj.hBeamlineGUI.Monitors.(psTag).lock == true
+                        pause(0.1);
+                        drawnow();
+                    end
+
+                    % Additional ramp stabilisation pause
+                    t_ramp = tic;
+                    while toc(t_ramp) < obj.rampDwell
+                        pause(0.05);
+                        drawnow();
+                    end
+
+                    % Dwell
+                    t_dwell = tic;
+                    while toc(t_dwell) < obj.DwellTime
+                        pause(0.05);
+                        drawnow();
+                    end
+
+                    % Read hardware and log
+                    fname = fullfile(obj.hBeamlineGUI.DataDir, sprintf('%s.mat', obj.testLab));
+                    obj.hBeamlineGUI.readHardware();
+                    obj.hBeamlineGUI.updateLog([],[],fname);
+
+                    fprintf('Setting: [%6.1f] %s\n', obj.VPoints(iV), ...
+                        obj.hBeamlineGUI.Monitors.(psTag).unit);
+                    fprintf('Result:  [%6.1f] %s\n', ...
+                        obj.hBeamlineGUI.Monitors.(psTag).lastRead, ...
+                        obj.hBeamlineGUI.Monitors.(psTag).unit);
+
+                    % Store readings
+                    monFields = fieldnames(obj.hBeamlineGUI.Monitors);
+                    for i = 1:numel(monFields)
+                        tag = monFields{i};
+                        obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
+                    end
+                    obj.step_num = iV;
+
+                    % Update plot
+                    cla(obj.hAxes1);
+                    plot(obj.hAxes1, obj.VPoints(1:iV), obj.scan_mon.(obj.resultTag)(1:iV));
+                    xlabel(obj.hAxes1, obj.hBeamlineGUI.Monitors.(psTag).sPrint());
+                    ylabel(obj.hAxes1, obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
+                    drawnow();
+                end
+                % ---- End of sweep loop ----------------------------------
+
+                obj.complete();
 
             catch MExc
                 % Delete figure if error, triggering closeGUI callback
                 delete(obj.hConfFigure);
-                % Rethrow caught exception
                 rethrow(MExc);
-
             end
-
-        function scan_step(src,evt)
-                iV = obj.step_num;
-                if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
-                    obj.hFigure = figure('NumberTitle','off',...
-                        'Name','1D Sweep');
-                    obj.hAxes1 = axes(obj.hFigure); %#ok<LAXES> Only executed if figure deleted or not instantiated
-                end
-
-                % Set ExB Val
-                if obj.VPoints(iV) ~= vsetx
-                    vsetx = obj.VPoints(iV);
-                    fprintf('Setting %s to %.2f %s...\n',psTag,obj.VPoints(iV),obj.hBeamlineGUI.Monitors.(psTag).unit);
-                    obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(iV));
-                end
-                
-                % Pause for ramp time
-                while obj.hBeamlineGUI.Monitors.(psTag).lock == true
-                    pause(.1);
-                    drawnow();
-                end
-
-%                 waitfor(obj.hBeamlineGUI.Monitors.(psTag),'lock',false);
-                
-                % Obtain readings
-                fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
-                obj.hBeamlineGUI.readHardware();
-                obj.hBeamlineGUI.updateLog([],[],fname);
-                
-                % Display set values
-                fprintf('Setting: [%6.1f] %s...\n',obj.VPoints(iV),obj.hBeamlineGUI.Monitors.(psTag).unit);
-                fprintf('Result:  [%6.1f] %s...\n',...
-                            obj.hBeamlineGUI.Monitors.(psTag).lastRead,obj.hBeamlineGUI.Monitors.(psTag).unit);
-                
-                % Assign variables from readings
-                fields = fieldnames(obj.hBeamlineGUI.Monitors);
-                for i=1:numel(fields)
-                    tag = fields{i};
-                    obj.scan_mon.(tag)(iV,:) = obj.hBeamlineGUI.Monitors.(tag).lastRead;
-                end
-                
-                % Update plot
-                cla(obj.hAxes1);
-                plot(obj.hAxes1,obj.VPoints(1:iV),obj.scan_mon.(obj.resultTag)(1:iV));
-                xlabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(psTag).sPrint());
-                ylabel(obj.hAxes1,obj.hBeamlineGUI.Monitors.(obj.resultTag).sPrint());
-                drawnow();
-                if iV >= length(obj.VPoints)
-                    obj.complete();
-                end
-                obj.step_num = obj.step_num + 1;
-            end
-        end    
+        end
 
         function complete(obj,~,~)
-            % Stop timer if valid and running, 
-            if isvalid(obj.scanTimer)
-                if strcmp(obj.scanTimer.Running,'on')
-                    stop(obj.scanTimer);
-                end
-                delete(obj.scanTimer);
-            end
-
             if obj.testRunning
                 % Save results to CSV
                 fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
                 writetable(struct2table(obj.scan_mon), fname);
                 fprintf('\nTest complete!\n');
-
                 obj.testRunning = false;
             end
-            %CLOSEGUI Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
-            % Enable beamline GUI run test button if still valid
+
+            % Re-enable beamline GUI run test button
             if isvalid(obj.hBeamlineGUI)
                 set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
             end
             obj.hBeamlineGUI.genTestSequence();
-            % Restart beamline timers
-            if isequal(myTimer.Running, 'off')
-                obj.hBeamlineGUI.restartTimer();
-            end
+            obj.hBeamlineGUI.restartTimer();
         end
 
     end
