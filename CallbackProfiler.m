@@ -31,6 +31,11 @@ classdef CallbackProfiler < handle
         % Visual window
         windowSec  = 30  % Seconds of timeline to display
         warnThresh = 0.8 % Duty-cycle fraction that triggers a warning
+
+        % Log timer profiling (plain timer has no profLog property, so
+        % the profiler owns the ring buffer and wraps the TimerFcn)
+        logTimerProfLog  double = zeros(0,3)  % [t_start, duration, status]
+        origLogTimerFcn                        % original TimerFcn before wrapping
     end
 
     properties (Constant)
@@ -156,6 +161,46 @@ classdef CallbackProfiler < handle
                 'BusyMode',      'drop',...
                 'TimerFcn',      @(~,~) obj.refresh());
             start(obj.hRefreshTimer);
+            obj.instrumentLogTimer();
+        end
+
+        % -----------------------------------------------------------------
+        function instrumentLogTimer(obj)
+            % Wrap hLogTimer's TimerFcn to record profiling data.
+            try
+                lt = obj.guiRef.hLogTimer;
+                if isempty(lt) || ~isvalid(lt), return; end
+
+                % Save original callback so we can restore it on close
+                obj.origLogTimerFcn = lt.TimerFcn;
+
+                origFcn = obj.origLogTimerFcn;
+                lt.TimerFcn = @(src,evt) obj.logTimerWrapper(src, evt, origFcn);
+            catch
+            end
+        end
+
+        % -----------------------------------------------------------------
+        function logTimerWrapper(obj, src, evt, origFcn)
+            t_start = now(); %#ok<TNOW1>
+            tic;
+            status = 1;
+            try
+                if isa(origFcn,'function_handle')
+                    origFcn(src, evt);
+                elseif iscell(origFcn)
+                    origFcn{1}(origFcn{2:end});
+                end
+            catch
+                status = -1;
+            end
+            dur = toc;
+            % Append to ring buffer (max 600 entries)
+            obj.logTimerProfLog(end+1,:) = [t_start, dur, status];
+            n = size(obj.logTimerProfLog,1);
+            if n > 600
+                obj.logTimerProfLog = obj.logTimerProfLog(n-599:end,:);
+            end
         end
 
         % -----------------------------------------------------------------
@@ -281,17 +326,35 @@ classdef CallbackProfiler < handle
                 yTick(end+1)  = yPos; %#ok<AGROW>
                 yLabel{end+1} = names{k}; %#ok<AGROW>
 
-                % Log timer: no profLog — draw period tick marks instead
+                % Log timer: draw from the profiler-owned ring buffer
                 if isa(dev,'timer')
                     try
                         period = dev.Period;
-                        isRun  = strcmp(dev.Running,'on');
-                        clr    = palette(k,:);
-                        if ~isRun, clr = [0.4 0.4 0.4]; end
-                        ticks = (-floor(obj.windowSec/period)*period) : period : 0;
-                        for t = ticks
-                            plot(obj.hGanttAxes, [t t], [yPos-0.35, yPos+0.35], '-',...
-                                'Color', clr, 'LineWidth', 2, 'HandleVisibility','off');
+                        plog   = obj.logTimerProfLog;
+                        if ~isempty(plog)
+                            pmask = plog(:,1) >= cutoff;
+                            plog  = plog(pmask,:);
+                        end
+                        for j = 1:size(plog,1)
+                            t0  = (plog(j,1) - now_t) * 86400;
+                            dur = plog(j,2);
+                            st  = plog(j,3);
+                            if st == 1
+                                if period > 0 && dur/period > obj.warnThresh
+                                    c = [1 0.3 0.15];
+                                elseif period > 0 && dur/period > 0.5
+                                    c = [1 0.85 0.2];
+                                else
+                                    c = [0.2 0.85 0.4];
+                                end
+                            elseif st == 0
+                                c = [0.4 0.4 0.4];
+                            else
+                                c = [1 0.15 0.15];
+                            end
+                            rectangle(obj.hGanttAxes,...
+                                'Position',[t0, yPos-0.35, max(dur,0.05), 0.7],...
+                                'FaceColor',c,'EdgeColor','none','Curvature',[0.3 0.3]);
                         end
                     catch
                     end
@@ -370,7 +433,26 @@ classdef CallbackProfiler < handle
 
             for k = 1:numel(devices)
                 dev = devices{k};
-                if isa(dev,'timer'), continue; end  % log timer has no profLog
+
+                % Log timer — use profiler-owned ring buffer
+                if isa(dev,'timer')
+                    plog = obj.logTimerProfLog;
+                    if isempty(plog), continue; end
+                    cutoff = now_t - obj.windowSec / 86400;
+                    pmask  = plog(:,1) >= cutoff & plog(:,3) == 1;
+                    vis    = plog(pmask,:);
+                    if isempty(vis), continue; end
+                    t_ago = (vis(:,1) - now_t) * 86400;
+                    plot(obj.hDelayAxes, t_ago, vis(:,2), '.-',...
+                        'Color', palette(k,:), 'LineWidth',1.2,...
+                        'MarkerSize',8, 'DisplayName',names{k});
+                    pVal  = dev.Period;
+                    plot(obj.hDelayAxes, [-obj.windowSec, 2], [pVal pVal], '--',...
+                        'Color', palette(k,:)*0.5, 'LineWidth',0.8,...
+                        'HandleVisibility','off');
+                    continue;
+                end
+
                 if ~isprop(dev,'profLog'), continue; end
                 log = dev.profLog;
                 if isempty(log), continue; end
@@ -417,16 +499,23 @@ classdef CallbackProfiler < handle
                 try
                     dev = devices{k};
 
-                    % Plain timer (hLogTimer) — display period and running state only
+                    % Plain timer (hLogTimer) — read from profiler-owned ring buffer
                     if isa(dev,'timer')
                         period  = dev.Period;
                         running = strcmp(dev.Running,'on');
-                        if running
-                            stStr = 'RUN';
-                        else
-                            stStr = 'STOP';
+                        stStr   = 'STOP';
+                        if running, stStr = 'RUN'; end
+                        delayStr = '—';
+                        duty     = '—';
+                        plog = obj.logTimerProfLog;
+                        if ~isempty(plog)
+                            lastDur  = plog(end,2);
+                            delayStr = sprintf('%.3f', lastDur);
+                            if period > 0
+                                duty = sprintf('%.1f', lastDur/period*100);
+                            end
                         end
-                        data(end+1,:) = {names{k}, sprintf('%.1f',period), '—', '—', 0, stStr}; %#ok<AGROW>
+                        data(end+1,:) = {names{k}, sprintf('%.1f',period), delayStr, duty, 0, stStr}; %#ok<AGROW>
                         continue;
                     end
 
@@ -562,11 +651,19 @@ classdef CallbackProfiler < handle
                 end
             catch
             end
+            obj.logTimerProfLog = zeros(0,3);
             set(obj.hWarnList,'String',{},'Value',1);
         end
 
         % -----------------------------------------------------------------
         function close(obj)
+            % Restore the original log timer callback before closing
+            try
+                lt = obj.guiRef.hLogTimer;
+                if ~isempty(obj.origLogTimerFcn) && ~isempty(lt) && isvalid(lt)
+                    lt.TimerFcn = obj.origLogTimerFcn;
+                end
+            catch, end
             try
                 if ~isempty(obj.hRefreshTimer) && isvalid(obj.hRefreshTimer)
                     stop(obj.hRefreshTimer);
