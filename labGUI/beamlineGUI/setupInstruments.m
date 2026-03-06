@@ -1,7 +1,25 @@
  function instruments = setupInstruments
 
     % Define configuration funcitons to be executed on connection
-
+    %
+     function fluke_config(fluke)
+        fluke.devRW("FUNC 1,TEMP,J");
+        display(fluke.devRW("FUNC? 1"));
+        
+        fluke.devRW("FUNC 3,TEMP,J");
+        display(fluke.devRW("FUNC? 3"));
+        
+        fluke.devRW("FUNC 4,TEMP,J");
+        display(fluke.devRW("FUNC? 4"));
+        
+        fluke.devRW("FUNC 5,TEMP,J");
+        display(fluke.devRW("FUNC? 5"));
+        
+        fluke.devRW("INTVL 0,0,3");
+        display(fluke.devRW("INTVL?"));
+        
+        fluke.devRW("SCAN 1");
+     end
     %Config Multimeter
     function config_keithleyMultimeter(hDMM)
         if hDMM.Connected
@@ -66,11 +84,8 @@
                          "MCPwebCam",camControl(),...
                          "caen_HVPS2",caen_hvps([],[],2,'config_caenPS2.ini'),...
                          "sr620counter",srsSR620("GPIB0::30::INSTR"),...
-                         "flukeHydra",flukeHydra2620A("GPIB0::6::INSTR")...
+                         "flukeHydra",flukeHydra2620A("GPIB0::6::INSTR",@fluke_config)...
                          );
-
-    % connect to devices
-    instruments.caen_HVPS2.connectDevice();
 
     %assign tags to instrument structures
     fields = fieldnames(instruments);
