@@ -53,7 +53,7 @@ classdef SWIPS_GUI < labGUI
         function createHardware(obj)
             % Implementation of abstract method from labGUI
             % Setup SWIPS hardware
-            obj.Hardware = setupSWIPSInstruments;
+            obj.Hardware = setupSWIPSInstruments(obj);
         end
         
         function createMonitors(obj)
