@@ -408,8 +408,7 @@ classdef Sweep2D < acquisition
                 % Set config figure to invisible
                 set(obj.hConfFigure,'Visible','off');
 
-                % Stop beamline timers (timer callback executed manually during test)
-                obj.hBeamlineGUI.stopTimer();
+                
 
                 % Create figures and axes
                 obj.hFigure = figure('NumberTitle','off',...
@@ -458,8 +457,22 @@ classdef Sweep2D < acquisition
                           'StartFcn',[],...
                           'StopFcn',[],...
                           'ErrorFcn',[]);
+                
+                
+                % Set ExB Val
+                if obj.VPoints(obj.step_num) ~= vsetx
+                    vsetx = obj.VPoints(obj.step_num);
+                    fprintf('Setting %s to %.2f %s...\n',psTag,obj.VPoints(obj.step_num),obj.hBeamlineGUI.Monitors.(psTag).unit);
+                    obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(obj.step_num));
+                end
+                if obj.VPoints2(obj.step_num) ~= vsety
+                    vsety = obj.VPoints2(obj.step_num);
+                    fprintf('Setting %s to %.2f %s...\n',psTag2,obj.VPoints2(obj.step_num),obj.hBeamlineGUI.Monitors.(psTag2).unit);
+                    obj.hBeamlineGUI.Monitors.(psTag2).set(obj.VPoints2(obj.step_num));
+                end
+                % Pause for ramp time
                 start(obj.scanTimer);
-
+            
             catch MExc
 
                 % Delete figure if error, triggering closeGUI callback
@@ -471,30 +484,18 @@ classdef Sweep2D < acquisition
             end
             function scan_step(src,evt)
                 iV = obj.step_num;
+                
+                
                 display(iV/length(obj.VPoints))
                 if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
                     obj.hFigure = figure('NumberTitle','off',...
                         'Name','Sweep2D');
                     obj.hAxes1 = axes(obj.hFigure); %#ok<LAXES> Only executed if figure deleted or not instantiated
                 end
-
-                % Set ExB Val
-                if obj.VPoints(iV) ~= vsetx
-                    vsetx = obj.VPoints(iV);
-                    fprintf('Setting %s to %.2f %s...\n',psTag,obj.VPoints(iV),obj.hBeamlineGUI.Monitors.(psTag).unit);
-                    obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(iV));
-                end
-                if obj.VPoints2(iV) ~= vsety
-                    vsety = obj.VPoints2(iV);
-                    fprintf('Setting %s to %.2f %s...\n',psTag2,obj.VPoints2(iV),obj.hBeamlineGUI.Monitors.(psTag2).unit);
-                    obj.hBeamlineGUI.Monitors.(psTag2).set(obj.VPoints2(iV));
-                end
-                % Pause for ramp time
-        
-                pause(obj.rampDwell);
+                
                 % Obtain readings
                 fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
-                obj.hBeamlineGUI.readHardware();
+                
                 obj.hBeamlineGUI.updateLog([],[],fname);
 
                 fprintf('Setting: [%s,%s]= [%6.1f,%6.1f] ...\n',psTag,psTag2,vsetx,vsety);
@@ -525,9 +526,26 @@ classdef Sweep2D < acquisition
                     obj.complete();
                 end
                 obj.step_num = obj.step_num + 1;
+
+                % Set ExB Val
+                if obj.VPoints(obj.step_num) ~= vsetx
+                    vsetx = obj.VPoints(obj.step_num);
+                    fprintf('Setting %s to %.2f %s...\n',psTag,obj.VPoints(obj.step_num),obj.hBeamlineGUI.Monitors.(psTag).unit);
+                    obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(obj.step_num));
+                end
+                if obj.VPoints2(obj.step_num) ~= vsety
+                    vsety = obj.VPoints2(iV);
+                    fprintf('Setting %s to %.2f %s...\n',psTag2,obj.VPoints2(obj.step_num),obj.hBeamlineGUI.Monitors.(psTag2).unit);
+                    obj.hBeamlineGUI.Monitors.(psTag2).set(obj.VPoints2(obj.step_num));
+                end
+                % Pause for ramp time
+        
+%                 pause(obj.rampDwell);
             end
                 
         end
+
+        
 
         function complete(obj,~,~)
             % Stop timer if valid and running, 
@@ -553,7 +571,9 @@ classdef Sweep2D < acquisition
                 set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
             end
             % Restart beamline timers
-            obj.hBeamlineGUI.restartTimer();
+            if isequal(obj.hbeamlineGUI.Timer.Running, 'off')
+                obj.hBeamlineGUI.restartTimer();
+            end
         end
 
     end

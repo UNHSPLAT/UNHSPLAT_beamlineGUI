@@ -337,20 +337,6 @@ classdef Sweep1d < acquisition
                     obj.hAxes1 = axes(obj.hFigure); %#ok<LAXES> Only executed if figure deleted or not instantiated
                 end
 
-                % Set ExB Val
-                if obj.VPoints(iV) ~= vsetx
-                    vsetx = obj.VPoints(iV);
-                    fprintf('Setting %s to %.2f %s...\n',psTag,obj.VPoints(iV),obj.hBeamlineGUI.Monitors.(psTag).unit);
-                    obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(iV));
-                end
-                
-                % Pause for ramp time
-%                 while obj.hBeamlineGUI.Monitors.(psTag).lock == true
-%                     pause(.1);
-%                     drawnow();
-%                 end
-
-                waitfor(obj.hBeamlineGUI.Monitors.(psTag),'lock',false);
                 
                 % Obtain readings
                 fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s.mat',obj.testLab));
@@ -379,6 +365,22 @@ classdef Sweep1d < acquisition
                     obj.complete();
                 end
                 obj.step_num = obj.step_num + 1;
+
+                % Set ExB Val
+                if obj.VPoints(obj.step_num) ~= vsetx
+                    vsetx = obj.VPoints(obj.step_num);
+                    fprintf('Setting %s to %.2f %s...\n',psTag,obj.VPoints(obj.step_num),obj.hBeamlineGUI.Monitors.(psTag).unit);
+                    obj.hBeamlineGUI.Monitors.(psTag).set(obj.VPoints(obj.step_num));
+                end
+
+                waitfor(obj.hBeamlineGUI.Monitors.(psTag),'lock',false);
+                
+                % Pause for ramp time
+%                 while obj.hBeamlineGUI.Monitors.(psTag).lock == true
+%                     pause(.1);
+%                     drawnow();
+%                 end
+
             end
         end    
 
@@ -407,7 +409,7 @@ classdef Sweep1d < acquisition
             end
             obj.hBeamlineGUI.genTestSequence();
             % Restart beamline timers
-            if isequal(myTimer.Running, 'off')
+            if isequal(obj.hbeamlineGUI.Timer.Running, 'off')
                 obj.hBeamlineGUI.restartTimer();
             end
         end
