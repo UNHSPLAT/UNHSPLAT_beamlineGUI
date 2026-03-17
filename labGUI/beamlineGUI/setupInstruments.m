@@ -20,6 +20,7 @@
         
         fluke.devRW("SCAN 1");
      end
+
     %Config Multimeter
     function config_keithleyMultimeter(hDMM)
         if hDMM.Connected
@@ -93,51 +94,4 @@
         instruments.(fields{i}).Tag = fields{i};
     end
 
-    % =======================================================================
-    % define read functions monitors will call to manipulate instrument output 
-    % need to move these to the instrument classes
-    % =======================================================================
-    function read_srsHVPS(self)
-             self.measVasync;
-%             val = self.measV;
-    end
-    
-    function read_pressure(self)
-            self.readPressure_async();
-    end
-
-     function val = read_pico(self)
-            val  = self.readDev();
-     end
-
-     function val = read_keithley(self)
-            val =  self.performScan(1,3);
-     end
-
-     function val = read_keysight(self)
-            val =  self.measV;
-     end
-
-     function read_counter(self)
-            self.measure_async;
-     end
-
-     readStruct = struct("leyboldPressure1",@read_pressure,...
-                         "leyboldPressure2",@read_pressure,...
-                         "leyboldPressure3",@read_pressure,...
-                         "picoFaraday",@read_pico,...
-                         "HvExbn",@read_srsHVPS,...
-                         "HvExbp",@read_srsHVPS,...
-                         "HvEsa",@read_srsHVPS,...
-                         "HvDefl",@read_srsHVPS,...
-                         "HvYsteer",@read_srsHVPS,...
-                         "keithleyMultimeter1",@read_keithley,...
-                         "LvMass",@read_keysight,...
-                         "sr620counter",@read_counter...
-                         );
-    % assign the read functions to their struct
-    fields = fieldnames(readStruct);
-    for i=1:numel(fields)
-        instruments.(fields{i}).readFunc = readStruct.(fields{i});
-    end
 end
