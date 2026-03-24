@@ -1377,9 +1377,9 @@ classdef (Abstract) labGUI < handle
                 grp = mon.group;
                 if strcmp(grp,groups{i})
                     if isempty(obj.hMonitorPlots)
-                        obj.hMonitorPlots = monitorPlot(obj,groupTab,'T',mon.Tag);
+                        obj.hMonitorPlots = monitorPlot(obj,groupTab,'dateTime',mon.Tag);
                     else
-                        obj.hMonitorPlots(end+1) = monitorPlot(obj,groupTab,'T',mon.Tag);
+                        obj.hMonitorPlots(end+1) = monitorPlot(obj,groupTab,'dateTime',mon.Tag);
                     end
                 end
             end
