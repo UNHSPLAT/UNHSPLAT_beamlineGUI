@@ -53,6 +53,7 @@ classdef (Abstract) labGUI < handle
         hTimerMenu % Handle to Timer top menu dropdown
         hToolsMenu % Handle to tools top menu dropdown
         hHardwareMenu % Handle to hardware top menu dropdown
+        hMonitorsMenu % Handle to monitors top menu dropdown
 
         hCopyTS % Handle to copy test sequence menu button
 
@@ -110,14 +111,6 @@ classdef (Abstract) labGUI < handle
 
             % Create tools menu
             obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
-            
-            % Add monitor inspection option
-            uimenu(obj.hToolsMenu,'Text','Inspect Monitors',...
-                'MenuSelectedFcn',@obj.inspectMonitorsCallback);
-                
-            % Add raster monitor option
-            uimenu(obj.hToolsMenu,'Text','Raster Monitor',...
-                'MenuSelectedFcn',@obj.rasterMonCallback);
                 
             % Add data analyzer option
             uimenu(obj.hToolsMenu,'Text','Data Analyzer',...
@@ -126,6 +119,13 @@ classdef (Abstract) labGUI < handle
             % Add callback profiler option
             uimenu(obj.hToolsMenu,'Text','Callback Profiler',...
                 'MenuSelectedFcn',@(~,~) CallbackProfiler(obj));
+
+            % Create monitors menu
+            obj.hMonitorsMenu = uimenu(obj.hFigure,'Text','Monitors');
+            uimenu(obj.hMonitorsMenu,'Text','Inspect Monitors',...
+                'MenuSelectedFcn',@obj.inspectMonitorsCallback);
+            uimenu(obj.hMonitorsMenu,'Text','Raster Monitor',...
+                'MenuSelectedFcn',@obj.rasterMonCallback);
 
             % Create hardware menu
             obj.hHardwareMenu = uimenu(obj.hFigure,'Text','Hardware');
