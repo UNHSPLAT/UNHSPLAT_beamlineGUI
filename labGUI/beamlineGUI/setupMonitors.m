@@ -395,19 +395,19 @@ function monitors = setupMonitors(instruments)
                                                 monitors.voltExB,...
                                                 ]...
                                      );
-
+    
     % Valve control monitor with pressure interlock
-
     function val = interlock_read(self)
+        interloc_outlet = 5;
         if self.parent.Connected
-            val = self.parent.lastRead;
-            if self.siblings.lastRead>2e-1 && val(4)
+            vstate = self.parent.lastRead;
+            if self.siblings.lastRead>5e-2 && vstate(interloc_outlet)
                 warning('%s Interlock Triggered at %s',self.Tag,datetime("now"))
-                self.parent.setOff(3);
+                self.parent.setOff(interloc_outlet-1);
                 self.parent.read();
             end
         else
-            val = self.parent.lastRead*nan;
+            vstate = self.parent.lastRead*nan;
         end
     end
 
@@ -415,6 +415,7 @@ function monitors = setupMonitors(instruments)
                                  'textLabel','Valve State',...
                                  'unit','[T/F]',...
                                  'active',false,...
+                                 'group','valveState',...
                                  'formatSpec','%d,',...
                                  'parent',instruments.webpowerstrip1,...
                                  'siblings',[monitors.pressureChamberIG1]...
