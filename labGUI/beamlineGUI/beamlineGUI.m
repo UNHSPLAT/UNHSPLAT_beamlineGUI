@@ -25,7 +25,7 @@ classdef beamlineGUI < labGUI
         mcpRampListener
         cemRampListener
         hcaenMenu    % Handle to CAEN menu handler
-        hHardwareMenu
+        hWPSMenu     % Handle to Web Power Strip menu handler
     end
 
     properties (SetObservable)
@@ -50,11 +50,13 @@ classdef beamlineGUI < labGUI
             obj@labGUI('Beamline GUI');
             % Initialize hardware and monitors
             
-            obj.hHardwareMenu = uimenu(obj.hFigure,'Text','Hardware');
-             % Create CAEN menu handler
+            % Create CAEN menu handler
             obj.hcaenMenu = caen_gui_menu(obj.Hardware.caen_HVPS2, obj.hHardwareMenu, ...
                                         [0,1,3], ...
                                         ["mcpVout", "mcpVa", "CEM"]);
+
+            % Create Web Power Strip menu handler
+            obj.hWPSMenu = webpowerstrip_gui_menu(obj.Hardware.webpowerstrip1, obj.hHardwareMenu);
 
             % Create GUI components and layout
             obj.createLayout();

@@ -3,7 +3,6 @@ classdef SWIPS_GUI < labGUI
     
     properties
         % SWIPS-specific properties
-        hHardwareMenu % Handle to hardware menu
         hStatusGrp % Handle to status uicontrol group
         hHVStatusGrp % Handle to high voltage status uicontrol group
         hPosStatusGrp % Handle to position status panel group
@@ -33,8 +32,6 @@ classdef SWIPS_GUI < labGUI
             obj@labGUI('SWIPS',fullfile(getenv("USERPROFILE"),"data/SWIPS"));
 
             obj.AcquisitionList = {'Sweep 1D','Sweep 2D'};
-
-            obj.hHardwareMenu = uimenu(obj.hFigure,'Text','Hardware');
 
             % Create CAEN menu handler
             obj.caenMenu = caen_gui_menu(obj.Hardware.caen_HVPS1, obj.hHardwareMenu, ...

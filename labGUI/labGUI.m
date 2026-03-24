@@ -52,6 +52,7 @@ classdef (Abstract) labGUI < handle
         hFileMenu % Handle to file top menu dropdown
         hTimerMenu % Handle to Timer top menu dropdown
         hToolsMenu % Handle to tools top menu dropdown
+        hHardwareMenu % Handle to hardware top menu dropdown
 
         hCopyTS % Handle to copy test sequence menu button
 
@@ -110,17 +111,9 @@ classdef (Abstract) labGUI < handle
             % Create tools menu
             obj.hToolsMenu = uimenu(obj.hFigure,'Text','Tools');
             
-            % Add hardware inspection option
-            uimenu(obj.hToolsMenu,'Text','Inspect Hardware',...
-                'MenuSelectedFcn',@obj.inspectHardwareCallback);
-                
             % Add monitor inspection option
             uimenu(obj.hToolsMenu,'Text','Inspect Monitors',...
                 'MenuSelectedFcn',@obj.inspectMonitorsCallback);
-                
-            % Add hardware simulation option
-            uimenu(obj.hToolsMenu,'Text','Simulate Hardware',...
-                'MenuSelectedFcn',@obj.simHWCallback);
                 
             % Add raster monitor option
             uimenu(obj.hToolsMenu,'Text','Raster Monitor',...
@@ -133,7 +126,14 @@ classdef (Abstract) labGUI < handle
             % Add callback profiler option
             uimenu(obj.hToolsMenu,'Text','Callback Profiler',...
                 'MenuSelectedFcn',@(~,~) CallbackProfiler(obj));
-                
+
+            % Create hardware menu
+            obj.hHardwareMenu = uimenu(obj.hFigure,'Text','Hardware');
+            uimenu(obj.hHardwareMenu,'Text','Inspect Hardware',...
+                'MenuSelectedFcn',@obj.inspectHardwareCallback);
+            uimenu(obj.hHardwareMenu,'Text','Simulate Hardware',...
+                'MenuSelectedFcn',@obj.simHWCallback);
+
             % Create Timer menu and all its menu items
             obj.createTimerMenu();            % Create timer to periodically update readings
             obj.createTimer();
