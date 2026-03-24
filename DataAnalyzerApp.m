@@ -136,9 +136,16 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     
                     % Set default selections
                     if ~isempty(columnNames)
-                        app.XAxisDropDown.Value = columnNames{1};
-                        if length(columnNames) > 1
-                            app.YAxisListBox.Value = columnNames{2};
+                        % Prefer 'dateTime' as the default X axis if present
+                        if ismember('dateTime', columnNames)
+                            app.XAxisDropDown.Value = 'dateTime';
+                        else
+                            app.XAxisDropDown.Value = columnNames{1};
+                        end
+                        % Default Y to the first column that isn't the selected X
+                        nonXCols = columnNames(~strcmp(columnNames, app.XAxisDropDown.Value));
+                        if ~isempty(nonXCols)
+                            app.YAxisListBox.Value = nonXCols{1};
                         end
                     end
                     
@@ -242,8 +249,13 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     if isdatetime(xData) || isduration(xData)
                         % Keep as is
                     else
-                        % Try to convert to numeric
-                        xData = str2double(string(xData));
+                        % Try to parse as datetime string first
+                        try
+                            xData = datetime(xData);
+                        catch
+                            % Fall back to numeric conversion
+                            xData = str2double(string(xData));
+                        end
                     end
                 end
                 
@@ -266,8 +278,13 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                         if isdatetime(yData) || isduration(yData)
                             % Keep as is
                         else
-                            % Try to convert to numeric
-                            yData = str2double(string(yData));
+                            % Try to parse as datetime string first
+                            try
+                                yData = datetime(yData);
+                            catch
+                                % Fall back to numeric conversion
+                                yData = str2double(string(yData));
+                            end
                         end
                     end
                     

@@ -54,7 +54,23 @@ classdef monitorPlot < handle
                 % Get current values
                 xval = obj.hGUI.Monitors.(obj.xMonStr).lastRead;
                 yval = obj.hGUI.Monitors.(obj.yMonStr).lastRead;
-                
+
+                % Convert string-encoded datetimes to datetime objects
+                if ~isnumeric(xval) && ~isdatetime(xval) && ~isduration(xval)
+                    try
+                        xval = datetime(xval);
+                    catch
+                        xval = str2double(string(xval));
+                    end
+                end
+                if ~isnumeric(yval) && ~isdatetime(yval) && ~isduration(yval)
+                    try
+                        yval = datetime(yval);
+                    catch
+                        yval = str2double(string(yval));
+                    end
+                end
+
                 if ~isempty(xval) && ~isempty(yval)
                     % Initialize arrays if this is the first data point
                     if isempty(obj.yvals)
