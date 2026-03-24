@@ -81,8 +81,8 @@ classdef monitorPlot < handle
                         end
                     end
                     
-                    % Add x value
-                    obj.xvals(end+1) = xval;
+                    % Add x value (use concatenation to support datetime arrays)
+                    obj.xvals = [obj.xvals, xval];
                     
                     % Add y values
                     if isscalar(yval)
