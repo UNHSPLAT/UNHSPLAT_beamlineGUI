@@ -397,13 +397,13 @@ function monitors = setupMonitors(instruments)
                                      );
     
     % Valve control monitor with pressure interlock
-    function val = interlock_read(self)
+    function vstate = interlock_read(self)
         interloc_outlet = 5;
         if self.parent.Connected
             vstate = self.parent.lastRead;
             if self.siblings.lastRead>5e-2 && vstate(interloc_outlet)
                 warning('%s Interlock Triggered at %s',self.Tag,datetime("now"))
-                self.parent.setOff(interloc_outlet-1);
+                self.parent.setOff(interloc_outlet);
                 self.parent.read();
             end
         else
