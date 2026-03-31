@@ -86,7 +86,10 @@
                          "flukeHydra",flukeHydra2620A("GPIB0::6::INSTR",@fluke_config),...
                          "webpowerstrip1",webpowerstrip("192.168.0.110")...
                          );
-
+     function scan_val = read_keithley(self)
+            scan_val = self.performScan(1,3);
+     end
+    instruments.keithleyMultimeter1.readFunc = @read_keithley;
     %assign tags to instrument structures
     fields = fieldnames(instruments);
     for i=1:numel(fields)
