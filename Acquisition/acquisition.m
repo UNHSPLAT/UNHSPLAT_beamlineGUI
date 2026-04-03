@@ -31,14 +31,7 @@ classdef acquisition < handle
             obj.closeGUI();
             
         end
-
-    end
-
-    methods (Abstract)
-        runSweep(obj)
-
-        closeGUI(obj)
-
+        
         function complete(obj,~,~)
             % Stop timer if valid and running, 
             if isvalid(obj.scanTimer)
@@ -68,6 +61,14 @@ classdef acquisition < handle
                 obj.hBeamlineGUI.restartTimer();
             end
         end
+    end
+
+    methods (Abstract)
+        runSweep(obj)
+
+        closeGUI(obj)
+
+        
     end
 
 end
