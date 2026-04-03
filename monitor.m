@@ -61,6 +61,8 @@ classdef monitor < handle
                 try
                     if isempty(obj.parent)
                         obj.lastReadTime = datetime('now');
+                    elseif ~isprop(obj.parent(1), 'Connected')
+                        obj.lastReadTime = datetime('now');
                     elseif all([obj.parent.Connected]) 
                         obj.lastReadTime = obj.parent.lastReadTime;
                     else
