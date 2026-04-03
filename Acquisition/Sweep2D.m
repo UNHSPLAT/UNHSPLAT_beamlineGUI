@@ -72,7 +72,7 @@ classdef Sweep2D < acquisition
             % set testLabel
 
             % get active and inactive monitors for scanning
-            function tag = get_active(mon)
+            function get_active(mon)
                 if mon.active
                     obj.PSList(end+1) = mon.Tag;
                 else
@@ -80,8 +80,8 @@ classdef Sweep2D < acquisition
                 end
             end
 
-            obj.PSList = [""];
-            obj.resultList = [""];
+            obj.PSList = "";
+            obj.resultList = "";
 
             structfun(@get_active,obj.hBeamlineGUI.Monitors);
 
@@ -389,8 +389,8 @@ classdef Sweep2D < acquisition
                 %Define meshgrid from scan vectors
                 [xx,yy] = meshgrid(vPointsX,vPointsY);
                 %Reorder meshgrid so we scan in triangles instead of knife edges
-                %xx(2:2:end,:) = fliplr(xx(2:2:end,:));
-                %yy(2:2:end,:) = fliplr(yy(2:2:end,:));
+                xx(2:2:end,:) = fliplr(xx(2:2:end,:));
+                yy(2:2:end,:) = fliplr(yy(2:2:end,:));
                 
                 %Flatten mat values and assign
                 obj.VPoints = reshape(xx',1,[]);
@@ -417,13 +417,6 @@ classdef Sweep2D < acquisition
 
 
                 obj.hAxes1 = axes(obj.hFigure);
-
-                % Preallocate arrays
-                FX = reshape(obj.VPoints,[stepsVal,stepsVal2])';
-                FX(2:2:end,:) = fliplr(FX(2:2:end,:));
-                
-                FY = reshape(obj.VPoints2,[stepsVal,stepsVal2])';
-                FY(2:2:end,:) = fliplr(FY(2:2:end,:));
 
                 obj.scan_mon = struct();
                 fields = fieldnames(obj.hBeamlineGUI.Monitors);
@@ -482,7 +475,7 @@ classdef Sweep2D < acquisition
                 rethrow(MExc);
 
             end
-            function scan_step(src,evt)
+            function scan_step(~,~)
                 iV = obj.step_num;
                 
                 
@@ -511,7 +504,8 @@ classdef Sweep2D < acquisition
                 end
                 
                 FF = reshape(obj.scan_mon.(daqTag),[stepsVal,stepsVal2])';
-                %FF(2:2:end,:) = fliplr(FF(2:2:end,:));
+                FF(2:2:end,:) = fliplr(FF(2:2:end,:));
+                
                 
                 imagesc(obj.hAxes1,vPointsX,vPointsY,FF);
                 
