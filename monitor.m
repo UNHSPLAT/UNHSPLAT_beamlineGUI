@@ -45,11 +45,18 @@ classdef monitor < handle
                 
                 % Create a listener for each parent
                 for i = 1:numel(parents)
-                    try
-                        newListener = addlistener(parents(i), obj.listenProp, 'PostSet', @obj.read);
-                        obj.parentListener(end+1) = newListener;
-                    catch ME
-                        warning('Failed to create listener for parent %d: %s', i, ME.message);
+                    if isa(parents(i), 'timer')
+                        % timer properties are not SetObservable; chain into TimerFcn instead
+                        prev = parents(i).TimerFcn;
+                        mon = obj;
+                        parents(i).TimerFcn = @(src,evt) monitor.chainTimerCallback(prev, mon, src, evt);
+                    else
+                        try
+                            newListener = addlistener(parents(i), obj.listenProp, 'PostSet', @obj.read);
+                            obj.parentListener(end+1) = newListener;
+                        catch ME
+                            warning('Failed to create listener for parent %d: %s', i, ME.message);
+                        end
                     end
                 end
             end
@@ -107,6 +114,15 @@ classdef monitor < handle
 
         function printVal = sPrintVal(obj)
             printVal = sprintf(obj.formatSpec,obj.lastRead);
+        end
+    end
+
+    methods (Static, Access = private)
+        function chainTimerCallback(prevFcn, monObj, src, evt)
+            if ~isempty(prevFcn)
+                feval(prevFcn, src, evt);
+            end
+            monObj.read(src, evt);
         end
     end
 end
