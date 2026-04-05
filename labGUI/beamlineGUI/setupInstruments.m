@@ -1,6 +1,25 @@
  function instruments = setupInstruments
 
     % Define configuration funcitons to be executed on connection
+    %
+     function fluke_config(fluke)
+        fluke.devRW("FUNC 1,TEMP,J");
+        display(fluke.devRW("FUNC? 1"));
+        
+        fluke.devRW("FUNC 3,TEMP,J");
+        display(fluke.devRW("FUNC? 3"));
+        
+        fluke.devRW("FUNC 4,TEMP,J");
+        display(fluke.devRW("FUNC? 4"));
+        
+        fluke.devRW("FUNC 5,TEMP,J");
+        display(fluke.devRW("FUNC? 5"));
+        
+        fluke.devRW("INTVL 0,0,3");
+        display(fluke.devRW("INTVL?"));
+        
+        fluke.devRW("SCAN 1");
+     end
 
     %Config Multimeter
     function config_keithleyMultimeter(hDMM)
@@ -48,9 +67,7 @@
         end
     end
 
-    % Generate list of available hardware
-
-%     
+    % Define hardware objects for each instrument, with appropriate configuration functions
     instruments = struct("leyboldPressure1",leyboldCenter2("ASRL7::INSTR"),...
                          "leyboldPressure3",leyboldGraphix3("ASRL10::INSTR"),...
                          "picoFaraday",keithley6485('GPIB0::14::INSTR',@config_picoFaraday),...
@@ -64,66 +81,19 @@
                          "keithleyMultimeter1",keithleyDAQ6510('USB0::0x05E6::0x6510::04524689::0::INSTR',...
                                                                @config_keithleyMultimeter),...
                          "MCPwebCam",camControl(),...
-                         "newportStage",NewportStageControl('192.168.0.254')...
+                         "caen_HVPS2",caen_hvps([],[],2,'config_caenPS2.ini'),...
+                         "sr620counter",srsSR620("GPIB0::30::INSTR"),...
+                         "flukeHydra",flukeHydra2620A("GPIB0::6::INSTR",@fluke_config),...
+                         "webpowerstrip1",webpowerstrip("192.168.0.110")...
                          );
-
-    
-
+     function scan_val = read_keithley(self)
+            scan_val = self.performScan(1,3);
+     end
+    instruments.keithleyMultimeter1.readFunc = @read_keithley;
     %assign tags to instrument structures
     fields = fieldnames(instruments);
     for i=1:numel(fields)
         instruments.(fields{i}).Tag = fields{i};
     end
 
-    % =======================================================================
-    % define read functions monitors will call to manipulate instrument output 
-    % need to move these to the instrument classes
-    % =======================================================================
-    function val = read_srsHVPS(self)
-         if self.Connected
-             val = self.measV;
-         end
-    end
-    
-    function val = read_pressure(self)
-
-         if self.Connected
-            val = self.readPressure();
-         end
-    end
-
-     function val = read_pico(self)
-         if self.Connected
-            val  = self.readDev();
-         end
-     end
-
-     function val = read_keithley(self)
-         if self.Connected
-            val =  self.performScan(1,3);
-         end
-     end
-
-     function val = read_keysight(self)
-         if self.Connected
-            val =  self.measV;
-         end
-     end
-     readStruct = struct("leyboldPressure1",@read_pressure,...
-                         "leyboldPressure2",@read_pressure,...
-                         "leyboldPressure3",@read_pressure,...
-                         "picoFaraday",@read_pico,...
-                         "HvExbn",@read_srsHVPS,...
-                         "HvExbp",@read_srsHVPS,...
-                         "HvEsa",@read_srsHVPS,...
-                         "HvDefl",@read_srsHVPS,...
-                         "HvYsteer",@read_srsHVPS,...
-                         "keithleyMultimeter1",@read_keithley,...
-                         "LvMass",@read_keysight...
-                         );
-    % assign the read functions to their struct
-    fields = fieldnames(readStruct);
-    for i=1:numel(fields)
-        instruments.(fields{i}).readFunc = readStruct.(fields{i});
-    end
 end
