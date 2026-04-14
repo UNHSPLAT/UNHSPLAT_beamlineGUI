@@ -3,15 +3,18 @@
     % Define configuration funcitons to be executed on connection
     %
      function fluke_config(fluke)
+         % Attached to instrument chasis
         fluke.devRW("FUNC 1,TEMP,J");
         display(fluke.devRW("FUNC? 1"));
         
-        fluke.devRW("FUNC 3,TEMP,J");
-        display(fluke.devRW("FUNC? 3"));
+%         fluke.devRW("FUNC 3,TEMP,J");
+%         display(fluke.devRW("FUNC? 3"));
         
+        % Attached to opalkelly
         fluke.devRW("FUNC 4,TEMP,J");
         display(fluke.devRW("FUNC? 4"));
         
+        % Attached to chamber 
         fluke.devRW("FUNC 5,TEMP,J");
         display(fluke.devRW("FUNC? 5"));
         
