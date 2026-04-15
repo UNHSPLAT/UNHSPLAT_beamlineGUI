@@ -44,8 +44,8 @@ classdef SWIPS_GUI < labGUI
             obj.OKMenu = swips_ok_gui_menu(obj.Hardware.Opal_Kelly, obj.hHardwareMenu);
 
             % pass the loggin info to opalkelly for PH logging
-            obj.Hardware.Opal_Kelly.DataDirectory = obj.DataDirectory;
-            obj.Hardware.Opal_Kelly.TestSequence = obj.TestSequence;
+            obj.Hardware.Opal_Kelly.PH_DataDirectory = @(~,~) obj.DataDir;
+            obj.Hardware.Opal_Kelly.PH_TestSequence = @(~,~) obj.TestSequence;
             % Create GUI components and layout
             obj.createLayout();
 
