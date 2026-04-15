@@ -37,11 +37,15 @@ classdef SWIPS_GUI < labGUI
             obj.caenMenu = caen_gui_menu(obj.Hardware.caen_HVPS1, obj.hHardwareMenu, ...
                                         [0,1,2,3], ...
                                         ["Upper Deflection", "Lower Deflection", "Flux Red.", "Inner Dome"]);
-
+            % Create Newport stage menu handler
             obj.newportMenu = newport_gui_menu(obj.Hardware.newportStage, obj.hHardwareMenu);
 
+            %create Opal Kelly menu handler
             obj.OKMenu = swips_ok_gui_menu(obj.Hardware.Opal_Kelly, obj.hHardwareMenu);
 
+            % pass the loggin info to opalkelly for PH logging
+            obj.Hardware.Opal_Kelly.DataDirectory = obj.DataDirectory;
+            obj.Hardware.Opal_Kelly.TestSequence = obj.TestSequence;
             % Create GUI components and layout
             obj.createLayout();
 
