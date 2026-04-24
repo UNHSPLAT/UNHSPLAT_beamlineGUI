@@ -19,6 +19,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         RightPanel              matlab.ui.container.Panel
         UIAxes                  matlab.ui.control.UIAxes
         PlotOptionsButton       matlab.ui.control.Button
+        CoordLabel              matlab.ui.control.Label
     end
 
     properties (Access = private)
@@ -1090,6 +1091,20 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             end
         end
 
+        % Update cursor position label when mouse moves over axes
+        function updateCursorPosition(app)
+            cp = app.UIAxes.CurrentPoint;
+            x = cp(1,1);
+            y = cp(1,2);
+            xl = xlim(app.UIAxes);
+            yl = ylim(app.UIAxes);
+            if x >= xl(1) && x <= xl(2) && y >= yl(1) && y <= yl(2)
+                app.CoordLabel.Text = sprintf('x: %.5g   y: %.5g', x, y);
+            else
+                app.CoordLabel.Text = '';
+            end
+        end
+
         % Clear data filter
         function clearDataFilter(app, dialogHandle)
             app.FilteredDataTable = [];
@@ -1226,6 +1241,18 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             ylabel(app.UIAxes, 'Y')
             app.UIAxes.Position = [10 10 690 550];
             grid(app.UIAxes, 'on');
+
+            % Create CoordLabel at bottom-right of plot area
+            app.CoordLabel = uilabel(app.RightPanel);
+            app.CoordLabel.Position = [490 13 210 20];
+            app.CoordLabel.Text = '';
+            app.CoordLabel.HorizontalAlignment = 'right';
+            app.CoordLabel.FontSize = 10;
+            app.CoordLabel.FontName = 'Courier New';
+            app.CoordLabel.BackgroundColor = 'none';
+
+            % Wire mouse-motion callback to update coordinate display
+            app.UIFigure.WindowButtonMotionFcn = @(~,~) app.updateCursorPosition();
 
             % Show the figure after all components are created
             app.UIFigure.Visible = 'on';
