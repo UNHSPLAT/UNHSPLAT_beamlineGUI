@@ -1087,19 +1087,48 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
 
             function copyResults()
                 txt = strjoin(resultsArea.Value, newline);
-                clipboard('copy', txt);
+                 clipboard('copy', txt);
             end
         end
 
         % Update cursor position label when mouse moves over axes
         function updateCursorPosition(app)
             cp = app.UIAxes.CurrentPoint;
-            x = cp(1,1);
-            y = cp(1,2);
             xl = xlim(app.UIAxes);
             yl = ylim(app.UIAxes);
-            if x >= xl(1) && x <= xl(2) && y >= yl(1) && y <= yl(2)
-                app.CoordLabel.Text = sprintf('x: %.5g   y: %.5g', x, y);
+            xIsDatetime = isdatetime(xl(1));
+            yIsDatetime = isdatetime(yl(1));
+            xFrac = cp(1,1);
+            yFrac = cp(1,2);
+            % When the axis is datetime, CurrentPoint gives a [0,1] fraction
+            % of the axis range; convert to datetime by interpolation.
+            if xIsDatetime
+                x = num2ruler(cp(1,1), app.UIAxes.XAxis);
+                xInRange = x >= xl(1) && x <= xl(2);
+            else
+                x = xFrac;
+                xInRange = x >= xl(1) && x <= xl(2);
+            end
+            if yIsDatetime
+                y = num2ruler(cp(1,2), app.UIAxes.YAxis);
+                yInRange = y >= yl(1) && y <= yl(2);
+            else
+                y = yFrac;
+                yInRange = y >= yl(1) && y <= yl(2);
+            end
+
+            if xInRange && yInRange
+                if xIsDatetime
+                    xStr = char(x, 'yyyy-MM-dd HH:mm:ss');
+                else
+                    xStr = sprintf('%.5g', x);
+                end
+                if yIsDatetime
+                    yStr = char(y, 'yyyy-MM-dd HH:mm:ss');
+                else
+                    yStr = sprintf('%.5g', y);
+                end
+                app.CoordLabel.Text = ['x: ' xStr '   y: ' yStr];
             else
                 app.CoordLabel.Text = '';
             end
@@ -1244,7 +1273,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
 
             % Create CoordLabel at bottom-right of plot area
             app.CoordLabel = uilabel(app.RightPanel);
-            app.CoordLabel.Position = [490 13 210 20];
+            app.CoordLabel.Position = [490 560 210 20];
             app.CoordLabel.Text = '';
             app.CoordLabel.HorizontalAlignment = 'right';
             app.CoordLabel.FontSize = 10;
