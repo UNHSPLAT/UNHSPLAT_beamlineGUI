@@ -31,7 +31,36 @@ classdef acquisition < handle
             obj.closeGUI();
             
         end
+        
+        function complete(obj,~,~)
+            % Stop timer if valid and running, 
+            if isvalid(obj.scanTimer)
+                if strcmp(obj.scanTimer.Running,'on')
+                    stop(obj.scanTimer);
+                end
+                delete(obj.scanTimer);
+            end
 
+            if obj.testRunning
+                % Save results to CSV
+                fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
+                writetable(struct2table(obj.scan_mon), fname);
+                fprintf('\nTest complete!\n');
+                
+                obj.hBeamlineGUI.genTestSequence();
+                obj.testRunning = false;
+            end
+            %CLOSEGUI Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
+            % Enable beamline GUI run test button if still valid
+            if isvalid(obj.hBeamlineGUI)
+                set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
+                set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
+            end
+            % Restart beamline timers
+            if isequal(obj.hBeamlineGUI.hLogTimer.Running, 'off')
+                obj.hBeamlineGUI.restartTimer();
+            end
+        end
     end
 
     methods (Abstract)

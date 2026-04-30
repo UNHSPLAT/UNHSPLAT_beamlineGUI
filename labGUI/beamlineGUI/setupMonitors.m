@@ -400,7 +400,7 @@ function monitors = setupMonitors(instruments)
     function vstate = interlock_read(self)
         interloc_outlet = 5;
         if self.parent.Connected
-            vstate = self.parent.lastRead;
+            vstate = double(self.parent.lastRead);
             if self.siblings.lastRead>5e-2 && vstate(interloc_outlet)
                 warning('%s Interlock Triggered at %s',self.Tag,datetime("now"))
                 self.parent.setOff(interloc_outlet);

@@ -19,6 +19,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
         RightPanel              matlab.ui.container.Panel
         UIAxes                  matlab.ui.control.UIAxes
         PlotOptionsButton       matlab.ui.control.Button
+        CoordLabel              matlab.ui.control.Label
     end
 
     properties (Access = private)
@@ -55,43 +56,31 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 startDir = pwd;
             end
             
-            % Ask user if they want to select a file or folder
-            choice = questdlg('Load data from:', ...
-                'Load Data', ...
-                'Single File', ...
-                'Folder (All readings_* files)', ...
-                'Cancel', ...
-                'Single File');
-            
-            if strcmp(choice, 'Cancel') || isempty(choice)
+            % Open a single dialog accepting both files and folders
+            import javax.swing.JFileChooser;
+            jfc = JFileChooser(startDir);
+            jfc.setDialogTitle('Select a Data File or Folder');
+            jfc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+
+            result = jfc.showOpenDialog([]);
+            if result ~= JFileChooser.APPROVE_OPTION
                 return;
             end
-            
+
+            selectedPath = char(jfc.getSelectedFile().getAbsolutePath());
+
             try
-                if strcmp(choice, 'Single File')
-                    % Open file picker for CSV or MAT files
-                    [file, path] = uigetfile({'*.csv;*.mat', 'Data Files (*.csv, *.mat)'; ...
-                                              '*.csv', 'CSV Files (*.csv)'; ...
-                                              '*.mat', 'MAT Files (*.mat)'; ...
-                                              '*.*', 'All Files (*.*)'}, ...
-                                             'Select Data File', startDir);
-                    
-                    if isequal(file, 0)
-                        return; % User cancelled
-                    end
-                    
-                    app.DataFilePath = fullfile(path, file);
-                    app.DataTable = app.loadSingleFile(app.DataFilePath);
-                    app.FilePathLabel.Text = ['Loaded: ' file];
-                    
-                else % Load all readings files from folder
-                    % Open folder picker
-                    path = uigetdir(startDir, 'Select Folder with readings_* files');
-                    
-                    if isequal(path, 0)
-                        return; % User cancelled
-                    end
-                    
+                if isfile(selectedPath)
+                    % Single file selected
+                    app.DataFilePath = selectedPath;
+                    [~, fname, ext] = fileparts(selectedPath);
+                    app.DefaultDataDir = fileparts(selectedPath);
+                    app.DataTable = app.loadSingleFile(selectedPath);
+                    app.FilePathLabel.Text = ['Loaded: ' fname ext];
+
+                else % Folder selected — load all readings_* files recursively
+                    path = selectedPath;
+
                     % Find all readings_*.csv and readings_*.mat files recursively
                     csvFiles = dir(fullfile(path, '**', 'readings_*.csv'));
                     matFiles = dir(fullfile(path, '**', 'readings_*.mat'));
@@ -125,6 +114,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     end
                     
                     app.DataFilePath = path;
+                    app.DefaultDataDir = path;
                     app.FilePathLabel.Text = sprintf('Loaded %d files from folder', fileCount);
                 end
                 
@@ -1097,7 +1087,50 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
 
             function copyResults()
                 txt = strjoin(resultsArea.Value, newline);
-                clipboard('copy', txt);
+                 clipboard('copy', txt);
+            end
+        end
+
+        % Update cursor position label when mouse moves over axes
+        function updateCursorPosition(app)
+            cp = app.UIAxes.CurrentPoint;
+            xl = xlim(app.UIAxes);
+            yl = ylim(app.UIAxes);
+            xIsDatetime = isdatetime(xl(1));
+            yIsDatetime = isdatetime(yl(1));
+            xFrac = cp(1,1);
+            yFrac = cp(1,2);
+            % When the axis is datetime, CurrentPoint gives a [0,1] fraction
+            % of the axis range; convert to datetime by interpolation.
+            if xIsDatetime
+                x = num2ruler(cp(1,1), app.UIAxes.XAxis);
+                xInRange = x >= xl(1) && x <= xl(2);
+            else
+                x = xFrac;
+                xInRange = x >= xl(1) && x <= xl(2);
+            end
+            if yIsDatetime
+                y = num2ruler(cp(1,2), app.UIAxes.YAxis);
+                yInRange = y >= yl(1) && y <= yl(2);
+            else
+                y = yFrac;
+                yInRange = y >= yl(1) && y <= yl(2);
+            end
+
+            if xInRange && yInRange
+                if xIsDatetime
+                    xStr = char(x, 'yyyy-MM-dd HH:mm:ss');
+                else
+                    xStr = sprintf('%.5g', x);
+                end
+                if yIsDatetime
+                    yStr = char(y, 'yyyy-MM-dd HH:mm:ss');
+                else
+                    yStr = sprintf('%.5g', y);
+                end
+                app.CoordLabel.Text = ['x: ' xStr '   y: ' yStr];
+            else
+                app.CoordLabel.Text = '';
             end
         end
 
@@ -1237,6 +1270,18 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
             ylabel(app.UIAxes, 'Y')
             app.UIAxes.Position = [10 10 690 550];
             grid(app.UIAxes, 'on');
+
+            % Create CoordLabel at bottom-right of plot area
+            app.CoordLabel = uilabel(app.RightPanel);
+            app.CoordLabel.Position = [490 560 210 20];
+            app.CoordLabel.Text = '';
+            app.CoordLabel.HorizontalAlignment = 'right';
+            app.CoordLabel.FontSize = 10;
+            app.CoordLabel.FontName = 'Courier New';
+            app.CoordLabel.BackgroundColor = 'none';
+
+            % Wire mouse-motion callback to update coordinate display
+            app.UIFigure.WindowButtonMotionFcn = @(~,~) app.updateCursorPosition();
 
             % Show the figure after all components are created
             app.UIFigure.Visible = 'on';

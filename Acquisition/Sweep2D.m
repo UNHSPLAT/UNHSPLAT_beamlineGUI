@@ -72,7 +72,7 @@ classdef Sweep2D < acquisition
             % set testLabel
 
             % get active and inactive monitors for scanning
-            function tag = get_active(mon)
+            function get_active(mon)
                 if mon.active
                     obj.PSList(end+1) = mon.Tag;
                 else
@@ -80,8 +80,8 @@ classdef Sweep2D < acquisition
                 end
             end
 
-            obj.PSList = [""];
-            obj.resultList = [""];
+            obj.PSList = "";
+            obj.resultList = "";
 
             structfun(@get_active,obj.hBeamlineGUI.Monitors);
 
@@ -389,8 +389,8 @@ classdef Sweep2D < acquisition
                 %Define meshgrid from scan vectors
                 [xx,yy] = meshgrid(vPointsX,vPointsY);
                 %Reorder meshgrid so we scan in triangles instead of knife edges
-                %xx(2:2:end,:) = fliplr(xx(2:2:end,:));
-                %yy(2:2:end,:) = fliplr(yy(2:2:end,:));
+                xx(2:2:end,:) = fliplr(xx(2:2:end,:));
+                yy(2:2:end,:) = fliplr(yy(2:2:end,:));
                 
                 %Flatten mat values and assign
                 obj.VPoints = reshape(xx',1,[]);
@@ -417,13 +417,6 @@ classdef Sweep2D < acquisition
 
 
                 obj.hAxes1 = axes(obj.hFigure);
-
-                % Preallocate arrays
-                FX = reshape(obj.VPoints,[stepsVal,stepsVal2])';
-                FX(2:2:end,:) = fliplr(FX(2:2:end,:));
-                
-                FY = reshape(obj.VPoints2,[stepsVal,stepsVal2])';
-                FY(2:2:end,:) = fliplr(FY(2:2:end,:));
 
                 obj.scan_mon = struct();
                 fields = fieldnames(obj.hBeamlineGUI.Monitors);
@@ -482,10 +475,9 @@ classdef Sweep2D < acquisition
                 rethrow(MExc);
 
             end
-            function scan_step(src,evt)
+            function scan_step(~,~)
                 iV = obj.step_num;
-                
-                
+
                 display(iV/length(obj.VPoints))
                 if isempty(obj.hFigure) || ~isvalid(obj.hFigure)
                     obj.hFigure = figure('NumberTitle','off',...
@@ -511,7 +503,8 @@ classdef Sweep2D < acquisition
                 end
                 
                 FF = reshape(obj.scan_mon.(daqTag),[stepsVal,stepsVal2])';
-                %FF(2:2:end,:) = fliplr(FF(2:2:end,:));
+                FF(2:2:end,:) = fliplr(FF(2:2:end,:));
+                
                 
                 imagesc(obj.hAxes1,vPointsX,vPointsY,FF);
                 
@@ -543,37 +536,6 @@ classdef Sweep2D < acquisition
 %                 pause(obj.rampDwell);
             end
                 
-        end
-
-        
-
-        function complete(obj,~,~)
-            % Stop timer if valid and running, 
-            if isvalid(obj.scanTimer)
-                if strcmp(obj.scanTimer.Running,'on')
-                    stop(obj.scanTimer);
-                end
-                delete(obj.scanTimer);
-            end
-
-            if obj.testRunning
-                % Save results to CSV
-                fname = fullfile(obj.hBeamlineGUI.DataDir,sprintf('%s_results.csv',obj.testLab));
-                writetable(struct2table(obj.scan_mon), fname);
-                fprintf('\nTest complete!\n');
-
-                obj.testRunning = false;
-            end
-            %CLOSEGUI Re-enable beamline GUI run test button, restart timer, and delete obj when figure is closed
-            % Enable beamline GUI run test button if still valid
-            if isvalid(obj.hBeamlineGUI)
-                set(obj.hBeamlineGUI.hRunBtn,'String','RUN TEST');
-                set(obj.hBeamlineGUI.hRunBtn,'Enable','on');
-            end
-            % Restart beamline timers
-            if isequal(obj.hbeamlineGUI.Timer.Running, 'off')
-                obj.hBeamlineGUI.restartTimer();
-            end
         end
 
     end
