@@ -14,6 +14,8 @@ classdef monitor < handle
         group string = ""%
         children = []%
         monTimer
+        lastReadTime datetime = datetime('now')%
+        listenProp = 'lastRead'
     end
     properties (SetObservable) 
         lastRead %
@@ -36,25 +38,46 @@ classdef monitor < handle
                 % Initialize an array of listeners
                 obj.parentListener = event.listener.empty;
                 
+                % obj.parentListener = addlistener(obj.parent, 'lastRead', 'PostSet', @obj.read);
+
                 % Handle both single objects and arrays
                 parents = obj.parent;
                 
                 % Create a listener for each parent
                 for i = 1:numel(parents)
-                    try
-                        newListener = addlistener(parents(i), 'lastRead', 'PostSet', @obj.read);
-                        obj.parentListener(end+1) = newListener;
-                    catch ME
-                        warning('Failed to create listener for parent %d: %s', i, ME.message);
+                    if isa(parents(i), 'timer')
+                        % timer properties are not SetObservable; chain into TimerFcn instead
+                        prev = parents(i).TimerFcn;
+                        mon = obj;
+                        parents(i).TimerFcn = @(src,evt) monitor.chainTimerCallback(prev, mon, src, evt);
+                    else
+                        try
+                            newListener = addlistener(parents(i), obj.listenProp, 'PostSet', @obj.read);
+                            obj.parentListener(end+1) = newListener;
+                        catch ME
+                            warning('Failed to create listener for parent %d: %s', i, ME.message);
+                        end
                     end
                 end
             end
         end
 
         function val = read(obj,src,evnt) 
-            % if all([obj.parent.Connected])
             try
                 val = obj.readFunc(obj);
+                try
+                    if isempty(obj.parent)
+                        obj.lastReadTime = datetime('now');
+                    elseif ~isprop(obj.parent(1), 'Connected')
+                        obj.lastReadTime = datetime('now');
+                    elseif all([obj.parent.Connected]) 
+                        obj.lastReadTime = obj.parent.lastReadTime;
+                    else
+                        obj.lastReadTime = datetime('NaT');
+                    end
+                catch
+                    obj.lastReadTime = datetime('NaT');
+                end
             catch
                 val = nan;
             end
@@ -65,6 +88,11 @@ classdef monitor < handle
             % if all([obj.parent.Connected])
             obj.setFunc(obj,val);
             % end
+            % Update GUI field if it exists
+            if ~isempty(obj.guiHand) && isfield(obj.guiHand, 'statusGrpSetField') && ...
+               isvalid(obj.guiHand.statusGrpSetField)
+                set(obj.guiHand.statusGrpSetField,'String',num2str(val));
+            end
         end
 
         function guiSetCallback(obj,~,~)
@@ -73,7 +101,7 @@ classdef monitor < handle
             setVal = str2double(obj.guiHand.statusGrpSetField.String);
             %need to insert some error handling here
             obj.set(setVal);
-            set(obj.guiHand.statusGrpSetField,'String','');
+            %set(obj.guiHand.statusGrpSetField,'String','');
         end
 
         function setfield(obj,field,val)
@@ -82,6 +110,19 @@ classdef monitor < handle
 
         function printStr = sPrint(obj)
             printStr = sprintf('%s [%s]',obj.textLabel,obj.unit);
+        end
+
+        function printVal = sPrintVal(obj)
+            printVal = sprintf(obj.formatSpec,obj.lastRead);
+        end
+    end
+
+    methods (Static, Access = private)
+        function chainTimerCallback(prevFcn, monObj, src, evt)
+            if ~isempty(prevFcn)
+                feval(prevFcn, src, evt);
+            end
+            monObj.read(src, evt);
         end
     end
 end
