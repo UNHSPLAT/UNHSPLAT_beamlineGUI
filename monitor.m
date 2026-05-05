@@ -90,9 +90,9 @@ classdef monitor < handle
             end
 
             %account for array style monitors that may be unfilled
-            if len(val)==obj.monitorLength
+            if numel(val)==obj.monitorLength
                 obj.lastRead = val;
-            elif obj.monitorLength > 0
+            elseif obj.monitorLength > 0
                 % Keep lastRead shape fixed at monitorLength
                 newVal = nan(1, obj.monitorLength);
                 n = min(numel(val), obj.monitorLength);
