@@ -84,6 +84,14 @@
 
         % Set Gate redundant with arm
         %stat = count.devRW('GATE 3; GATE?');
+        
+        %set Levels, not currently imp
+        % » stat = count.devRW('LEVL? 0')
+        % stat ='1.95'
+        % » stat = count.devRW('LEVL? 1')
+        % stat ='0.92'
+        % » stat = count.devRW('LEVL? 2')
+        % stat = '0.01
     end
 
     % Define hardware objects for each instrument, with appropriate configuration functions
