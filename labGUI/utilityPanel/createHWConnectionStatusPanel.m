@@ -81,7 +81,6 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
         % Callback to connect device
         function connectCallback(hwDevice)
             hwDevice.connectDevice();
-            hwDevice.restartTimer();
         end
         
         % Callback to disconnect device
@@ -103,7 +102,6 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
             disp(nam)
             if any(strcmp(tags, nam))
                 Hardware.(nam).connectDevice();
-                Hardware.(nam).restartTimer();
             end
         end
     end
