@@ -81,6 +81,9 @@ switch button
         if launchNew
             % Build the MATLAB command to run in the new instance
             startupDir = fileparts(which('startup'));
+            if isempty(startupDir)
+                startupDir = pwd;
+            end
             switch guiIdx
                 case 1
                     runCmd = 'mybeamlineGUI = beamlineGUI;';
