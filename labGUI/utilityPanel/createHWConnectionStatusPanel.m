@@ -127,10 +127,14 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
             nam = hwStats(i).String;
             if any(strcmp(tags, nam))
                 disp(['Disconnecting: ' nam])
-                if ismethod(Hardware.(nam), 'disconnectDevice')
-                    Hardware.(nam).disconnectDevice();
-                else
-                    warning('createHWConnectionStatusPanel:NoDisconnect', 'Device %s does not have a disconnectDevice method.', nam);
+                try
+                    if ismethod(Hardware.(nam), 'disconnectDevice')
+                        Hardware.(nam).disconnectDevice();
+                    else
+                        warning('createHWConnectionStatusPanel:NoDisconnect', 'Device %s does not have a disconnectDevice method.', nam);
+                    end
+                catch ME
+                    warning('createHWConnectionStatusPanel:DisconnectError', 'Error disconnecting %s: %s', nam, ME.message);
                 end
             end
         end
