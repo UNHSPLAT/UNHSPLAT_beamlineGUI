@@ -82,9 +82,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     path = selectedPath;
 
                     % Find all readings_*.csv and readings_*.mat files recursively
-                    csvFiles = dir(fullfile(path, '**', 'readings_*.csv'));
-                    matFiles = dir(fullfile(path, '**', 'readings_*.mat'));
-                    allFiles = [csvFiles; matFiles];
+                    allFiles = dir(fullfile(path, '**', 'readings_*.csv'));
                     
                     if isempty(allFiles)
                         uialert(app.UIFigure, ...
@@ -104,7 +102,19 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                             if isempty(app.DataTable)
                                 app.DataTable = tempTable;
                             else
-                                % Combine tables, matching columns
+                                % Combine tables, matching columns and filling missing with NaN
+                                existingCols = app.DataTable.Properties.VariableNames;
+                                newCols = tempTable.Properties.VariableNames;
+                                % Add missing columns to app.DataTable
+                                for mc = newCols(~ismember(newCols, existingCols))
+                                    app.DataTable.(mc{1}) = nan(height(app.DataTable), 1);
+                                end
+                                % Add missing columns to tempTable
+                                for mc = existingCols(~ismember(existingCols, newCols))
+                                    tempTable.(mc{1}) = nan(height(tempTable), 1);
+                                end
+                                % Reorder tempTable to match app.DataTable column order
+                                tempTable = tempTable(:, app.DataTable.Properties.VariableNames);
                                 app.DataTable = [app.DataTable; tempTable]; %#ok<AGROW>
                             end
                             fileCount = fileCount + 1;
