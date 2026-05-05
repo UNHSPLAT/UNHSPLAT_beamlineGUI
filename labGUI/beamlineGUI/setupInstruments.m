@@ -3,6 +3,7 @@
     % Define configuration funcitons to be executed on connection
     %
      function fluke_config(fluke)
+        fprintf('Configuring Fluke Hydra...\n');
          % Attached to instrument chasis
         fluke.devRW("FUNC 1,TEMP,J");
         display(fluke.devRW("FUNC? 1"));
@@ -26,6 +27,7 @@
 
     %Config Multimeter
     function config_keithleyMultimeter(hDMM)
+        fprintf('Configuring Keithley Multimeter...\n');
         if hDMM.Connected
             hDMM.devRW('SENS:FUNC "VOLT", (@101:103)');
             hDMM.devRW('SENS:VOLT:INP MOHM10, (@101:103)');
@@ -69,18 +71,23 @@
         end
     end
 
-    function config_counter(count)
+    function config_sr620(count)
+        fprintf('Configuring SR620 Counter...');
         % Disable auto measurement  mode
         stat = count.devRW('AUTM 0; AUTM?');
+        fprintf('AUTM 0 -> %s\n', strtrim(stat));
 
         % Set to count mode
         stat = count.devRW('MODE 6; MODE?');
+        fprintf('MODE 6 -> %s\n', strtrim(stat));
 
         % Set sample number:
         stat = count.devRW('SIZE 1; SIZE?');
+        fprintf('SIZE 1 -> %s\n', strtrim(stat));
 
         % Set Gate arm/gate mode to 1s
         stat = count.devRW('ARMM 5; ARMM?');
+        fprintf('ARMM 5 -> %s\n', strtrim(stat));
 
         % Set Gate redundant with arm
         %stat = count.devRW('GATE 3; GATE?');
@@ -112,7 +119,7 @@
                                                                'autoConnect',true),...
                          "MCPwebCam",camControl(),...
                          "caen_HVPS2",caen_hvps([],'LBus_Address',2,'equip_config_filename','config_caenPS2.ini'),...
-                         "sr620counter",srsSR620("GPIB0::30::INSTR"),...
+                         "sr620counter",srsSR620("GPIB0::30::INSTR",'funcConfig',@config_sr620),...
                          "flukeHydra",flukeHydra2620A("GPIB0::6::INSTR", ...
                                                 'funcConfig',@fluke_config,'autoConnect',true),...
                          "webpowerstrip1",webpowerstrip("192.168.0.110", ...
