@@ -71,7 +71,7 @@
 
     function config_counter(count)
         % Disable auto measurement  mode
-        stat = count.devRW('AUTM 0;AUTM?');
+        stat = count.devRW('AUTM 0; AUTM?');
 
         % Set to count mode
         stat = count.devRW('MODE 6; MODE?');
@@ -79,11 +79,11 @@
         % Set sample number:
         stat = count.devRW('SIZE 1; SIZE?');
 
-        % Set Gate arm mode to .01s
-        stat = count.devRW('ARMM 3; ARMM?');
+        % Set Gate arm/gate mode to 1s
+        stat = count.devRW('ARMM 5; ARMM?');
 
-        % Set Gate
-        stat = count.devRW('GATE 3; GATE?');
+        % Set Gate redundant with arm
+        %stat = count.devRW('GATE 3; GATE?');
     end
 
     % Define hardware objects for each instrument, with appropriate configuration functions
