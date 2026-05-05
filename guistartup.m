@@ -69,7 +69,7 @@ end
 switch button
     case 'OK'
         % Clear timers if option selected
-        if clearTimers
+        if clearTimers && ~launchNew
             alltimers = timerfindall;
             if ~isempty(alltimers)
                 stop(alltimers);
