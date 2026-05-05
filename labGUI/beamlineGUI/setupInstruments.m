@@ -38,7 +38,6 @@
     function config_picoFaraday(hFaraday)
         trynum = 3;
         if hFaraday.Connected
-%             hFaraday.Tag = "Faraday";
             hFaraday.devRW(':SYST:ZCH OFF');
             dataOut = strtrim(hFaraday.devRW(':SYST:ZCH?'));
             i = 1;
@@ -70,6 +69,23 @@
         end
     end
 
+    function config_counter(count)
+        % Disable auto measurement  mode
+        stat = count.devRW('AUTM 0;AUTM?');
+
+        % Set to count mode
+        stat = count.devRW('MODE 6; MODE?');
+
+        % Set sample number:
+        stat = count.devRW('SIZE 1; SIZE?');
+
+        % Set Gate arm mode to .01s
+        stat = count.devRW('ARMM 3; ARMM?');
+
+        % Set Gate
+        stat = count.devRW('GATE 3; GATE?');
+    end
+
     % Define hardware objects for each instrument, with appropriate configuration functions
     instruments = struct("leyboldPressure1",leyboldCenter2("ASRL7::INSTR",'autoConnect',true),...
                          "leyboldPressure3",leyboldGraphix3("ASRL10::INSTR",'autoConnect',true),...
@@ -90,7 +106,7 @@
                          "caen_HVPS2",caen_hvps([],'LBus_Address',2,'equip_config_filename','config_caenPS2.ini'),...
                          "sr620counter",srsSR620("GPIB0::30::INSTR"),...
                          "flukeHydra",flukeHydra2620A("GPIB0::6::INSTR", ...
-                         'funcConfig',@fluke_config,'autoConnect',true),...
+                                                'funcConfig',@fluke_config,'autoConnect',true),...
                          "webpowerstrip1",webpowerstrip("192.168.0.110", ...
                                                         'autoConnect',true, ...
                                                          'refreshRate',2)...
