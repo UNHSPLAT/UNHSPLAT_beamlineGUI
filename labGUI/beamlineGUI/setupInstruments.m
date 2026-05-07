@@ -10,7 +10,7 @@
         
         % disable all channels for configure
         for ch = 1:10
-            fluke.devRW(sprintf("FUNC %d OFF", ch));
+            fluke.devRW(sprintf("FUNC %d, OFF", ch));
             display(fluke.devRW(sprintf("FUNC? %d", ch)));
         end
 
