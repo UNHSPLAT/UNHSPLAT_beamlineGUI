@@ -80,13 +80,20 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
         
         % Callback to connect device
         function connectCallback(hwDevice)
-            hwDevice.connectDevice();
-            hwDevice.restartTimer();
+            if ismethod(hwDevice, 'connectDevice')
+                hwDevice.connectDevice();
+            else
+                warning('createHWConnectionStatusPanel:NoConnect', 'Device %s does not have a connectDevice method.', hwDevice.Tag);
+            end
         end
         
         % Callback to disconnect device
         function disconnectCallback(hwDevice)
-            hwDevice.disconnectDevice();
+            if ismethod(hwDevice, 'disconnectDevice')
+                hwDevice.disconnectDevice();
+            else
+                warning('createHWConnectionStatusPanel:NoDisconnect', 'Device %s does not have a disconnectDevice method.', hwDevice.Tag);
+            end
         end
     end
 
@@ -102,8 +109,11 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
             nam = hwStats(i).String;
             disp(nam)
             if any(strcmp(tags, nam))
-                Hardware.(nam).connectDevice();
-                Hardware.(nam).restartTimer();
+                if ismethod(Hardware.(nam), 'connectDevice')
+                    Hardware.(nam).connectDevice();
+                else
+                    warning('createHWConnectionStatusPanel:NoConnect', 'Device %s does not have a connectDevice method.', nam);
+                end
             end
         end
     end
@@ -115,9 +125,17 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
         tags = fieldnames(Hardware);
         for i = 1:numel(hwStats)
             nam = hwStats(i).String;
-            disp(['Disconnecting: ' nam])
             if any(strcmp(tags, nam))
-                Hardware.(nam).disconnectDevice();
+                disp(['Disconnecting: ' nam])
+                try
+                    if ismethod(Hardware.(nam), 'disconnectDevice')
+                        Hardware.(nam).disconnectDevice();
+                    else
+                        warning('createHWConnectionStatusPanel:NoDisconnect', 'Device %s does not have a disconnectDevice method.', nam);
+                    end
+                catch ME
+                    warning('createHWConnectionStatusPanel:DisconnectError', 'Error disconnecting %s: %s', nam, ME.message);
+                end
             end
         end
     end

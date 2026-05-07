@@ -56,35 +56,45 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                 startDir = pwd;
             end
             
-            % Open a single dialog accepting both files and folders
-            import javax.swing.JFileChooser;
-            jfc = JFileChooser(startDir);
-            jfc.setDialogTitle('Select a Data File or Folder');
-            jfc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-
-            result = jfc.showOpenDialog([]);
-            if result ~= JFileChooser.APPROVE_OPTION
+            % Ask user if they want to select a file or folder
+            choice = questdlg('Load data from:', ...
+                'Load Data', ...
+                'Single File', ...
+                'Folder (All readings_* files)', ...
+                'Cancel', ...
+                'Single File');
+            
+            if strcmp(choice, 'Cancel') || isempty(choice)
                 return;
             end
 
-            selectedPath = char(jfc.getSelectedFile().getAbsolutePath());
-
             try
-                if isfile(selectedPath)
-                    % Single file selected
-                    app.DataFilePath = selectedPath;
-                    [~, fname, ext] = fileparts(selectedPath);
-                    app.DefaultDataDir = fileparts(selectedPath);
-                    app.DataTable = app.loadSingleFile(selectedPath);
-                    app.FilePathLabel.Text = ['Loaded: ' fname ext];
-
-                else % Folder selected — load all readings_* files recursively
-                    path = selectedPath;
+                if strcmp(choice, 'Single File')
+                    % Open file picker for CSV or MAT files
+                    [file, path] = uigetfile({'*.csv;*.mat', 'Data Files (*.csv, *.mat)'; ...
+                                              '*.csv', 'CSV Files (*.csv)'; ...
+                                              '*.mat', 'MAT Files (*.mat)'; ...
+                                              '*.*', 'All Files (*.*)'}, ...
+                                             'Select Data File', startDir);
+                    
+                    if isequal(file, 0)
+                        return; % User cancelled
+                    end
+                    
+                    app.DataFilePath = fullfile(path, file);
+                    app.DataTable = app.loadSingleFile(app.DataFilePath);
+                    app.FilePathLabel.Text = ['Loaded: ' file];
+                    
+                else % Load all readings files from folder
+                    % Open folder picker
+                    path = uigetdir(startDir, 'Select Folder with readings_* files');
+                    
+                    if isequal(path, 0)
+                        return; % User cancelled
+                    end
 
                     % Find all readings_*.csv and readings_*.mat files recursively
-                    csvFiles = dir(fullfile(path, '**', 'readings_*.csv'));
-                    matFiles = dir(fullfile(path, '**', 'readings_*.mat'));
-                    allFiles = [csvFiles; matFiles];
+                    allFiles = dir(fullfile(path, '**', 'readings_*.csv'));
                     
                     if isempty(allFiles)
                         uialert(app.UIFigure, ...
@@ -104,7 +114,19 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                             if isempty(app.DataTable)
                                 app.DataTable = tempTable;
                             else
-                                % Combine tables, matching columns
+                                % Combine tables, matching columns and filling missing with NaN
+                                existingCols = app.DataTable.Properties.VariableNames;
+                                newCols = tempTable.Properties.VariableNames;
+                                % Add missing columns to app.DataTable
+                                for mc = newCols(~ismember(newCols, existingCols))
+                                    app.DataTable.(mc{1}) = nan(height(app.DataTable), 1);
+                                end
+                                % Add missing columns to tempTable
+                                for mc = existingCols(~ismember(existingCols, newCols))
+                                    tempTable.(mc{1}) = nan(height(tempTable), 1);
+                                end
+                                % Reorder tempTable to match app.DataTable column order
+                                tempTable = tempTable(:, app.DataTable.Properties.VariableNames);
                                 app.DataTable = [app.DataTable; tempTable]; %#ok<AGROW>
                             end
                             fileCount = fileCount + 1;

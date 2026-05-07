@@ -3,29 +3,66 @@
     % Define configuration funcitons to be executed on connection
     %
      function fluke_config(fluke)
-         % Attached to instrument chasis
+        fprintf('Configuring Fluke Hydra...\n');
+
+        % disable scan for configure
+        fluke.devRW("SCAN 0");
+        
+        % disable all channels for configure
+        for ch = 1:10
+            response = fluke.devRW(sprintf("FUNC %d, OFF;FUNC? %d", ch, ch));
+            if ~strcmp(strtrim(response), 'OFF')
+                warning('beamlineGUI:flukeChannelNotOff', ...
+                    'Channel %d did not respond with ''OFF'' as expected (got: ''%s'')', ch, strtrim(response));
+            end
+        end
+
+        %% Enable and config Thermocouples
+        % Attached to instrument chasis
         fluke.devRW("FUNC 1,TEMP,J");
-        display(fluke.devRW("FUNC? 1"));
+        response = strtrim(fluke.devRW("FUNC? 1"));
+        if ~strcmp(response, 'TEMP,J')
+            warning('beamlineGUI:flukeConfigMismatch', ...
+                'Channel 1 config did not respond with ''TEMP,J'' as expected (got: ''%s'')', response);
+        end
         
 %         fluke.devRW("FUNC 3,TEMP,J");
-%         display(fluke.devRW("FUNC? 3"));
+%         response = strtrim(fluke.devRW("FUNC? 3"));
+%         if ~strcmp(response, 'TEMP,J')
+%             warning('beamlineGUI:flukeConfigMismatch', ...
+%                 'Channel 3 config did not respond with ''TEMP,J'' as expected (got: ''%s'')', response);
+%         end
         
         % Attached to opalkelly
         fluke.devRW("FUNC 4,TEMP,J");
-        display(fluke.devRW("FUNC? 4"));
+        response = strtrim(fluke.devRW("FUNC? 4"));
+        if ~strcmp(response, 'TEMP,J')
+            warning('beamlineGUI:flukeConfigMismatch', ...
+                'Channel 4 config did not respond with ''TEMP,J'' as expected (got: ''%s'')', response);
+        end
         
         % Attached to chamber 
         fluke.devRW("FUNC 5,TEMP,J");
-        display(fluke.devRW("FUNC? 5"));
+        response = strtrim(fluke.devRW("FUNC? 5"));
+        if ~strcmp(response, 'TEMP,J')
+            warning('beamlineGUI:flukeConfigMismatch', ...
+                'Channel 5 config did not respond with ''TEMP,J'' as expected (got: ''%s'')', response);
+        end
         
         fluke.devRW("INTVL 0,0,3");
-        display(fluke.devRW("INTVL?"));
+        response = strtrim(fluke.devRW("INTVL?"));
+        if ~strcmp(response, '0,0,3')
+            warning('beamlineGUI:flukeConfigMismatch', ...
+                'INTVL did not respond with ''0,0,3'' as expected (got: ''%s'')', response);
+        end
         
+        % re-enable scan
         fluke.devRW("SCAN 1");
      end
 
     %Config Multimeter
     function config_keithleyMultimeter(hDMM)
+        fprintf('Configuring Keithley Multimeter...\n');
         if hDMM.Connected
             hDMM.devRW('SENS:FUNC "VOLT", (@101:103)');
             hDMM.devRW('SENS:VOLT:INP MOHM10, (@101:103)');
@@ -38,7 +75,6 @@
     function config_picoFaraday(hFaraday)
         trynum = 3;
         if hFaraday.Connected
-%             hFaraday.Tag = "Faraday";
             hFaraday.devRW(':SYST:ZCH OFF');
             dataOut = strtrim(hFaraday.devRW(':SYST:ZCH?'));
             i = 1;
@@ -70,6 +106,36 @@
         end
     end
 
+    function config_sr620(count)
+        fprintf('Configuring SR620 Counter...');
+        % Disable auto measurement  mode
+        stat = count.devRW('AUTM 0; AUTM?');
+        fprintf('AUTM 0 -> %s\n', strtrim(stat));
+
+        % Set to count mode
+        stat = count.devRW('MODE 6; MODE?');
+        fprintf('MODE 6 -> %s\n', strtrim(stat));
+
+        % Set sample number:
+        stat = count.devRW('SIZE 1; SIZE?');
+        fprintf('SIZE 1 -> %s\n', strtrim(stat));
+
+        % Set Gate arm/gate mode to 1s
+        stat = count.devRW('ARMM 5; ARMM?');
+        fprintf('ARMM 5 -> %s\n', strtrim(stat));
+
+        % Set Gate redundant with arm
+        %stat = count.devRW('GATE 3; GATE?');
+        
+        %set Levels, not currently imp
+        % » stat = count.devRW('LEVL? 0')
+        % stat ='1.95'
+        % » stat = count.devRW('LEVL? 1')
+        % stat ='0.92'
+        % » stat = count.devRW('LEVL? 2')
+        % stat = '0.01
+    end
+
     % Define hardware objects for each instrument, with appropriate configuration functions
     instruments = struct("leyboldPressure1",leyboldCenter2("ASRL7::INSTR",'autoConnect',true),...
                          "leyboldPressure3",leyboldGraphix3("ASRL10::INSTR",'autoConnect',true),...
@@ -88,9 +154,9 @@
                                                                'autoConnect',true),...
                          "MCPwebCam",camControl(),...
                          "caen_HVPS2",caen_hvps([],'LBus_Address',2,'equip_config_filename','config_caenPS2.ini'),...
-                         "sr620counter",srsSR620("GPIB0::30::INSTR"),...
+                         "sr620counter",srsSR620("GPIB0::30::INSTR",'funcConfig',@config_sr620),...
                          "flukeHydra",flukeHydra2620A("GPIB0::6::INSTR", ...
-                         'funcConfig',@fluke_config,'autoConnect',true),...
+                                                'funcConfig',@fluke_config,'autoConnect',true),...
                          "webpowerstrip1",webpowerstrip("192.168.0.110", ...
                                                         'autoConnect',true, ...
                                                          'refreshRate',2)...

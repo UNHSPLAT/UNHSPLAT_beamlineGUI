@@ -21,6 +21,7 @@ classdef monitor < handle
         lastRead %
         lock = false%
         parentListener
+        monitorLength = 1
     end
 
     methods
@@ -60,6 +61,10 @@ classdef monitor < handle
                     end
                 end
             end
+
+            if obj.monitorLength > 1
+                obj.lastRead = nan(1, obj.monitorLength);
+            end
         end
 
         function val = read(obj,src,evnt) 
@@ -81,7 +86,19 @@ classdef monitor < handle
             catch
                 val = nan;
             end
-            obj.lastRead = val;
+
+            %account for array style monitors that may be unfilled
+            if numel(val)==obj.monitorLength
+                obj.lastRead = val;
+            elseif obj.monitorLength > 1
+                % Keep lastRead shape fixed at monitorLength
+                newVal = nan(1, obj.monitorLength);
+                n = min(numel(val), obj.monitorLength);
+                newVal(1:n) = val(1:n);
+                obj.lastRead = newVal;
+            else
+                warning('Monitor %s readFunc output length does not match monitorLength. Output ignored.', obj.Tag);
+            end
         end
 
         function set(obj,val)

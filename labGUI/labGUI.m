@@ -268,14 +268,26 @@ classdef (Abstract) labGUI < handle
             %DELETE Handle class destructor
             
             % Stop timer if running
-            obj.stopTimer();
+            try
+                obj.stopTimer();
+            catch ME
+                warning('labGUI:DeleteError', 'stopTimer error: %s', ME.message);
+            end
 
             % delete timers on instruments, log and acq
-            obj.destroyTimer();
+            try
+                obj.destroyTimer();
+            catch ME
+                warning('labGUI:DeleteError', 'destroyTimer error: %s', ME.message);
+            end
 
             % Delete figure
-            if isvalid(obj.hFigure)
-                delete(obj.hFigure);
+            try
+                if isvalid(obj.hFigure)
+                    delete(obj.hFigure);
+                end
+            catch ME
+                warning('labGUI:DeleteError', 'Figure delete error: %s', ME.message);
             end
 
             % Clean up monitors and hardware
@@ -283,12 +295,20 @@ classdef (Abstract) labGUI < handle
             function try_delete(x)
                 try
                     delete(x);
-                catch
-                    % pass to avoid error during cleanup
+                catch ME
+                    warning('labGUI:DeleteError', 'Object delete error: %s', ME.message);
                 end
             end
-            structfun(@(x)try_delete(x),obj.Monitors,'UniformOutput',false);
-            structfun(@(x)try_delete(x),obj.Hardware,'UniformOutput',false);
+            try
+                structfun(@(x)try_delete(x),obj.Monitors,'UniformOutput',false);
+            catch ME
+                warning('labGUI:DeleteError', 'Monitors cleanup error: %s', ME.message);
+            end
+            try
+                structfun(@(x)try_delete(x),obj.Hardware,'UniformOutput',false);
+            catch ME
+                warning('labGUI:DeleteError', 'Hardware cleanup error: %s', ME.message);
+            end
         end
 
         function destroyTimer(obj)
