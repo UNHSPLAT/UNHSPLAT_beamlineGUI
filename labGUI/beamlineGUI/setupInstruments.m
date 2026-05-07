@@ -4,7 +4,12 @@
     %
      function fluke_config(fluke)
         fprintf('Configuring Fluke Hydra...\n');
-         % Attached to instrument chasis
+
+        % disable scan for configure
+        fluke.devRW("SCAN 0");
+        
+        %% Enable and config Thermocouples
+        % Attached to instrument chasis
         fluke.devRW("FUNC 1,TEMP,J");
         display(fluke.devRW("FUNC? 1"));
         
