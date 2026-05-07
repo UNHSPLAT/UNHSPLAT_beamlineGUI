@@ -10,29 +10,53 @@
         
         % disable all channels for configure
         for ch = 1:10
-            fluke.devRW(sprintf("FUNC %d, OFF", ch));
-            display(fluke.devRW(sprintf("FUNC? %d", ch)));
+            response = fluke.devRW(sprintf("FUNC %d, OFF;FUNC? %d", ch, ch));
+            if ~strcmp(strtrim(response), 'OFF')
+                warning('beamlineGUI:flukeChannelNotOff', ...
+                    'Channel %d did not respond with ''OFF'' as expected (got: ''%s'')', ch, strtrim(response));
+            end
         end
 
         %% Enable and config Thermocouples
         % Attached to instrument chasis
         fluke.devRW("FUNC 1,TEMP,J");
-        display(fluke.devRW("FUNC? 1"));
+        response = strtrim(fluke.devRW("FUNC? 1"));
+        if ~strcmp(response, 'TEMP,J')
+            warning('beamlineGUI:flukeConfigMismatch', ...
+                'Channel 1 config did not respond with ''TEMP,J'' as expected (got: ''%s'')', response);
+        end
         
 %         fluke.devRW("FUNC 3,TEMP,J");
-%         display(fluke.devRW("FUNC? 3"));
+%         response = strtrim(fluke.devRW("FUNC? 3"));
+%         if ~strcmp(response, 'TEMP,J')
+%             warning('beamlineGUI:flukeConfigMismatch', ...
+%                 'Channel 3 config did not respond with ''TEMP,J'' as expected (got: ''%s'')', response);
+%         end
         
         % Attached to opalkelly
         fluke.devRW("FUNC 4,TEMP,J");
-        display(fluke.devRW("FUNC? 4"));
+        response = strtrim(fluke.devRW("FUNC? 4"));
+        if ~strcmp(response, 'TEMP,J')
+            warning('beamlineGUI:flukeConfigMismatch', ...
+                'Channel 4 config did not respond with ''TEMP,J'' as expected (got: ''%s'')', response);
+        end
         
         % Attached to chamber 
         fluke.devRW("FUNC 5,TEMP,J");
-        display(fluke.devRW("FUNC? 5"));
+        response = strtrim(fluke.devRW("FUNC? 5"));
+        if ~strcmp(response, 'TEMP,J')
+            warning('beamlineGUI:flukeConfigMismatch', ...
+                'Channel 5 config did not respond with ''TEMP,J'' as expected (got: ''%s'')', response);
+        end
         
         fluke.devRW("INTVL 0,0,3");
-        display(fluke.devRW("INTVL?"));
+        response = strtrim(fluke.devRW("INTVL?"));
+        if ~strcmp(response, '0,0,3')
+            warning('beamlineGUI:flukeConfigMismatch', ...
+                'INTVL did not respond with ''0,0,3'' as expected (got: ''%s'')', response);
+        end
         
+        % re-enable scan
         fluke.devRW("SCAN 1");
      end
 
