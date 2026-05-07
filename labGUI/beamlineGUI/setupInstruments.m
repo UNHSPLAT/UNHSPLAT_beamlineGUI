@@ -8,6 +8,12 @@
         % disable scan for configure
         fluke.devRW("SCAN 0");
         
+        % disable all channels for configure
+        for ch = 1:10
+            fluke.devRW(sprintf("FUNC %d OFF", ch));
+            display(fluke.devRW(sprintf("FUNC? %d", ch)));
+        end
+
         %% Enable and config Thermocouples
         % Attached to instrument chasis
         fluke.devRW("FUNC 1,TEMP,J");
