@@ -104,27 +104,7 @@ classdef SWIPS_GUI < labGUI
                 'colSizes',colSize,...
                 'monitorGroup', 'HV');
 
-            %===================================================================================
-             % MCP ramp activate and abort button
-            obj.hMCPRamp = uicontrol(obj.hHVStatusGrp, ...
-                'Style','pushbutton',...
-               'Position',[sum(colSize(1:3))+xgap*3,ygap,sum(colSize(4:end))+xgap*3,obj.ysize],...
-               'String','Ramp MCP',...
-               'FontSize',12,...
-               'FontWeight','bold',...
-                'HorizontalAlignment','center',...
-                'Callback',@obj.mcpRampCallback);
-
-            function ramp_stat(self)
-                if self.parent.lock
-                    curr_string = 'Abort Ramp';
-                else
-                    curr_string = 'Ramp MCP';
-                end
-                set(self.guiHand,'String',curr_string);
-            end
-            obj.mcpRampListener = guiListener(obj.Monitors.voltMCP,'lock',...
-                                        obj.hMCPRamp,@ramp_stat);
+           
 
             % Panel height is automatically adjusted by guiPanelMake
 
@@ -188,7 +168,31 @@ classdef SWIPS_GUI < labGUI
                 'colSizes',colSize,... % Use existing column sizes
                 'monitorGroup', 'status');
             
+ %===================================================================================
+             % MCP ramp activate and abort button
+            obj.hMCPRamp = uicontrol(obj.hInstGrp, ...
+                'Style','pushbutton',...
+               'Position',[sum(colSize(1:3))+xgap*3,ygap,sum(colSize(4:end))+xgap*3,obj.ysize],...
+               'String','Ramp MCP',...
+               'FontSize',12,...
+               'FontWeight','bold',...
+                'HorizontalAlignment','center',...
+                'Callback',@obj.mcpRampCallback);
+
+            function ramp_stat(self)
+                if self.parent.lock
+                    curr_string = 'Abort Ramp';
+                else
+                    curr_string = 'Ramp MCP';
+                end
+                set(self.guiHand,'String',curr_string);
+            end
+            obj.mcpRampListener = guiListener(obj.Monitors.voltMCP,'lock',...
+                                        obj.hMCPRamp,@ramp_stat);
+
             obj.guiPanelTest([rightColStart, obj.hStatusGrp.Position(4)+obj.hStatusGrp.Position(2)+20, 360, 250],obj.hMainControlsTab);
+            
+            
             % Adjust figure size to fit all panels  
             % Calculate required figure size based on panels
             obj.guiAutoScale(obj.hFigure);
