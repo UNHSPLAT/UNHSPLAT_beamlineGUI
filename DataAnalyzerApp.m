@@ -84,6 +84,7 @@ classdef DataAnalyzerApp < matlab.apps.AppBase
                     app.DataFilePath = fullfile(path, file);
                     app.DataTable = app.loadSingleFile(app.DataFilePath);
                     app.FilePathLabel.Text = ['Loaded: ' file];
+                    app.DefaultDataDir = path;
                     
                 else % Load all readings files from folder
                     % Open folder picker

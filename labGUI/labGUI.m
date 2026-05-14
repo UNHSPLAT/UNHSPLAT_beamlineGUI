@@ -1402,7 +1402,7 @@ classdef (Abstract) labGUI < handle
             
             function MonPlt(mon,obj,groupTab)
                 grp = mon.group;
-                if strcmp(grp,groups{i})
+                if strcmp(grp,groups{i}) && mon.plot
                     if isempty(obj.hMonitorPlots)
                         obj.hMonitorPlots = monitorPlot(obj,groupTab,'dateTime',mon.Tag);
                     else

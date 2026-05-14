@@ -4,14 +4,19 @@ classdef monitor < handle
         Tag string =""%
         textLabel string = ""% 
         unit string = ""%
-        parent % 
-        siblings =[]%
-        readFunc = @(x) NaN%function which takes the relevant instrument structure and outputs val of desired format
-        setFunc = @(x) NaN%
         formatSpec = '%.2e'
-        guiHand = struct %
         active = false %tag indicating if the monitor can be set (like a highvoltage power supply) or cant be set (like a pressure monitor)
         group string = ""%
+        plot = true %logical indicating whether this monitor should be plotted in the main app plot
+
+        parent % 
+        siblings =[]%
+        
+        readFunc = @(x) NaN%function which takes the relevant instrument structure and outputs val of desired format
+        setFunc = @(x) NaN%
+        
+        guiHand = struct %
+        
         children = []%
         monTimer
         lastReadTime datetime = datetime('now')%
