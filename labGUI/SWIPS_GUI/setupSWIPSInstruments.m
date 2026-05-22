@@ -49,6 +49,8 @@ function instruments = setupSWIPSInstruments()
             self.setVset(3,6)
             self.setIset(3,1)
         end
+
+        [self.VSet,self.ISet,self.OutputState] = self.getAllSettings();
     end
     
     function read_LVPS(self)
