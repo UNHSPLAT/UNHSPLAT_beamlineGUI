@@ -93,8 +93,11 @@ classdef SWIPS_GUI < labGUI
                 createHWConnectionStatusPanel(obj.hMainControlsTab, obj.Hardware, ...
                                               leftMargin, 30);
             
+            obj.guiPanelTest([leftMargin, obj.hHWConnStatusGrp.Position(4)+obj.hHWConnStatusGrp.Position(2)+20, 360, 250],...
+                            obj.hMainControlsTab);
+
             % Define column 2 starting position (after hardware connection status panel)
-            col2Start = obj.hHWConnStatusGrp.Position(1) + obj.hHWConnStatusGrp.Position(3) + panelGap;
+            col2Start = obj.hTestPanel.Position(1) + obj.hTestPanel.Position(3) + panelGap;
             
             %===================================================================================
             % Create HV status panel in column 2
@@ -154,8 +157,15 @@ classdef SWIPS_GUI < labGUI
             'monitorGroup', 'detectors');
             
             % Create instrument monitor panel below detectors
-            obj.hInstGrp = obj.guiPanelMake(obj.hMainControlsTab, rightColStart, ...
+            obj.hLvpsGrp = obj.guiPanelMake(obj.hMainControlsTab, rightColStart, ...
             detectorsPanel.Position(4)+detectorsPanel.Position(2)+20, ...
+            'LVPS Monitors', ...
+            'colSizes',[100,200,40,60,60],...
+            'monitorGroup', 'inst_LV');
+
+            % Create instrument monitor panel below LVPS monitors
+            obj.hInstGrp = obj.guiPanelMake(obj.hMainControlsTab, rightColStart, ...
+            obj.hLvpsGrp.Position(4)+obj.hLvpsGrp.Position(2)+20, ...
             'Instrument Monitors', ...
             'colSizes',[100,200,40,60,60],...
             'monitorGroup', 'inst');
@@ -189,9 +199,6 @@ classdef SWIPS_GUI < labGUI
             end
             obj.mcpRampListener = guiListener(obj.Monitors.voltMCP,'lock',...
                                         obj.hMCPRamp,@ramp_stat);
-
-            obj.guiPanelTest([rightColStart, obj.hStatusGrp.Position(4)+obj.hStatusGrp.Position(2)+20, 360, 250],obj.hMainControlsTab);
-            
             
             % Adjust figure size to fit all panels  
             % Calculate required figure size based on panels
