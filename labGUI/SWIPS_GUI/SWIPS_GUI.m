@@ -7,6 +7,7 @@ classdef SWIPS_GUI < labGUI
         hHVStatusGrp % Handle to high voltage status uicontrol group
         hPosStatusGrp % Handle to position status panel group
         hInstGrp % Handle to instrument monitors panel
+        hLvpsGrp% Handle to LVPS monitor group
         mcpRampListener
         hMCPRamp
         hHWConnStatusGrp % Handle to hardware connection status panel
@@ -159,7 +160,7 @@ classdef SWIPS_GUI < labGUI
             % Create instrument monitor panel below detectors
             obj.hLvpsGrp = obj.guiPanelMake(obj.hMainControlsTab, rightColStart, ...
             detectorsPanel.Position(4)+detectorsPanel.Position(2)+20, ...
-            'LVPS Monitors', ...
+            'LVPS', ...
             'colSizes',[100,200,40,60,60],...
             'monitorGroup', 'inst_LV');
 
