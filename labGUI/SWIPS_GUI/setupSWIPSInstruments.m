@@ -37,6 +37,19 @@ function instruments = setupSWIPSInstruments()
             hFaraday.devRW(':SYST:LOC');
         end
     end
+
+    function config_lvps(self)
+        states = self.getOutputState();
+        if states(2)==0
+            self.setVset(2,6)
+            self.setIset(2,1)
+        end
+        
+        if states(3)==0
+            self.setVset(3,6)
+            self.setIset(3,1)
+        end
+    end
     
     function read_LVPS(self)
         if self.Connected
@@ -53,7 +66,9 @@ function instruments = setupSWIPSInstruments()
                         "HvMCPn",srsPS350('GPIB0::04::INSTR'),...
                         'newportStage',NewportStageControl('192.168.0.254'),...
                          "picoPHD",keithley6485('GPIB0::14::INSTR','funcConfig',@config_picoFaraday),...
-                         "swipsLVPS",keysightE36313A('GPIB0::5::INSTR','readFunc',@read_LVPS)...
+                         "swipsLVPS",keysightE36313A('GPIB0::5::INSTR', ...
+                                                        'readFunc',@read_LVPS, ...
+                                                        'funcConfig',@config_lvps)...
                                 );
 
      % Configure the Stanford research read functions

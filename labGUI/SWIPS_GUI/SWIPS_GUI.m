@@ -140,7 +140,7 @@ classdef SWIPS_GUI < labGUI
             
             obj.hPosStatusGrp.Position(4) = controlsHeight+imageHeight;  % Add some padding at the bottom
 
-         %===================================================================================
+            %===================================================================================
             % create column 3
             
             % Define third column position
@@ -168,7 +168,7 @@ classdef SWIPS_GUI < labGUI
                 'colSizes',colSize,... % Use existing column sizes
                 'monitorGroup', 'status');
             
- %===================================================================================
+            %===================================================================================
              % MCP ramp activate and abort button
             obj.hMCPRamp = uicontrol(obj.hInstGrp, ...
                 'Style','pushbutton',...
