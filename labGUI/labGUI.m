@@ -230,6 +230,14 @@ classdef (Abstract) labGUI < handle
         end
 
         function updateLog(obj,~,~,fname)
+            
+            % if day has changed, issue new test sequence 
+            date = datestr(round(now*1e6)/1e6,'mmm dd, yyyy HH:MM:SS');
+            lastDate = char(obj.TestDate);
+            if ~strcmp(date(1:11), lastDate(1:11))
+                obj.genTestSequence();
+            end
+
             %UPDATELOG Save current readings to a .mat file
             readings = struct(sprintf('r%s',string(round(now()*1e6))),obj.updateReadings);
 
