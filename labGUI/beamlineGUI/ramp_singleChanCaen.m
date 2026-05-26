@@ -29,8 +29,13 @@ function ramp_singleChanCaen(monCaenVolt)
 
     % define coupled voltage set func
     function setV(vOut)
-        monCaenVolt.parent.read();
-        monCaenVolt.set(vOut);
+        if monCaenVolt.parent.Connected
+            monCaenVolt.parent.read();
+            monCaenVolt.set(vOut);
+        else
+            stop(monCaenVolt.monTimer);
+            errordlg('CAEN power supply not connected!','Connection error');
+        end
     end
 
     %define voltage ramp stop function
@@ -63,7 +68,7 @@ function ramp_singleChanCaen(monCaenVolt)
                   'ErrorFcn',@stop_func);
         start(monCaenVolt.monTimer);
     else
-        setVImgMCP(vSet);
+        setV(vSet);
         monCaenVolt.lock = false;
     end
 end

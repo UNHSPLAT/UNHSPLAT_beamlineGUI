@@ -25,6 +25,16 @@ function Ramp_MCPHVPS(monMCP)
         monMCP.lock = false;
         delete(monMCP.monTimer);
     end
+
+    function set_volt(src,evt)
+        if monMCP.parent.Connected
+            monMCP.parent.setVSet(multivolt(get(src,'TasksExecuted')))
+        else
+            stop(monMCP.monTimer);
+            errordlg('MCP power supply not connected!','Connection error');
+        end
+    end
+    
     monMCP.lock = true;
     %check the voltage being applied and ramp the voltage in steps if need be
     vStart = monMCP.lastRead;
@@ -37,7 +47,7 @@ function Ramp_MCPHVPS(monMCP)
                   'BusyMode','queue',... %{drop, error, queue}
                   'TasksToExecute',numel(multivolt),...          
                   'StartDelay',0,...
-                  'TimerFcn',@(src,evt)monMCP.parent.setVSet(multivolt(get(src,'TasksExecuted'))),...
+                  'TimerFcn',@(src,evt)set_volt(src,evt),...
                   'StartFcn',@(src,evt)setfield( monMCP , 'lock' , true ),...
                   'StopFcn',@stop_func,...
                   'ErrorFcn',@stop_func);

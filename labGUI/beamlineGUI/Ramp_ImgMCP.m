@@ -30,10 +30,15 @@ function Ramp_ImgMCP(monMCP_Va,monMCP_vOut)
 
     % define coupled voltage set func
     function setVImgMCP(vA)
-        vOut = vA*2100/2400;
-        monMCP_Va.parent.read();
-        monMCP_Va.set(vA);
-        monMCP_vOut.set(vOut);
+        if monMCP_Va.parent.Connected
+            vOut = vA*2100/2400;
+            monMCP_Va.parent.read();
+            monMCP_Va.set(vA);
+            monMCP_vOut.set(vOut);
+        else
+            stop(monMCP_Va.monTimer);
+            errordlg('IMG MCP power supply not connected!','Connection error');
+        end
     end
 
     %define voltage ramp stop function
