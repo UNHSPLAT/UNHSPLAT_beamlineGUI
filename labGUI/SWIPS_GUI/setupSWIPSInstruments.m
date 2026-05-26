@@ -41,16 +41,19 @@ function instruments = setupSWIPSInstruments()
     function config_lvps(self)
         states = self.getOutputState();
         if states(2)==0
-            self.setVset(2,6)
-            self.setIset(2,1)
+            self.setVSet(6,2)
+            self.setISet(1,2)
         end
         
         if states(3)==0
-            self.setVset(3,6)
-            self.setIset(3,1)
+            self.setVSet(6,3)
+            self.setISet(1,3)
         end
 
-        [self.VSet,self.ISet,self.OutputState] = self.getAllSettings();
+        self.getAllSettings();
+        display(self.VSet);
+        display(self.ISet);
+        display(self.OutputState);
     end
     
     function read_LVPS(self)
