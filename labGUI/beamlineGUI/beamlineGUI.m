@@ -166,7 +166,7 @@ classdef beamlineGUI < labGUI
             
             [obj.hHWConnStatusGrp, obj.HWConnStatusListeners, obj.hHWConnBtn] = ...
                 createHWConnectionStatusPanel(obj.hMainControlsTab, obj.Hardware, ...
-                                              xBorderBuffer, yBorderBuffer);
+                                              xBorderBuffer, yBorderBuffer, obj.hLogTimer);
             ypos = obj.hHWConnStatusGrp.Position(2) + obj.hHWConnStatusGrp.Position(4);
 
             %===================================================================================

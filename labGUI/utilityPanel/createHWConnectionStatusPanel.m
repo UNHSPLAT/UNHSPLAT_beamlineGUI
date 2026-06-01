@@ -1,4 +1,4 @@
-function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parentPanel, Hardware, xPosition, yPosition)
+function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parentPanel, Hardware, xPosition, yPosition, hLogTimer)
 %CREATEHWCONNECTIONSTATUSPANEL Create hardware connection status panel
 %   Creates a panel with radio buttons showing connection status for each
 %   hardware device and a refresh button with built-in callback
@@ -8,6 +8,7 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
 %       Hardware - Structure containing hardware devices
 %       xPosition - X position for the panel
 %       yPosition - Y position for the panel
+%       hLogTimer - Handle to the logging timer
 %
 %   Outputs:
 %       hPanel - Handle to the created panel
@@ -82,6 +83,9 @@ function [hPanel, listeners, hRefreshBtn] = createHWConnectionStatusPanel(parent
         function connectCallback(hwDevice)
             if ismethod(hwDevice, 'connectDevice')
                 hwDevice.connectDevice();
+                if strcmp(hLogTimer.Running,'on')
+                    hwDevice.restartTimer();
+                end
             else
                 warning('createHWConnectionStatusPanel:NoConnect', 'Device %s does not have a connectDevice method.', hwDevice.Tag);
             end
