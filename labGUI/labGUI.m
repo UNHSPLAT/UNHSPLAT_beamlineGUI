@@ -84,8 +84,6 @@ classdef (Abstract) labGUI < handle
                 'Position',[100 100 800 600],...
                 'CloseRequestFcn',@obj.closeGUI);
             
-            % start matlab diary
-            diary(fullfile(obj.DataLoc,sprintf('%s_log.txt',guiLab)))
             % Configure inp to show timestamp
             try
                 setPrompt([datestr(now,'mm/dd/yyyy HH:MM PM') ' >> '])
@@ -95,6 +93,9 @@ classdef (Abstract) labGUI < handle
             % Generate initial test sequence, date, and data directory
             obj.genTestSequence;
             
+            % start matlab diary
+            diary(fullfile(obj.DataDir,sprintf('%s_log.txt',guiLab)))
+
             % Create file menu
             obj.hFileMenu = uimenu(obj.hFigure,'Text','File');
             
