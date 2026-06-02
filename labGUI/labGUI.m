@@ -230,15 +230,35 @@ classdef (Abstract) labGUI < handle
         end
 
         function updateLog(obj,~,~,fname)
+            %UPDATELOG update log file with current readings
+
+            dateStr = datestr(round(now*1e6)/1e6,'mmm dd, yyyy HH:MM:SS');
+            lastDateStr = char(obj.TestDate);
+            
+            % Parse current date, hour, and minute
+            date = dateStr(1:12);           % "mmm dd, yyyy"
+            hour = str2double(dateStr(14:15));  % HH
+            min = str2double(dateStr(17:18));   % MM
+            
+            % Parse lastDate hour and minute
+            lastDate = lastDateStr(1:12);   % "mmm dd, yyyy"
+            lastHour = str2double(lastDateStr(14:15));  % HH
+            lastMin = str2double(lastDateStr(17:18));   % MM
             
             % if day has changed, issue new test sequence 
-            date = datestr(round(now*1e6)/1e6,'mmm dd, yyyy HH:MM:SS');
-            lastDate = char(obj.TestDate);
-            if ~strcmp(date(1:11), lastDate(1:11))
+            if ~strcmp(date, lastDate)
                 obj.genTestSequence();
             end
 
-            %UPDATELOG Save current readings to a .mat file
+            % Configure inp to show new timestamp
+            if lastMin~=min
+                try
+                    setPrompt([datestr(now,'mm/dd/yyyy HH:MM PM') ' >> '])
+                catch
+                    % pass to avoid error if setPrompt unavailable
+                end
+            end
+
             readings = struct(sprintf('r%s',string(round(now()*1e6))),obj.updateReadings);
 
             if ~exist('fname','var')
