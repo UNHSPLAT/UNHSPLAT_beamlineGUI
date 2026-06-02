@@ -31,7 +31,6 @@ function monitors = setupMonitors(instruments)
         end
         % define coupled voltage set func
         function setV(volt)
-            display(volt);
             self.parent.setVSet(volt);
 %             self.parent.read();
         end

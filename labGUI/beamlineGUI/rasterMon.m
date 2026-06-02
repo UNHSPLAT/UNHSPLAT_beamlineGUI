@@ -41,7 +41,7 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
         lowerVal = temp;
     end
     
-    % Stop existing raster timer if it exists
+    % Stop existing ramp timer if it exists
     if isprop(mon, 'monTimer') && ~isempty(mon.monTimer) && isvalid(mon.monTimer)
         stop(mon.monTimer);
         delete(mon.monTimer);
@@ -72,7 +72,7 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
     if ~isempty(mon.guiHand) && isfield(mon.guiHand, 'statusGrpSetBtn') && ...
        isvalid(mon.guiHand.statusGrpSetBtn)
         % Store original button text and callback
-        originalText = 'Set';
+        originalText = 'SET';
         originalCallback = @mon.guiSetCallback;
         
         % Change button to ABORT
