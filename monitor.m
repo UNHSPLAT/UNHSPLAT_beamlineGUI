@@ -21,6 +21,7 @@ classdef monitor < handle
         monTimer
         lastReadTime datetime = datetime('now')%
         listenProp = 'lastRead'
+        nanVal = nan
     end
     properties (SetObservable) 
         lastRead %
@@ -75,6 +76,15 @@ classdef monitor < handle
         function val = read(obj,src,evnt) 
             try
                 val = obj.readFunc(obj);
+                
+                % Check if val equals nanVal; if so, assign nan (element-wise for arrays)
+                if numel(val) > 1
+                    mask = arrayfun(@(x) isequal(x, obj.nanVal), val);
+                    val(mask) = nan;
+                elseif isequal(val, obj.nanVal)
+                    val = nan;
+                end
+                
                 try
                     if isempty(obj.parent)
                         obj.lastReadTime = datetime('now');
