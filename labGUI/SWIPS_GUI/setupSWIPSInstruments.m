@@ -108,22 +108,13 @@ function instruments = setupSWIPSInstruments()
      %configure Opal Kelly PPA settings
      function self = config_ok(self)
          if self.Connected
-             self.configurePPA_ok([107,60,60,60, 60,60,60,60, 60,60,91,107, 146,117,109,150]);
+             self.configurePPA_ok([75,72,78,75, 81,75,72,66, 66,75,75,87, 84,84,81,90]);
          end
      end
      instruments.Opal_Kelly.funcConfig = @config_ok;
 
 
-    % @2000V - 
-    % instruments.Opal_Kelly.configurePPA_ok([68,60,60,60, 60,60,60,60, 60,60,60,61, 60,60,60,76]);
-    % @2100V -
-    % instruments.Opal_Kelly.configurePPA_ok([110,80,60,60, 75,60,72,60, 60,60,61,74, 86,84,87,115]);
-    % @2200V post-vib -
-    % instruments.Opal_Kelly.configurePPA_ok([110,80,72,72, 72,76,69,76, 75,75,75,75, 75,75,75,115]);
-    % @2200V new exit grid mask -
-    %instruments.Opal_Kelly.configurePPA_ok([154,119,107,97, 67,67,67,67, 69,68,95,112, 123,183,179,255]);
-    % @2400V new exit grid mask Jan072026 -
-    % instruments.Opal_Kelly.configurePPA_ok([107,60,60,60, 60,60,60,60, 60,60,91,107, 146,117,109,150]);
+                                                            
     
     %assign tags to instrument structures
     fields = fieldnames(instruments);
