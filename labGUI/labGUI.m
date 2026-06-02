@@ -93,8 +93,12 @@ classdef (Abstract) labGUI < handle
             % Generate initial test sequence, date, and data directory
             obj.genTestSequence;
             
-            % start matlab diary
-            diary(fullfile(obj.DataDir,sprintf('%s_log.txt',guiLab)))
+            % start matlab diary in day-separated folder location
+            dayFolder = fullfile(obj.DataLoc, datestr(obj.TestSequence/1e6,'yyyymmdd'));
+            if ~exist(dayFolder, 'dir')
+                mkdir(dayFolder);
+            end
+            diary(fullfile(dayFolder, sprintf('%s_log.txt', guiLab)))
 
             % Create file menu
             obj.hFileMenu = uimenu(obj.hFigure,'Text','File');
