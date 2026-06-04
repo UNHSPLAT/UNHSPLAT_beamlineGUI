@@ -65,7 +65,12 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
     
     % Lock the monitor
     if isprop(mon, 'lock')
-        mon.lock = true;
+        if mon.lock
+            fprintf('Monitor locked: Raster Aborted')
+            return
+        else
+            mon.lock = true;
+        end
     end
     
     % Change button to ABORT if GUI button exists
@@ -86,6 +91,8 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
             stop(mon.monTimer);
             delete(mon.monTimer);
         end
+        stop(monTimer);
+        delete(monTimer);
         
         % Restore button to original state
         if ~isempty(mon.guiHand) && isfield(mon.guiHand, 'statusGrpSetBtn') && ...
@@ -146,7 +153,7 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
     end
     
     % Create and configure the timer
-    mon.monTimer = timer('Name', 'rasterMonTimer',...
+    monTimer = timer('Name', 'rasterMonTimer',...
         'Period', dwellTime,...
         'ExecutionMode', 'fixedRate',...
         'BusyMode', 'queue',...
@@ -158,5 +165,5 @@ function rasterMon(mon, upperVal, lowerVal, stepNum, dwellTime)
         'ErrorFcn', @stopFunc);
     
     % Start the timer
-    start(mon.monTimer);
+    start(monTimer);
 end

@@ -71,7 +71,7 @@ function Ramp_ImgMCP(monMCP_Va,monMCP_vOut)
         multivolt = linspace(vStart,vSet,ceil((abs(vSet-monMCP_Va.lastRead))/step)+1);
         multivolt = multivolt(2:end);
         
-        monMCP_Va.monTimer = timer('Period',sampleRate,... %period
+        monMCP_Va.monTimer = timer('Period',dwell,... %period
                   'ExecutionMode','fixedSpacing',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
                   'BusyMode','queue',... %{drop, error, queue}
                   'TasksToExecute',numel(multivolt),...          
