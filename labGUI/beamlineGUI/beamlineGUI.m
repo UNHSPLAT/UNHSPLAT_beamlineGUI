@@ -152,6 +152,9 @@ classdef beamlineGUI < labGUI
             uimenu(obj.hControlMenu,'Text','ValveControl',...
                 'MenuSelectedFcn',@obj.valveControlCallback);
 
+            uimenu(obj.hControlMenu,'Text','Raster HVPS',...
+                'MenuSelectedFcn',@obj.rasterHvpsCallback);
+
             %===================================================================================
             % Create instrument connection status uicontrol group
             
@@ -340,6 +343,66 @@ classdef beamlineGUI < labGUI
             else
                 obj.Hardware.newportStage.run();
                 obj.hStageButton.set('String','Stop');
+            end
+        end
+
+        function rasterHvpsCallback(obj, ~, ~)
+            %RASTERHVPSCALLBACK Opens a dialog to configure and start srsHVPS rastering
+
+            % Filter monitors whose parent instrument is an srsHVPS
+            monFields = fieldnames(obj.Monitors);
+            hvpsMonFields = {};
+            for i = 1:numel(monFields)
+                mon = obj.Monitors.(monFields{i});
+                if ~isempty(mon.parent) && isa(mon.parent, 'srsHVPS')
+                    hvpsMonFields{end+1} = monFields{i}; %#ok<AGROW>
+                end
+            end
+
+            if isempty(hvpsMonFields)
+                errordlg('No srsHVPS monitors found.', 'No HVPS Monitors');
+                return;
+            end
+
+            % Select monitor
+            [monIdx, tf] = listdlg('ListString', hvpsMonFields, ...
+                                   'SelectionMode', 'single', ...
+                                   'PromptString', 'Select an HVPS monitor to raster:', ...
+                                   'Name', 'Select HVPS Monitor', ...
+                                   'ListSize', [300 200]);
+            if ~tf; return; end
+
+            monName = hvpsMonFields{monIdx};
+
+            % Prompt for raster parameters
+            answer = inputdlg({'Upper Value (V):', 'Lower Value (V):', ...
+                               'Number of Steps:', 'Dwell Time (s):'}, ...
+                              ['Raster HVPS: ' monName], [1 50], ...
+                              {'1000', '0', '20', '1.0'});
+            if isempty(answer); return; end
+
+            upperVal  = str2double(answer{1});
+            lowerVal  = str2double(answer{2});
+            stepNum   = str2double(answer{3});
+            dwellTime = str2double(answer{4});
+
+            if any(isnan([upperVal lowerVal stepNum dwellTime]))
+                errordlg('All parameters must be valid numbers.', 'Invalid Input');
+                return;
+            end
+            if stepNum < 2
+                errordlg('Number of steps must be at least 2.', 'Invalid Input');
+                return;
+            end
+            if dwellTime <= 0
+                errordlg('Dwell time must be positive.', 'Invalid Input');
+                return;
+            end
+
+            try
+                rasterSrsHvps(obj.Monitors.(monName), upperVal, lowerVal, stepNum, dwellTime);
+            catch ME
+                errordlg(['Error starting HVPS raster: ' ME.message], 'Raster Error');
             end
         end
 
