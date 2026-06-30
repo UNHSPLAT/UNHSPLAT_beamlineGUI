@@ -64,10 +64,12 @@
     function config_keithleyMultimeter(hDMM)
         fprintf('Configuring Keithley Multimeter...\n');
         if hDMM.Connected
-            hDMM.devRW('SENS:FUNC "VOLT", (@101:103)');
-            hDMM.devRW('SENS:VOLT:INP MOHM10, (@101:103)');
-            hDMM.devRW('SENS:VOLT:NPLC 1, (@101:103)');
-            hDMM.devRW('ROUT:SCAN:CRE (@101:103)');
+            hDMM.devRW('SENS:FUNC "VOLT", (@101:104)');
+            hDMM.devRW('SENS:VOLT:INP MOHM10, (@101:104)');
+            hDMM.devRW('SENS:VOLT:NPLC 1, (@101:104)');
+            hDMM.devRW('ROUT:SCAN:CRE (@101:104)');
+            hDMM.lastRead = [nan,nan,nan,nan];
+            hDMM.readFunc = @(x) x.performScan(1,4);
         end
     end
 
