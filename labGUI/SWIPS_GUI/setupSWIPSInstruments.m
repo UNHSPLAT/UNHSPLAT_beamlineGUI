@@ -68,11 +68,31 @@ function instruments = setupSWIPSInstruments()
         end
     end
 
+    function config_sr620(count)
+        fprintf('Configuring SR620 Counter...');
+        % Disable auto measurement  mode
+        stat = count.devRW('AUTM 0; AUTM?');
+        fprintf('AUTM 0 -> %s\n', strtrim(stat));
+
+        % Set to count mode
+        stat = count.devRW('MODE 6; MODE?');
+        fprintf('MODE 6 -> %s\n', strtrim(stat));
+
+        % Set sample number:
+        stat = count.devRW('SIZE 1; SIZE?');
+        fprintf('SIZE 1 -> %s\n', strtrim(stat));
+
+        % Set Gate arm/gate mode to 1s
+        stat = count.devRW('ARMM 5; ARMM?');
+        fprintf('ARMM 5 -> %s\n', strtrim(stat));
+    end
+
      instruments = struct('Opal_Kelly',SWIPS_OK(),...
                         'caen_HVPS1',caen_hvps('','LBus_Address',0,'equip_config_filename','config_caenPS.ini'),...
                         "HvMCPn",srsPS350('GPIB0::04::INSTR'),...
                         'newportStage',NewportStageControl('192.168.0.254'),...
                          "picoPHD",keithley6485('GPIB0::14::INSTR','funcConfig',@config_picoFaraday),...
+                         "sr620counter",srsSR620("GPIB0::30::INSTR",'funcConfig',@config_sr620),...
                          "swipsLVPS",keysightE36313A('GPIB0::5::INSTR', ...
                                                         'readFunc',@read_LVPS, ...
                                                         'funcConfig',@config_lvps)...
