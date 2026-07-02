@@ -69,7 +69,6 @@
             hDMM.devRW('SENS:VOLT:NPLC 1, (@101:104)');
             hDMM.devRW('ROUT:SCAN:CRE (@101:104)');
             hDMM.lastRead = [nan,nan,nan,nan];
-            hDMM.readFunc = @(x) x.performScan(1,4);
         end
     end
 
@@ -164,7 +163,7 @@
                                                          'refreshRate',2)...
                          );
      function scan_val = read_keithley(self)
-            scan_val = self.performScan(1,3);
+            scan_val = self.performScan(1,4);
      end
     instruments.keithleyMultimeter1.readFunc = @read_keithley;
     %assign tags to instrument structures
