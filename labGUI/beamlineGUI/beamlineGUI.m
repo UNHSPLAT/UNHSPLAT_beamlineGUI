@@ -76,8 +76,8 @@ classdef beamlineGUI < labGUI
             obj.Monitors = setupMonitors(obj.Hardware);
         end
 
-        function valveControlCallback(obj,~,~)
-            %VALVECONTROLCALLBACK Launches the vacControl vacuum/valve control app
+        function vacControlCallback(obj,~,~)
+            %VACCONTROLCALLBACK Launches the vacControl vacuum/valve control app
             obj.hVacControl = vacControl(obj.Monitors);
         end
     end
@@ -102,8 +102,8 @@ classdef beamlineGUI < labGUI
             % Create Tools menu
             obj.hControlMenu = uimenu(obj.hFigure,'Text','Control');
 
-            uimenu(obj.hControlMenu,'Text','ValveControl',...
-                'MenuSelectedFcn',@obj.valveControlCallback);
+            uimenu(obj.hControlMenu,'Text','Vac Control',...
+                'MenuSelectedFcn',@obj.vacControlCallback);
 
             uimenu(obj.hControlMenu,'Text','Raster HVPS',...
                 'MenuSelectedFcn',@obj.rasterHvpsCallback);
