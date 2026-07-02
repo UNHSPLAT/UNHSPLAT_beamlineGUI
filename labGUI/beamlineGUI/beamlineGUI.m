@@ -3,7 +3,7 @@ classdef beamlineGUI < labGUI
     
     properties
         % Beamline-specific properties and controls
-        hValveFigure % Handle to valve control figure
+        hVacControl  % Handle to vacControl app instance
         
         hStatusGrp % Handle to beamline status uicontrol group
         hCamGUI % Handle to camera control init button
@@ -77,55 +77,8 @@ classdef beamlineGUI < labGUI
         end
 
         function valveControlCallback(obj,~,~)
-            %VALVECONTROLCALLBACK Creates a valve control window with web interface
-            %   This function creates a figure with two main components:
-            %   1. A web panel displaying the power strip control interface
-            %   2. A system layout diagram showing the valve configuration
-            %
-            %   The window includes:
-            %   - Power strip web control interface in bottom 40% of window
-            %   - System layout diagram in top 60% of window
-            %   - Refresh button to reload the web interface
-            %
-            %   Parameters:
-            %   obj - The beamlineGUI object
-            %   ~,~ - Unused callback parameters
-            
-           vfrac = .4; % Fraction of window height for valve control panel
-           obj.hValveFigure = figure('MenuBar','none',...
-                'ToolBar','none',...
-                'Position',[658 245 876 687],...
-                'NumberTitle','off',...
-                'Name','Valve Control');
-
-           pan_valveControl = uipanel(obj.hValveFigure,...
-                'Title','PowerStrip',...
-                'FontWeight','bold',...
-                'FontSize',12,...
-                'Position',[0,0,1,vfrac] ...
-                );
-
-           % Create refresh button at the top
-           uicontrol(obj.hValveFigure,...
-                'Style', 'pushbutton',...
-                'String', 'Refresh',...
-                'FontSize', 12,...
-                'FontWeight', 'bold',...
-                'Units', 'normalized',...
-                'Position', [0.01 vfrac+0.01 0.1 0.05],...
-                'Callback', @(~,~)displayWebPage('http://192.168.0.110/',pan_valveControl));
-
-           displayWebPage('http://192.168.0.110/',pan_valveControl);
-           
-           panSystem = uipanel(obj.hValveFigure,...
-                'Position',[0,vfrac,1,1] ...
-                );
-
-           ax = axes('Parent',panSystem,'units','normalized','position',[0,0,1,1-vfrac]);
-           img  = imread('system_layoutV04.png');
-           imshow(img, 'Parent', ax);
-           set(ax,'handlevisibility','off','visible','off')
-
+            %VALVECONTROLCALLBACK Launches the vacControl vacuum/valve control app
+            obj.hVacControl = vacControl(obj.Monitors);
         end
     end
 
