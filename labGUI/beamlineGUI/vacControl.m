@@ -21,7 +21,7 @@ classdef vacControl < matlab.apps.AppBase
 
     properties (Access = private)
         hFigure           % Handle to the control figure
-        monitorListeners  % Listener array keeping PostSet listeners alive
+        monitorListeners=event.listener.empty  % Listener array keeping PostSet listeners alive
     end
 
     methods
@@ -54,6 +54,7 @@ classdef vacControl < matlab.apps.AppBase
 
         function delete(obj)
             %DELETE  Close figure; AppManagementService handles unregistration automatically
+            delete(obj.monitorListeners);
             if isvalid(obj.hFigure)
                 delete(obj.hFigure);
             end
@@ -75,8 +76,9 @@ classdef vacControl < matlab.apps.AppBase
             vfrac = 0.4;  % Fraction of window height reserved for the web panel
 
             % 'ToolBar',     'none', ...
+
+%                 'MenuBar',     'none', ...
             obj.hFigure = figure( ...
-                'MenuBar',     'none', ...
                 'Position',    [658 245 876 687], ...
                 'NumberTitle', 'off', ...
                 'Name',        'Vac Control');
@@ -117,31 +119,20 @@ classdef vacControl < matlab.apps.AppBase
             hRoughPressText = uicontrol(panSystem, ...
                 'Style',               'text', ...
                 'Units',               'normalized', ...
-                'Position',            [0.547844895365554, 0.107397107897664, 0.04058916653081, 0.031145717463849], ...
+                'Position',            [0.6, 0.107397107897664, 0.08, 0.031145717463849], ...
                 'String',              '---', ...
-                'FontSize',            8, ...
+                'FontSize',            10, ...
                 'BackgroundColor',     'none', ...
                 'ForegroundColor',     [1 1 1], ...
                 'HorizontalAlignment', 'center');
             
-            function updateRoughPress(~,~)
-                val = mon.lastRead;
-                if isempty(val) || all(isnan(val(:)))
-                    set(hRoughPressText, 'String', '---');
-                else
-                    set(hRoughPressText, 'String', ...
-                        sprintf([mon.formatSpec ' ' char(mon.unit)], val(1)));
-                end
-            end
-            
             if isfield(obj.pressureMonitors, 'pressureChamberRough1')
                 mon = obj.pressureMonitors.pressureChamberRough1;
-                
-                % Seed display with current value
-                updateRoughPress();
                 % Update whenever the monitor fires
-                obj.monitorListeners(end+1) = addlistener(mon, 'lastRead', 'PostSet', @updateRoughPress);
+                obj.monitorListeners(end+1) = listener(mon, 'lastRead', 'PostSet',...
+                    @(~,~) set(hRoughPressText, 'String',mon.sPrintVal()));
             end
+            
         end
     end
 end
