@@ -52,8 +52,7 @@ classdef vacControl < matlab.apps.AppBase
         end
 
         function delete(obj)
-            %DELETE  Clean up: unregister app and close figure
-            unregisterApp(obj);
+            %DELETE  Close figure; AppManagementService handles unregistration automatically
             if isvalid(obj.hFigure)
                 delete(obj.hFigure);
             end
@@ -62,8 +61,10 @@ classdef vacControl < matlab.apps.AppBase
 
     methods (Access = private)
 
-        function startupFcn(obj)
+        function startupFcn(obj, ~)
             %STARTUPFCN  Runs after construction via runStartupFcn (AppBase pattern)
+            %   The second argument (the app handle) is passed by runStartupFcn
+            %   internally and is ignored here since obj is already bound.
             %   Place any initialisation that must wait until the figure exists here.
         end
 
