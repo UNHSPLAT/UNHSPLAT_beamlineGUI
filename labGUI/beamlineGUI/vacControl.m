@@ -20,7 +20,8 @@ classdef vacControl < matlab.apps.AppBase
     end
 
     properties (Access = private)
-        hFigure  % Handle to the control figure
+        hFigure           % Handle to the control figure
+        monitorListeners  % Listener array keeping PostSet listeners alive
     end
 
     methods
@@ -73,9 +74,9 @@ classdef vacControl < matlab.apps.AppBase
 
             vfrac = 0.4;  % Fraction of window height reserved for the web panel
 
+            % 'ToolBar',     'none', ...
             obj.hFigure = figure( ...
                 'MenuBar',     'none', ...
-                'ToolBar',     'none', ...
                 'Position',    [658 245 876 687], ...
                 'NumberTitle', 'off', ...
                 'Name',        'Vac Control');
@@ -95,8 +96,11 @@ classdef vacControl < matlab.apps.AppBase
                 'Units',      'normalized', ...
                 'Position',   [0.01, vfrac + 0.01, 0.1, 0.05], ...
                 'Callback',   @(~,~) displayWebPage('http://192.168.0.110/', pan_valveControl));
-
-            displayWebPage('http://192.168.0.110/', pan_valveControl);
+            try
+                displayWebPage('http://192.168.0.110/', pan_valveControl);
+            catch
+                warning('Failed to display web page.');
+            end
 
             % --- System layout diagram (top 60 %) ---
             panSystem = uipanel(obj.hFigure, ...
@@ -108,6 +112,36 @@ classdef vacControl < matlab.apps.AppBase
             img = imread('system_layoutV04.png');
             imshow(img, 'Parent', ax);
             set(ax, 'HandleVisibility', 'off', 'Visible', 'off');
+
+            % --- Chamber rough pressure readout overlaid on layout diagram ---
+            hRoughPressText = uicontrol(panSystem, ...
+                'Style',               'text', ...
+                'Units',               'normalized', ...
+                'Position',            [0.547844895365554, 0.107397107897664, 0.04058916653081, 0.031145717463849], ...
+                'String',              '---', ...
+                'FontSize',            8, ...
+                'BackgroundColor',     'none', ...
+                'ForegroundColor',     [1 1 1], ...
+                'HorizontalAlignment', 'center');
+            
+            function updateRoughPress(~,~)
+                val = mon.lastRead;
+                if isempty(val) || all(isnan(val(:)))
+                    set(hRoughPressText, 'String', '---');
+                else
+                    set(hRoughPressText, 'String', ...
+                        sprintf([mon.formatSpec ' ' char(mon.unit)], val(1)));
+                end
+            end
+            
+            if isfield(obj.pressureMonitors, 'pressureChamberRough1')
+                mon = obj.pressureMonitors.pressureChamberRough1;
+                
+                % Seed display with current value
+                updateRoughPress();
+                % Update whenever the monitor fires
+                obj.monitorListeners(end+1) = addlistener(mon, 'lastRead', 'PostSet', @updateRoughPress);
+            end
         end
     end
 end
