@@ -445,8 +445,8 @@ function monitors = setupMonitors(instruments)
             gateValveState = self.siblings.lastRead(interloc_outlet);
             if gateValveState && cryoTemp>19
                 warning('%s Interlock Triggered at %s',self.Tag,datetime("now"))
-                % self.parent(1).setOff(interloc_outlet);
-                % self.parent(1).read();
+                self.parent(1).setOff(interloc_outlet);
+                self.parent(1).read();
             end
         else 
             cryoTemp = nan;
