@@ -16,7 +16,7 @@ classdef vacControl < matlab.apps.AppBase
 
     properties
         pressureMonitors struct  % Monitors whose group is 'pressure'
-        valveMonitors    struct  % Monitors whose group is 'valveState'
+        stateMonitors    struct  % Monitors whose group is 'valveState'
     end
 
     properties (Access = private)
@@ -31,15 +31,15 @@ classdef vacControl < matlab.apps.AppBase
             %   monitors struct, then builds the GUI.
 
             obj.pressureMonitors = struct();
-            obj.valveMonitors    = struct();
+            obj.stateMonitors    = struct();
 
             fields = fieldnames(monitors);
             for i = 1:numel(fields)
                 mon = monitors.(fields{i});
                 if strcmp(mon.group, 'pressure')
                     obj.pressureMonitors.(fields{i}) = mon;
-                elseif strcmp(mon.group, 'valveState')
-                    obj.valveMonitors.(fields{i}) = mon;
+                elseif strcmp(mon.group, 'systemState')
+                    obj.stateMonitors.(fields{i}) = mon;
                 end
             end
 
@@ -139,6 +139,28 @@ classdef vacControl < matlab.apps.AppBase
                     mon = obj.pressureMonitors.(monName);
                     obj.monitorListeners(end+1) = listener(mon, 'lastRead', 'PostSet', ...
                         @(~,~) set(hTxt, 'String', mon.sPrintVal()));
+                end
+            end
+
+            % --- System-state readouts overlaid on layout diagram ---
+            systemStateOverlays = { ...
+                'cryoTemp', [0.794748293002288, 0.174228060238596, 0.08, 0.031145717463849]; ...
+            };
+
+            for k = 1:size(systemStateOverlays, 1)
+                monName = systemStateOverlays{k,1};
+                pos     = systemStateOverlays{k,2};
+                hTxt = uicontrol(panSystem, ...
+                    'Style',               'text', ...
+                    'Units',               'normalized', ...
+                    'Position',            pos, ...
+                    'String',              '---', ...
+                    'FontSize',            10, ...
+                    'HorizontalAlignment', 'center');
+                if isfield(obj.stateMonitors, monName)
+                    mon = obj.stateMonitors.(monName);
+                    obj.monitorListeners(end+1) = listener(mon, 'lastRead', 'PostSet', ...
+                        @(~,~) set(hTxt, 'String', sprintf('%s%s',mon.sPrintVal(),mon.unit)));
                 end
             end
             
