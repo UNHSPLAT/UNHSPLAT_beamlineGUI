@@ -64,13 +64,17 @@
     function config_keithleyMultimeter(hDMM)
         fprintf('Configuring Keithley Multimeter...\n');
         if hDMM.Connected
-            hDMM.devRW('SENS:FUNC "VOLT", (@101:104)');
-            hDMM.devRW('SENS:VOLT:INP MOHM10, (@101:104)');
-            hDMM.devRW('SENS:VOLT:NPLC 1, (@101:104)');
-            hDMM.devRW('ROUT:SCAN:CRE (@101:104)');
-            hDMM.lastRead = [nan,nan,nan,nan];
+            hDMM.devRW('SENS:FUNC "VOLT", (@101:105)');
+            hDMM.devRW('SENS:VOLT:INP MOHM10, (@101:105)');
+            hDMM.devRW('SENS:VOLT:NPLC 1, (@101:105)');
+            hDMM.devRW('ROUT:SCAN:CRE (@101:105)');
+            hDMM.lastRead = [nan,nan,nan,nan,nan];
         end
     end
+
+    function scan_val = read_keithley(self)
+            scan_val = self.performScan(1,5);
+     end
 
     % Configure picoammeter
     function config_picoFaraday(hFaraday)
@@ -152,7 +156,8 @@
                                                         'refreshRate',2),...
                          "keithleyMultimeter1",keithleyDAQ6510('USB0::0x05E6::0x6510::04524689::0::INSTR',...
                                                                'funcConfig',@config_keithleyMultimeter, ...
-                                                               'autoConnect',true),...
+                                                               'autoConnect',true, ...
+                                                               'readFunc',@read_keithley),...
                          "MCPwebCam",camControl(),...
                          "caen_HVPS2",caen_hvps([],'LBus_Address',2,'equip_config_filename','config_caenPS2.ini'),...
                          "sr620counter",srsSR620("GPIB0::30::INSTR",'funcConfig',@config_sr620),...
@@ -162,10 +167,7 @@
                                                         'autoConnect',true, ...
                                                          'refreshRate',2)...
                          );
-     function scan_val = read_keithley(self)
-            scan_val = self.performScan(1,4);
-     end
-    instruments.keithleyMultimeter1.readFunc = @read_keithley;
+     
     %assign tags to instrument structures
     fields = fieldnames(instruments);
     for i=1:numel(fields)

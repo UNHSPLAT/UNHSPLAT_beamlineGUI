@@ -281,7 +281,7 @@ function monitors = setupMonitors(instruments)
 
     % =======================================================================
     % Ext voltage
-    % =======================================================================
+
     function sync_Ext(self,volt)
             voltExt = self.lastRead();
             monXsteer = self.siblings(1);
@@ -324,7 +324,6 @@ function monitors = setupMonitors(instruments)
                                  );
     % =======================================================================
     % ExB voltage
-    % =======================================================================
 
     function val = read_voltEXB(self)
         voltExbp = self.siblings(1).lastRead();
@@ -361,7 +360,6 @@ function monitors = setupMonitors(instruments)
 
     % =======================================================================
     % Target Mass
-    % =======================================================================
     
      function C = calc_C()
             % Reference species location
@@ -406,6 +404,12 @@ function monitors = setupMonitors(instruments)
                                                 ]...
                                      );
     
+    % =======================================================================
+    % Interlocks
+    % Setup monitors that with perform actions when certain conditions are met, 
+    % such as a pressure interlock that will turn off a valve if the pressure is too high
+    % =======================================================================
+
     % Valve control monitor with pressure interlock
     function vstate = interlock_read(self)
         interloc_outlet = 5;
@@ -425,15 +429,45 @@ function monitors = setupMonitors(instruments)
                                  'textLabel','Valve State',...
                                  'unit','[T/F]',...
                                  'active',false,...
-                                 'group','valveState',...
+                                 'group','systemState',...
                                  'formatSpec','%d,',...
                                  'monitorLength',8,...
                                  'parent',instruments.webpowerstrip1,...
                                  'siblings',[monitors.pressureChamberIG1]...
                                  );
 
-    %assign tags to instrument tag parameters, may just want to have these and the 
-    %   instrument structs setup as lists
+    % Cryo Temp With Gatevalve interlock
+    function cryoTemp = cryo_temp_interlock_read(self)
+        % Trigger close on Cryo GV if the temperature is above 19degK
+        interloc_outlet = 5;
+        if self.parent.Connected
+            cryoTemp = double(self.parent(1).lastRead(5))*10; %convert to degK
+            gateValveState = self.siblings.lastRead(interloc_outlet);
+            if gateValveState && cryoTemp>19
+                warning('%s Interlock Triggered at %s',self.Tag,datetime("now"))
+                self.parent(2).setOff(interloc_outlet);
+                self.parent(2).read();
+            end
+        else 
+            cryoTemp = nan;
+        end
+    end
+
+    monitors.cryoTempInterlock = monitor('readFunc',@cryo_temp_interlock_read,...
+                                 'textLabel','Cryo Temp',...
+                                 'unit','[degK]',...
+                                 'active',false,...
+                                 'plot',false,...
+                                 'group','systemState',...
+                                 'formatSpec','%1.1f,',...
+                                 'monitorLength',1,...
+                                 'parent',[instruments.webpowerstrip1,instruments.keithleyMultimeter1],...
+                                 'siblings',[monitors.valveState]...
+                                 );
+    
+    % =======================================================================
+    % Clean up: assign tags to instrument tag parameters
+    % % =======================================================================
      fields = fieldnames(monitors);
      for i=1:numel(fields)
          monitors.(fields{i}).setfield('Tag',fields{i});
