@@ -1,4 +1,4 @@
-classdef (Abstract) labGUI < handle
+classdef (Abstract) labGUI < matlab.apps.AppBase
     %LABGUI - Abstract base class for lab instrument GUI interfaces
     
     properties
@@ -184,6 +184,9 @@ classdef (Abstract) labGUI < handle
             
             % Create tabs for monitor groups
             obj.makeMonTabs2();
+
+            % Register with MATLAB's Running Apps system
+            registerApp(obj, obj.hFigure);
         end
         
         function stopTimer(obj,~,~)
@@ -287,14 +290,11 @@ classdef (Abstract) labGUI < handle
 
         %% Destructors
         function closeGUI(obj,~,~)
-            %CLOSEGUI Clean up when GUI is closed            
-
-            % Delete the object
-            try
-                obj.delete();
-                delete(obj);
-            catch
-            end
+            %CLOSEGUI Clean up when GUI is closed
+            %   With AppBase, delete(obj) calls the destructor then invalidates
+            %   the handle; the AppManagementService listener fires afterwards
+            %   but the handle is already invalid so it is a no-op.
+            delete(obj);
         end
 
         function delete(obj)
