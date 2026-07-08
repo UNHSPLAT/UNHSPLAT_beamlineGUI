@@ -138,7 +138,7 @@ classdef vacControl < matlab.apps.AppBase
                 if isfield(obj.pressureMonitors, monName)
                     mon = obj.pressureMonitors.(monName);
                     obj.monitorListeners(end+1) = listener(mon, 'lastRead', 'PostSet', ...
-                        @(~,~) set(hTxt, 'String', mon.sPrintVal()));
+                        @(~,~) set(hTxt, 'String', sprintf('%s%s',mon.sPrintVal(),mon.unit)));
                 end
             end
 
