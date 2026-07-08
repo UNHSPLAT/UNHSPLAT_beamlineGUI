@@ -114,7 +114,10 @@ classdef vacControl < matlab.apps.AppBase
             end
 
             % Tab 2 — Placeholder
-            uitab(tabGroup, 'Title', 'Controls');
+            tabControl = uitab(tabGroup, 'Title', 'Control Procedures');
+            
+            % Tab 3 — Placeholder
+            uitab(tabGroup, 'Title', 'Interlocs');
 
             % --- System layout diagram (top 60 %) ---
             panSystem = uipanel(obj.hFigure, ...
