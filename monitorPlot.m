@@ -9,24 +9,25 @@ classdef monitorPlot < handle
     properties (SetAccess = private)
         Readings struct % Structure containing all readings
         ReadingsListener % Listener for beamlineGUI readings
-        xMonStr%
-        yMonStr%
+        xMon            % X-axis monitor object
+        yMon            % Y-axis monitor object
         xvals = []%
         yvals = {}  % Cell array to store multiple y-value arrays
         numYvals = 0  % Number of y-values to track
         panel%
         ax%
-        hGUI %
         listo
+        hFigure%
     end
 
     methods
-        function obj = monitorPlot(hGUI,panel,xMonStr,yMonStr)
-            %BEAMLINEMONITOR Construct an instance of this class
-            obj.hGUI = hGUI;
+        function obj = monitorPlot(hFigure,panel, xMon, yMon)
+            %MONITORPLOT Construct an instance of this class
+            %   Takes a panel and monitor objects directly
+            obj.hFigure = hFigure;
             obj.panel = panel;
-            obj.xMonStr = xMonStr;
-            obj.yMonStr = yMonStr;
+            obj.xMon = xMon;
+            obj.yMon = yMon;
             
             
             % Create and position the new axis
@@ -37,13 +38,13 @@ classdef monitorPlot < handle
             grid(obj.ax, 'on');
             
             % Create right-click context menu for plot options
-            contextMenu = uicontextmenu(obj.hGUI.hFigure);
+            contextMenu = uicontextmenu(obj.hFigure);
             uimenu(contextMenu, 'Text', 'Toggle Y Log Scale', 'Callback', @(~,~)obj.toggleYLogScale());
             uimenu(contextMenu, 'Text', 'Clear Buffer', 'Callback', @(~,~)obj.clearBuffer(), 'Separator', 'on');
             set(obj.ax, 'UIContextMenu', contextMenu);
             
             % Add listener for y monitor value changes
-            obj.listo = addlistener(obj.hGUI.Monitors.(obj.yMonStr), 'lastRead', 'PostSet', @(src,evt)obj.pltVal());
+            obj.listo = addlistener(yMon, 'lastRead', 'PostSet', @(src,evt)obj.pltVal());
             
             % Initial plot
             obj.pltVal();
@@ -52,8 +53,8 @@ classdef monitorPlot < handle
         function pltVal(obj)
             try
                 % Get current values
-                xval = obj.hGUI.Monitors.(obj.xMonStr).lastRead;
-                yval = obj.hGUI.Monitors.(obj.yMonStr).lastRead;
+                xval = obj.xMon.lastRead;
+                yval = obj.yMon.lastRead;
 
                 % Convert string-encoded datetimes to datetime objects
                 if ~isnumeric(xval) && ~isdatetime(xval) && ~isduration(xval)
@@ -122,18 +123,18 @@ classdef monitorPlot < handle
                     end
                     hold(obj.ax, 'off');
 
-                    xlabel(obj.ax, obj.hGUI.Monitors.(obj.xMonStr).sPrint());
-                    ylabel(obj.ax, obj.hGUI.Monitors.(obj.yMonStr).sPrint());
+                    xlabel(obj.ax, obj.xMon.sPrint());
+                    ylabel(obj.ax, obj.yMon.sPrint());
                     
                     % Update title with current values
                     if obj.numYvals == 1
                         titleStr = sprintf('[x,y]= [%s, %s]', ...
-                            obj.hGUI.Monitors.(obj.xMonStr).sPrintVal(), ...
-                            obj.hGUI.Monitors.(obj.yMonStr).sPrintVal());
+                            obj.xMon.sPrintVal(), ...
+                            obj.yMon.sPrintVal());
                     else
                         titleStr = sprintf('x=%s, y=[', ...
-                            obj.hGUI.Monitors.(obj.xMonStr).sPrintVal());
-                        yvals = obj.hGUI.Monitors.(obj.yMonStr).lastRead;
+                            obj.xMon.sPrintVal());
+                        yvals = obj.yMon.lastRead;
                         for i = 1:length(yvals)
                             if i > 1
                                 titleStr = [titleStr, ', '];
@@ -147,8 +148,8 @@ classdef monitorPlot < handle
             catch
                 % delete(obj.listo);
                 fprintf('[%s,%s] MonPlot Failed\n', ...
-                    obj.hGUI.Monitors.(obj.xMonStr).sPrint(), ...
-                    obj.hGUI.Monitors.(obj.yMonStr).sPrint());
+                    obj.xMon.sPrint(), ...
+                    obj.yMon.sPrint());
             end
         end
         
@@ -171,8 +172,8 @@ classdef monitorPlot < handle
             cla(obj.ax);
             
             % Reset axes labels
-            xlabel(obj.ax, obj.hGUI.Monitors.(obj.xMonStr).sPrint());
-            ylabel(obj.ax, obj.hGUI.Monitors.(obj.yMonStr).sPrint());
+            xlabel(obj.ax, obj.xMon.sPrint());
+            ylabel(obj.ax, obj.yMon.sPrint());
             title(obj.ax, 'Buffer Cleared - Waiting for new data...');
         end
 

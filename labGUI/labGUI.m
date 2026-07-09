@@ -1436,10 +1436,14 @@ classdef (Abstract) labGUI < matlab.apps.AppBase
             function MonPlt(mon,obj,groupTab)
                 grp = mon.group;
                 if strcmp(grp,groups{i}) && mon.plot
+                    % Get the dateTime monitor object
+                    xMonObj = obj.Monitors.dateTime;
+                    yMonObj = mon;
+                    
                     if isempty(obj.hMonitorPlots)
-                        obj.hMonitorPlots = monitorPlot(obj,groupTab,'dateTime',mon.Tag);
+                        obj.hMonitorPlots = monitorPlot(obj.hFigure, groupTab, xMonObj, yMonObj);
                     else
-                        obj.hMonitorPlots(end+1) = monitorPlot(obj,groupTab,'dateTime',mon.Tag);
+                        obj.hMonitorPlots(end+1) = monitorPlot(obj.hFigure, groupTab, xMonObj, yMonObj);
                     end
                 end
             end

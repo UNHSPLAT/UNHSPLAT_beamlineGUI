@@ -31,10 +31,7 @@ classdef beamlineGUI < labGUI
     properties (SetObservable)
         LastRead struct % Last readings of beamline timer
     end
-    
-    methods (Access = protected)
-        
-    end
+
     
     methods
         function obj = beamlineGUI
