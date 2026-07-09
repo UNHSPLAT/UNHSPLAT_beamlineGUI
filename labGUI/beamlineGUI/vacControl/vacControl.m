@@ -15,33 +15,34 @@ classdef vacControl < matlab.apps.AppBase
     %       monitors - struct of monitor objects from beamlineGUI (obj.Monitors)
 
     properties
-        pressureMonitors struct  % Monitors whose group is 'pressure'
-        stateMonitors    struct  % Monitors whose group is 'valveState'
+        Monitors struct  % All monitors from beamlineGUI (pressure, systemState, status, etc.)
+    end
+
+    properties (SetObservable)
+        processRunning = false     % True if vac control process is running (e.g. venting, pumping, etc.)
+        hFigure           % Handle to the control figure
+        processPanel
     end
 
     properties (Access = private)
-        hFigure           % Handle to the control figure
         monitorListeners=event.listener.empty  % Listener array keeping PostSet listeners alive
+        processStatusListener = event.listener.empty  % Listener for process status changes
+
+        
+        processes = {'HV Crossover'}  % List of available processes to run
+        hProcessText
+        hProcessDropdown  % Handle to the process function dropdown menu
+        hRunButton        % Handle to the run button
+        idleCol = [0.53,0.89,0.53]
+        runningCol = [0.99,0.77,0.77]
     end
 
     methods
         function obj = vacControl(monitors)
             %VACCONTROL  Construct the vacuum control app
-            %   Extracts pressure and valveState monitors from the provided
-            %   monitors struct, then builds the GUI.
+            %   Stores all monitors from the provided monitors struct.
 
-            obj.pressureMonitors = struct();
-            obj.stateMonitors    = struct();
-
-            fields = fieldnames(monitors);
-            for i = 1:numel(fields)
-                mon = monitors.(fields{i});
-                if strcmp(mon.group, 'pressure')
-                    obj.pressureMonitors.(fields{i}) = mon;
-                elseif strcmp(mon.group, 'systemState')
-                    obj.stateMonitors.(fields{i}) = mon;
-                end
-            end
+            obj.Monitors = monitors;
 
             % Build UI, then register with MATLAB's Running Apps system
             obj.createLayout();
@@ -55,6 +56,7 @@ classdef vacControl < matlab.apps.AppBase
         function delete(obj)
             %DELETE  Close figure; AppManagementService handles unregistration automatically
             delete(obj.monitorListeners);
+            delete(obj.processStatusListener);
             if isvalid(obj.hFigure)
                 delete(obj.hFigure);
             end
@@ -77,7 +79,7 @@ classdef vacControl < matlab.apps.AppBase
 
             % 'ToolBar',     'none', ...
 
-%                 'MenuBar',     'none', ...
+            % 'MenuBar',     'none', ...
             obj.hFigure = figure( ...
                 'Position',    [658 245 876 687], ...
                 'NumberTitle', 'off', ...
@@ -113,13 +115,67 @@ classdef vacControl < matlab.apps.AppBase
                 warning('Failed to display web page.');
             end
 
-            % Tab 2 — Placeholder
-            tabControl = uitab(tabGroup, 'Title', 'Control Procedures');
-            
-            % Tab 3 — Placeholder
+            %% Tab 2 Process control
+            tabProcessControl = uitab(tabGroup, 'Title', 'Process Control');
+            obj.processPanel = uipanel(tabProcessControl, ...
+                'Units',      'normalized', ...
+                'Position',   [.3, 0, 0.7, 1]);
+
+            % "Process Status" text box in upper left corner
+            uicontrol(tabProcessControl, ...
+                'Style',      'text', ...
+                'String',     'Process Status', ...
+                'FontSize',   12, ...
+                'FontWeight', 'bold', ...
+                'Units',      'normalized', ...
+                'Position',   [0.01, 0.85, 0.15, 0.1]);
+
+            % Add "Process Status" text box in upper left corner
+            obj.hProcessText = uicontrol(tabProcessControl, ...
+                'Style',      'text', ...
+                'String',     'Idle', ...
+                'FontSize',   12, ...
+                'FontWeight', 'bold', ...
+                'Units',      'normalized', ...
+                'HorizontalAlignment', 'center', ...
+                'BackgroundColor',     obj.idleCol, ...
+                'Position',   [0.16, 0.85, 0.1, 0.1]);
+
+            % "Select Process" label below status
+            uicontrol(tabProcessControl, ...
+                'Style',      'text', ...
+                'String',     'Select Process:', ...
+                'FontSize',   12, ...
+                'FontWeight', 'bold', ...
+                'Units',      'normalized', ...
+                'Position',   [0.01, 0.73, 0.15, 0.1]);
+
+            % Process function dropdown menu
+            obj.hProcessDropdown = uicontrol(tabProcessControl, ...
+                'Style',      'popupmenu', ...
+                'String',     obj.processes, ...
+                'FontSize',   10, ...
+                'Units',      'normalized', ...
+                'HorizontalAlignment', 'center', ...
+                'Position',   [0.033015873015872,0.639967637540453,0.229122315592904,0.046763754045297]);
+
+            % Run button below dropdown
+            obj.hRunButton = uicontrol(tabProcessControl, ...
+                'Style',      'pushbutton', ...
+                'String',     'Run', ...
+                'FontSize',   12, ...
+                'FontWeight', 'bold', ...
+                'Units',      'normalized', ...
+                'Position',   [0.033015873015873,0.423139158576047,0.096535947712418,0.124757281553391], ...
+                'Callback',   @(~,~) obj.runSelectedProcess());
+
+            obj.processStatusListener = listener(obj, 'processRunning', 'PostSet', @obj.updateProcessStatus);
+
+
+            %% Tab 3 — Placeholder
             uitab(tabGroup, 'Title', 'Interlocs');
 
-            % --- System layout diagram (top 60 %) ---
+            %% System layout diagram (top 60 %)
             panSystem = uipanel(obj.hFigure, ...
                 'Position', [0, vfrac, 1, 1]);
 
@@ -159,8 +215,8 @@ classdef vacControl < matlab.apps.AppBase
                     'VerticalAlignment',   'middle', ...
                     'BackgroundColor',     [0 0.8 0 0.2], ...
                     'EdgeColor',           'none');
-                if isfield(obj.pressureMonitors, monName)
-                    mon = obj.pressureMonitors.(monName);
+                if isfield(obj.Monitors, monName)
+                    mon = obj.Monitors.(monName);
                     obj.monitorListeners(end+1) = listener(mon, 'lastRead', 'PostSet', ...
                         @(~,~) set(hTxt, 'String', sprintf('%s%s', mon.sPrintVal(), mon.unit)));
                 end
@@ -184,13 +240,66 @@ classdef vacControl < matlab.apps.AppBase
                     'VerticalAlignment',   'middle', ...
                     'BackgroundColor',     [0 0.4 1 0.45], ...
                     'EdgeColor',           'none');
-                if isfield(obj.stateMonitors, monName)
-                    mon = obj.stateMonitors.(monName);
+                if isfield(obj.Monitors, monName)
+                    mon = obj.Monitors.(monName);
                     obj.monitorListeners(end+1) = listener(mon, 'lastRead', 'PostSet', ...
                         @(~,~) set(hTxt, 'String', sprintf('%s%s', mon.sPrintVal(), mon.unit)));
                 end
             end
-            
         end
+
+        function updateProcessStatus(obj,src,evt)
+            %UPDATEPROCESSSTATUS  Update the process status text and color
+            %   newStatus should be a struct with fields 'text' and 'color' (RGB triplet)
+            if obj.processRunning
+                text = 'Running';
+                color = obj.runningCol;
+                set(obj.hRunButton,'String', 'Abort');
+                set(obj.hProcessDropdown, 'Enable', 'off');
+            else
+                text = 'Idle';
+                color = obj.idleCol;
+                set(obj.hRunButton,'String', 'Run');
+                set(obj.hProcessDropdown, 'Enable', 'on');
+            end
+            set(obj.hProcessText, 'String', text, 'BackgroundColor', color);
+        end
+
+        function runSelectedProcess(obj)
+            %RUNSELECTEDPROCESS  Execute the process function currently selected in the dropdown
+            %   Retrieves the selected process from the dropdown and runs it
+            
+            if obj.processRunning
+                % If a process is already running, we could implement an abort mechanism here
+                obj.stopProcess();  % This would signal the running process to stop via the listener
+                return;
+            end
+
+            selections = get(obj.hProcessDropdown, 'String');
+            selectedIdx = get(obj.hProcessDropdown, 'Value');
+            selectedFunction = selections{selectedIdx};
+            
+            % Execute the selected process function
+            switch selectedFunction
+                case 'HV Crossover'
+                    % Execute HV Crossover process
+                    obj.processRunning = true; 
+                    disp('Running HV Crossover process...');
+                    % Call the actual process function here
+                    vacControl_fHVcrossover(obj);
+                otherwise
+                    disp(['Cannot run: ' selectedFunction]);
+            end
+        end
+
+        function stopProcess(obj)
+            %STOPPROCESS  Signal the currently running process to stop
+            if obj.processRunning
+                disp('Aborting current process...');
+                obj.processRunning = false;  % This would signal the running process to stop via the listener
+            else
+                disp('No process is currently running.');
+            end
+        end 
     end
 end

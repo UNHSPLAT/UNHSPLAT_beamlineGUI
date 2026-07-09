@@ -15,9 +15,14 @@ classdef monitorPlot < handle
         yvals = {}  % Cell array to store multiple y-value arrays
         numYvals = 0  % Number of y-values to track
         panel%
-        ax%
         listo
         hFigure%
+    end
+
+    properties(SetAccess = public)
+        margin = 0.08;  % Margin around edges (as fraction of figure size)
+        spacing = 0.08; % Spacing between plots (as fraction of figure size)
+        ax%
     end
 
     methods
@@ -192,8 +197,8 @@ classdef monitorPlot < handle
             num_cols = ceil((num_axes + 1) / num_rows);
             
             % Define margins and spacing
-            margin = 0.08;  % 8% margin around edges
-            spacing = 0.08; % 8% spacing between plots
+            margin = obj.margin;  % 8% margin around edges
+            spacing = obj.spacing; % 8% spacing between plots
 
             % Calculate available space after margins
             available_width = 1 - 2*margin;
