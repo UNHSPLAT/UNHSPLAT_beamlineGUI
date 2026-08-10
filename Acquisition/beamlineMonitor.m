@@ -15,13 +15,14 @@ classdef beamlineMonitor < acquisition
         ReadingsListener % Listener for beamlineGUI readings
     end
 
+    properties
+        hFigure % Handle to configuration GUI figure
+    end
+
     methods
         function obj = beamlineMonitor(hGUI)
             %BEAMLINEMONITOR Construct an instance of this class
             obj@acquisition(hGUI);
-
-            % Add listener to delete configuration GUI figure if main beamline GUI deleted
-            listener(obj.hBeamlineGUI,'ObjectBeingDestroyed',@obj.beamlineGUIDeleted);
 
         end
 

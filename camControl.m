@@ -23,9 +23,9 @@ classdef camControl < handle
             obj.Tag = 'MCPcam';
             obj.lastRead = nan;
             % initialize timer to execute peakfinding
-            obj.Timer =  timer('Period',.5,... %period
+            obj.Timer =  timer('Period',2,... %period
                       'ExecutionMode','fixedSpacing',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
-                      'BusyMode','queue',... %{drop, error, queue}
+                      'BusyMode','drop',... %{drop, error, queue}
                       'StartDelay',0,...
                       'TimerFcn',@obj.update ...
                       );
@@ -61,14 +61,6 @@ classdef camControl < handle
             
             % Run Main Loop
             obj.datamanager.setupPreview;
-            
-            % initialize timer to execute peakfinding
-            obj.Timer =  timer('Period',.1,... %period
-                      'ExecutionMode','fixedSpacing',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
-                      'BusyMode','drop',... %{drop, error, queue}
-                      'StartDelay',0,...
-                      'TimerFcn',@obj.update ...
-                      );
 
             start(obj.Timer);
             obj.Connected = true;
@@ -143,6 +135,9 @@ classdef camControl < handle
 
         function delete(obj)
             % Delete the webcam object
+            if isvalid(obj.Timer)
+                delete(obj.Timer)
+            end
             obj.shutdown();
         end
 

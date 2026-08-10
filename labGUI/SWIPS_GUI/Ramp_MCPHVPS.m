@@ -13,9 +13,11 @@ function Ramp_MCPHVPS(monMCP)
     if or(isnan(vSet)|isnan(step),isnan(dwell))
         errordlg('A valid voltage value must be entered!','Invalid input!');
         return
-    elseif abs(vSet) > abs(monMCP.parent.VMax) || abs(vSet) < abs(monMCP.parent.VMin)
-        errordlg(['Defl voltage setpoint must be between ',num2str(hDefl.VMin),' and ',num2str(hDefl.VMax),' V!'],'Invalid input!');
-        return
+    elseif  isprop(monMCP.parent,'VMax') && isprop(monMCP.parent,'VMin')
+        if abs(vSet) > abs(monMCP.parent.VMax) || abs(vSet) < abs(monMCP.parent.VMin)
+            errordlg(['Defl voltage setpoint must be between ',num2str(hDefl.VMin),' and ',num2str(hDefl.VMax),' V!'],'Invalid input!');
+            return
+        end
     end    
 
     function stop_func(src,evt)
