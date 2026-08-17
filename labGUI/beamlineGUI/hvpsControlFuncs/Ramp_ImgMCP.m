@@ -33,7 +33,7 @@ function Ramp_ImgMCP(monMCP_Va,monMCP_vOut)
     monMCP_Va.parent.stopTimer();
     monMCP_Va.parent.Timer.Period = sampleRate;
     monMCP_Va.parent.restartTimer();
-
+    
     % define coupled voltage set func
     function setVImgMCP(vA)
         if monMCP_Va.parent.Connected
