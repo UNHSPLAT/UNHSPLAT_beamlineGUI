@@ -49,6 +49,14 @@
                 'Channel 5 config did not respond with ''TEMP,J'' as expected (got: ''%s'')', response);
         end
         
+        % Attached to chamber 
+        fluke.devRW("FUNC 15,OHMS,3,2");
+        response = strtrim(fluke.devRW("FUNC? 15"));
+        if ~strcmp(response, 'OHMS,3,2')
+            warning('beamlineGUI:flukeConfigMismatch', ...
+                'Channel 15 config did not respond with ''OHMS,3,2'' as expected (got: ''%s'')', response);
+        end
+
         fluke.devRW("INTVL 0,0,3");
         response = strtrim(fluke.devRW("INTVL?"));
         if ~strcmp(response, '0,0,3')
