@@ -2,7 +2,7 @@ function vacControl_fHVcrossover(vacController)
     % Function to execute the HV Crossover process in the vacuum control system.
     cryoOutlet = 5;
     crossoverPressure = 4.0e-2; % Define the crossover pressure threshold
-    pressureMonitor = vacController.Monitors.pressureChamberRough1; % Monitor for chamber pressure
+    pressureMonitor = vacController.Monitors.pressureChamberIG1; % Monitor for chamber pressure
     monplot = [];  % Initialize monplot as empty to track if it's created
 
     %% Verify all hardware is connected
@@ -63,7 +63,7 @@ function vacControl_fHVcrossover(vacController)
     monplot = monitorPlot(vacController.hFigure, ...
                         vacController.processPanel, ...
                 vacController.Monitors.dateTime, ... 
-                vacController.Monitors.pressureChamberRough1);
+                vacController.Monitors.pressureChamberIG1);
     
     % scale plot to margin
     inset = get(monplot.ax, 'TightInset');
