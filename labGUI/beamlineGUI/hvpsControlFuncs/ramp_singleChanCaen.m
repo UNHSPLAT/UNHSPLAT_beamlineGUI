@@ -1,14 +1,14 @@
 function ramp_singleChanCaen(monCaenVolt)
-    prompt = {'Enter desired set voltage:','Enter step size [V]:','Enter dwell time [s]:','Enter sample rate [s]:'};
+    prompt = {'Enter desired set voltage:','Enter step size [V]:','Enter dwell time [s]:'};
     dlgtitle = 'Caen Voltage Ramp';
-    fieldsize = [1 45; 1 45; 1 45; 1 45];
+    fieldsize = [1 45; 1 45; 1 45];
     try
         chLastRead = char(string(monCaenVolt.lastRead));
     catch
         chLastRead = '0';
     end
 
-    definput = {chLastRead,'20','10','2'};
+    definput = {chLastRead,'20','10'};
     answer = inputdlg(prompt,dlgtitle,fieldsize,definput);
     
     % abort if cancel button pressed
@@ -20,18 +20,12 @@ function ramp_singleChanCaen(monCaenVolt)
     vSet = abs(str2double(answer{1}));
     step = abs(str2double(answer{2}));
     dwell = str2double(answer{3});
-    sampleRate = str2double(answer{4});
     
-    if or(isnan(vSet),isnan(step)) || isnan(dwell) || isnan(sampleRate)
+    if or(isnan(vSet),isnan(step)) || isnan(dwell)
         errordlg('A valid voltage value must be entered!','Invalid input!');
         return
     end    
     monCaenVolt.lock = true;
-
-    % update parent device polling rate to sampleRate
-    monCaenVolt.parent.stopTimer();
-    monCaenVolt.parent.Timer.Period = sampleRate;
-    monCaenVolt.parent.restartTimer();
 
     % define coupled voltage set func
     function setV(vOut)
@@ -47,11 +41,6 @@ function ramp_singleChanCaen(monCaenVolt)
     function stop_func(src,evt)
         monCaenVolt.parent.read();
         monCaenVolt.lock = false;
-
-        monCaenVolt.parent.stopTimer();
-        monCaenVolt.parent.Timer.Period = monCaenVolt.parent.refreshRate;
-        monCaenVolt.parent.restartTimer();
-
         delete(monCaenVolt.monTimer);
     end
 
@@ -66,7 +55,7 @@ function ramp_singleChanCaen(monCaenVolt)
         multivolt = linspace(vStart,vSet,ceil((abs(vSet-monCaenVolt.lastRead))/step)+1);
         multivolt = multivolt(2:end);
         
-        monCaenVolt.monTimer = timer('Period',sampleRate,... %period
+        monCaenVolt.monTimer = timer('Period',dwell,... %period
                   'ExecutionMode','fixedSpacing',... %{singleShot,fixedRate,fixedSpacing,fixedDelay}
                   'BusyMode','queue',... %{drop, error, queue}
                   'TasksToExecute',numel(multivolt),...          

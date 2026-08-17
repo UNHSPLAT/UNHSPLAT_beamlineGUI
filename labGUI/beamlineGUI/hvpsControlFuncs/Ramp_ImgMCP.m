@@ -1,14 +1,14 @@
 function Ramp_ImgMCP(monMCP_Va,monMCP_vOut)
-    prompt = {'Enter desired set voltage:','Enter step size [V]:','Enter dwell time [s]:','Enter sample rate [s]:'};
+    prompt = {'Enter desired set voltage:','Enter step size [V]:','Enter dwell time [s]:'};
     dlgtitle = 'IMG MCP Ramp';
-    fieldsize = [1 45; 1 45; 1 45; 1 45];
+    fieldsize = [1 45; 1 45; 1 45];
     try
         chLastRead = char(string(monMCP_Va.lastRead));
     catch
         chLastRead = '0';
     end
 
-    definput = {chLastRead,'20','10','2'};
+    definput = {chLastRead,'20','10'};
     answer = inputdlg(prompt,dlgtitle,fieldsize,definput);
     
     % abort if cancel button pressed
@@ -20,19 +20,13 @@ function Ramp_ImgMCP(monMCP_Va,monMCP_vOut)
     vSet = abs(str2double(answer{1}));
     step = abs(str2double(answer{2}));
     dwell = str2double(answer{3});
-    sampleRate = str2double(answer{4});
     
-    if or(isnan(vSet),isnan(step)) || isnan(dwell) || isnan(sampleRate)
+    if or(isnan(vSet),isnan(step)) || isnan(dwell)
         errordlg('A valid voltage value must be entered!','Invalid input!');
         return
     end    
     monMCP_Va.lock = true;
     monMCP_vOut.lock = true;
-
-    % update parent device polling rate to sampleRate
-    monMCP_Va.parent.stopTimer();
-    monMCP_Va.parent.Timer.Period = sampleRate;
-    monMCP_Va.parent.restartTimer();
 
     % define coupled voltage set func
     function setVImgMCP(vA)
@@ -50,11 +44,6 @@ function Ramp_ImgMCP(monMCP_Va,monMCP_vOut)
     function stop_func(src,evt)
         monMCP_Va.parent.read();
         monMCP_Va.lock = false;
-
-        monMCP_Va.parent.stopTimer();
-        monMCP_Va.parent.Timer.Period = monMCP_Va.parent.refreshRate;
-        monMCP_Va.parent.restartTimer();
-
         delete(monMCP_Va.monTimer);
         monMCP_vOut.lock = false;
     end
