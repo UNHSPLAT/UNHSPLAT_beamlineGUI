@@ -9,7 +9,7 @@
         fluke.devRW("SCAN 0");
         
         % disable all channels for configure
-        for ch = 1:10
+        for ch = 1:20
             response = fluke.devRW(sprintf("FUNC %d, OFF;FUNC? %d", ch, ch));
             if ~strcmp(strtrim(response), 'OFF')
                 warning('beamlineGUI:flukeChannelNotOff', ...
