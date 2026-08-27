@@ -34,7 +34,7 @@ classdef vacControl < matlab.apps.AppBase
         hRunButton        % Handle to the run button
         idleCol = [0.53,0.89,0.53]
         runningCol = [0.99,0.77,0.77]
-        hValveBoxes   = gobjects(0)  % Text handles for valve state boxes
+        hValveBoxes   = gobjects(0)  % Rectangle handles for valve state boxes
         valveChannels = []            % Webpowerstrip channel index for each box
     end
 
@@ -267,18 +267,16 @@ classdef vacControl < matlab.apps.AppBase
             obj.valveChannels = cell2mat(valveOverlays(:, 2));
 
             for k = 1:size(valveOverlays, 1)
-                label = valveOverlays{k, 1};
-                pos   = valveOverlays{k, 3};
-                ax_cx = pos(1) + pos(3)/2;
-                ax_cy = (pos(2) + pos(4)/2) / (1 - vfrac);
-                px    = 0.5 + ax_cx * imgW;
-                py    = 0.5 + (1 - ax_cy) * imgH;
-                obj.hValveBoxes(k) = text(ax, px, py, label, ...
-                    'FontSize',            7, ...
-                    'HorizontalAlignment', 'center', ...
-                    'VerticalAlignment',   'middle', ...
-                    'BackgroundColor',     [0.7 0.7 0.7], ...
-                    'EdgeColor',           'k');
+                pos    = valveOverlays{k, 3};
+                x_rect = 0.5 + pos(1) * imgW;
+                y_rect = 0.5 + (1 - (pos(2) + pos(4)) / (1 - vfrac)) * imgH;
+                w_rect = pos(3) * imgW;
+                h_rect = pos(4) / (1 - vfrac) * imgH;
+                obj.hValveBoxes(k) = rectangle(ax, ...
+                    'Position',  [x_rect, y_rect, w_rect, h_rect], ...
+                    'EdgeColor', [0.7 0.7 0.7], ...
+                    'FaceColor', 'none', ...
+                    'LineWidth', 2);
             end
 
             obj.monitorListeners(end+1) = listener(obj.Monitors.valveState, 'lastRead', 'PostSet', ...
@@ -352,7 +350,7 @@ classdef vacControl < matlab.apps.AppBase
                 else
                     col = colUnknown;
                 end
-                set(obj.hValveBoxes(i), 'BackgroundColor', col);
+                set(obj.hValveBoxes(i), 'EdgeColor', col);
             end
         end
     end
