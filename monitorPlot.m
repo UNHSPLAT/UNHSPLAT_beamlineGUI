@@ -14,6 +14,7 @@ classdef monitorPlot < handle
         xvals = []%
         yvals = {}  % Cell array to store multiple y-value arrays
         numYvals = 0  % Number of y-values to track
+        lineHandles = gobjects(0)  % Handles to plotted lines for in-place updates
         panel%
         listo
         hFigure%
@@ -116,17 +117,22 @@ classdef monitorPlot < handle
                         end
                     end
                     
-                    % Clear the axes
-                    cla(obj.ax);
-                    
-                    % Plot each line with a different color
-                    colors = {'b', 'r', 'g', 'm', 'c', 'k', 'y'};  % Color cycle
-                    hold(obj.ax, 'on');
-                    for i = 1:obj.numYvals
-                        color_idx = mod(i-1, length(colors)) + 1;
-                        plot(obj.ax, obj.xvals, obj.yvals{i}, [colors{color_idx} '.-']);
+                    % Update or create plot lines
+                    colors = {'b', 'r', 'g', 'm', 'c', 'k', 'y'};
+                    if numel(obj.lineHandles) ~= obj.numYvals || ~all(isvalid(obj.lineHandles))
+                        cla(obj.ax);
+                        hold(obj.ax, 'on');
+                        obj.lineHandles = gobjects(1, obj.numYvals);
+                        for i = 1:obj.numYvals
+                            color_idx = mod(i-1, length(colors)) + 1;
+                            obj.lineHandles(i) = plot(obj.ax, obj.xvals, obj.yvals{i}, [colors{color_idx} '.-']);
+                        end
+                        hold(obj.ax, 'off');
+                    else
+                        for i = 1:obj.numYvals
+                            set(obj.lineHandles(i), 'XData', obj.xvals, 'YData', obj.yvals{i});
+                        end
                     end
-                    hold(obj.ax, 'off');
 
                     xlabel(obj.ax, obj.xMon.sPrint());
                     ylabel(obj.ax, obj.yMon.sPrint());
@@ -172,6 +178,7 @@ classdef monitorPlot < handle
             obj.xvals = [];
             obj.yvals = {};
             obj.numYvals = 0;
+            obj.lineHandles = gobjects(0);
             
             % Clear the current plot
             cla(obj.ax);
