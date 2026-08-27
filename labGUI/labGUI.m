@@ -408,7 +408,6 @@ classdef (Abstract) labGUI < matlab.apps.AppBase
             if obj.isAcquisition()
                 if strcmp(obj.Acquisitions.scanTimer.Running, 'off')
                     try
-                        obj.stopTimer();
                         start(obj.Acquisitions.scanTimer);
                         msgbox('Acquisition started successfully', 'Start Acquisition');
                     catch ME
