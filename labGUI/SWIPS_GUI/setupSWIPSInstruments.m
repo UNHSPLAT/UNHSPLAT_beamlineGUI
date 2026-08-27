@@ -60,7 +60,7 @@ function instruments = setupSWIPSInstruments()
         if self.Connected
             self.lastIRead = self.measI;
             pause(0.1);
-            drawnow();
+            drawnow limitrate;
             self.lastRead = self.measV;
         else
             self.lastIRead = [nan,nan,nan];
