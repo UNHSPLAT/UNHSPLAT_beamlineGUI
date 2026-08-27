@@ -55,7 +55,6 @@ classdef CallbackProfiler < handle
             obj.startRefresh();
             obj.refresh();
         end
-
         % -----------------------------------------------------------------
         function buildUI(obj)
             obj.hFigure = figure(...
@@ -102,7 +101,7 @@ classdef CallbackProfiler < handle
                 'Units','normalized','Position',[rightX 0.56 rightW 0.410],...
                 'ColumnName',colNames,...
                 'RowName',{},...
-                'ColumnWidth','auto',...
+                'ColumnWidth',{100,'auto','auto','auto','auto','auto'},...
                 'FontSize',8,...
                 'BackgroundColor',[0.14 0.14 0.16; 0.18 0.18 0.20],...
                 'ForegroundColor',[0.92 0.92 0.92]);
@@ -134,7 +133,7 @@ classdef CallbackProfiler < handle
 
             % ---- Window controls ----
             uicontrol('Parent',obj.hFigure,'Style','text',...
-                'Units','normalized','Position',[0.06 0.95 0.12 0.03],...
+                'Units','normalized','Position',[0.01 0.95 0.06 0.03],...
                 'String','Window (sec):',...
                 'BackgroundColor',[0.10 0.10 0.12],...
                 'ForegroundColor',[.7 .7 .7],'FontSize',8,...
@@ -142,12 +141,12 @@ classdef CallbackProfiler < handle
 
             winOptions = {'15','30','60','120','300'};
             uicontrol('Parent',obj.hFigure,'Style','popupmenu',...
-                'Units','normalized','Position',[0.19 0.955 0.08 0.025],...
+                'Units','normalized','Position',[0.1 0.955 0.04 0.025],...
                 'String',winOptions,'Value',2,...
                 'Callback',@(src,~) obj.setWindow(str2double(winOptions{src.Value})));
 
             uicontrol('Parent',obj.hFigure,'Style','pushbutton',...
-                'Units','normalized','Position',[0.29 0.955 0.08 0.028],...
+                'Units','normalized','Position',[0.15 0.955 0.08 0.028],...
                 'String','Clear Logs',...
                 'Callback',@(~,~) obj.clearAll());
         end
@@ -210,6 +209,7 @@ classdef CallbackProfiler < handle
             end
 
             [names, devices] = obj.getDevices();
+            ndev = numel(devices);
             now_t  = now(); %#ok<TNOW1>
             nDev   = numel(names);
             palette = lines(max(nDev,1));
@@ -218,7 +218,15 @@ classdef CallbackProfiler < handle
             % failure does not prevent the others from rendering.
             try
                 obj.drawGantt(names, devices, now_t, palette);
-            catch ME
+
+                %align gant and table
+                obj.hGanttAxes.Units = 'points';
+                currentGPos = obj.hGanttAxes.Position;
+                currentGPos(end) = obj.hTable.FontSize*(ndev)*1.75;
+                obj.hGanttAxes.Position = currentGPos;
+                obj.hGanttAxes.Units = 'normalized';
+                obj.hGanttAxes.Position(2) = obj.hTable.Position(2);
+            catch ME    
                 loc = '';
                 if ~isempty(ME.stack), loc = sprintf(' (line %d in %s)', ME.stack(1).line, ME.stack(1).name); end
                 obj.addWarning(['Gantt error: ' ME.message loc]);
@@ -234,6 +242,15 @@ classdef CallbackProfiler < handle
 
             try
                 obj.drawTable(names, devices);
+                
+                %align gant and table
+                obj.hTable.Units = 'points';
+                currentGPos = obj.hTable.Position;
+                currentGPos(end) = obj.hTable.FontSize*(ndev+1)*1.75;
+                obj.hTable.Position = currentGPos;
+                obj.hTable.Units = 'pixels';
+                obj.hFigure.Position(end) = obj.hTable.Position(2)+obj.hTable.Position(end);
+                obj.hTable.Units = 'normalized';
             catch ME
                 loc = '';
                 if ~isempty(ME.stack), loc = sprintf(' (line %d in %s)', ME.stack(1).line, ME.stack(1).name); end
@@ -356,6 +373,7 @@ classdef CallbackProfiler < handle
                                 'Position',[t0, yPos-0.35, max(dur,0.05), 0.7],...
                                 'FaceColor',c,'EdgeColor','none','Curvature',[0.3 0.3]);
                         end
+                        
                     catch
                     end
                     continue;
