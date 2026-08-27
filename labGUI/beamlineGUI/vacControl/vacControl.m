@@ -27,7 +27,6 @@ classdef vacControl < matlab.apps.AppBase
     properties (Access = private)
         monitorListeners=event.listener.empty  % Listener array keeping PostSet listeners alive
         processStatusListener = event.listener.empty  % Listener for process status changes
-
         
         processes = {'HV Crossover'}  % List of available processes to run
         hProcessText
@@ -35,6 +34,8 @@ classdef vacControl < matlab.apps.AppBase
         hRunButton        % Handle to the run button
         idleCol = [0.53,0.89,0.53]
         runningCol = [0.99,0.77,0.77]
+        hValveBoxes   = gobjects(0)  % Text handles for valve state boxes
+        valveChannels = []            % Webpowerstrip channel index for each box
     end
 
     methods
@@ -246,6 +247,42 @@ classdef vacControl < matlab.apps.AppBase
                         @(~,~) set(hTxt, 'String', sprintf('%s%s', mon.sPrintVal(), mon.unit)));
                 end
             end
+
+
+
+            % --- Valve state indicators overlaid on layout diagram ---
+            % [label, webpowerstrip_channel, [x, y, w, h] in panSystem normalised coords]
+            valveOverlays = { ...
+                'Turbo1GV',       4, [0.288126183986701, 0.234487534626039, 0.035122496713833, 0.030470914127424]; ...
+                'BeamRoughV',     1, [0.256789197208691, 0.090443213296399, 0.035122496713833, 0.030470914127424]; ...
+                'Turbo2GV',       3, [0.51375248878837,  0.335133887349954, 0.035122496713833, 0.030470914127424]; ...
+                'ChamberBeamGV',  6, [0.608459826606354, 0.377608494921514, 0.035122496713833, 0.030470914127424]; ...
+                'BeamRoughV2',    2, [0.582389063105424, 0.28944097852671,  0.035122496713833, 0.030470914127424]; ...
+                'Cryo1GV',        5, [0.73788254541455,  0.228058530403746, 0.035122496713833, 0.030470914127424]; ...
+                'ChamberRoughV1', 8, [0.799335059381031, 0.089669010999243, 0.035122496713833, 0.030470914127424]; ...
+                'ChamberRoughV2', 7, [0.6053,0.1965,0.0351,0.0305]; ...
+            };
+
+            obj.hValveBoxes   = gobjects(size(valveOverlays, 1), 1);
+            obj.valveChannels = cell2mat(valveOverlays(:, 2));
+
+            for k = 1:size(valveOverlays, 1)
+                label = valveOverlays{k, 1};
+                pos   = valveOverlays{k, 3};
+                ax_cx = pos(1) + pos(3)/2;
+                ax_cy = (pos(2) + pos(4)/2) / (1 - vfrac);
+                px    = 0.5 + ax_cx * imgW;
+                py    = 0.5 + (1 - ax_cy) * imgH;
+                obj.hValveBoxes(k) = text(ax, px, py, label, ...
+                    'FontSize',            7, ...
+                    'HorizontalAlignment', 'center', ...
+                    'VerticalAlignment',   'middle', ...
+                    'BackgroundColor',     [0.7 0.7 0.7], ...
+                    'EdgeColor',           'k');
+            end
+
+            obj.monitorListeners(end+1) = listener(obj.Monitors.valveState, 'lastRead', 'PostSet', ...
+                @(~,~) obj.updateValveBoxes());
         end
 
         function updateProcessStatus(obj,src,evt)
@@ -300,6 +337,23 @@ classdef vacControl < matlab.apps.AppBase
             else
                 disp('No process is currently running.');
             end
-        end 
+        end
+
+        function updateValveBoxes(obj)
+            %UPDATEVALVEBOXES  Colour valve boxes green (open) / red (closed) / grey (unknown)
+            states     = obj.Monitors.valveState.lastRead;
+            colOpen    = [0.2 0.8 0.2];
+            colClosed  = [0.9 0.2 0.2];
+            colUnknown = [0.7 0.7 0.7];
+            for i = 1:numel(obj.hValveBoxes)
+                ch = obj.valveChannels(i);
+                if ch <= numel(states) && ~isnan(states(ch))
+                    if states(ch); col = colOpen; else; col = colClosed; end
+                else
+                    col = colUnknown;
+                end
+                set(obj.hValveBoxes(i), 'BackgroundColor', col);
+            end
+        end
     end
 end
