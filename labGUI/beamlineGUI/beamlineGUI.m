@@ -77,6 +77,13 @@ classdef beamlineGUI < labGUI
             %VACCONTROLCALLBACK Launches the vacControl vacuum/valve control app
             obj.hVacControl = vacControl(obj.Monitors);
         end
+
+        function delete(obj)
+            if ~isempty(obj.hVacControl) && isvalid(obj.hVacControl)
+                delete(obj.hVacControl);
+            end
+            delete@labGUI(obj);
+        end
     end
 
 
