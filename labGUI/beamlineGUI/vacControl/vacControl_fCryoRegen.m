@@ -155,7 +155,6 @@ function vacControl_fCryoRegen(vacController)
 
     % Close monitor plot if it exists
     if ~isempty(monplot) && isvalid(monplot)
-        delete(monplot.ax);
         delete(monplot);
     end
 
@@ -164,7 +163,6 @@ function vacControl_fCryoRegen(vacController)
         vacController.processRunning = false;
         display('Aborting Cryo Regen process...');
         if ~isempty(monplot) && isvalid(monplot)
-            delete(monplot.ax);
             delete(monplot);
         end
     end

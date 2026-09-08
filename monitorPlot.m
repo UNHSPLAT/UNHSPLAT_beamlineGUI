@@ -55,6 +55,16 @@ classdef monitorPlot < handle
             % Initial plot
             obj.pltVal();
         end
+
+        function delete(obj)
+            %DELETE Clean up listener and axes so callers only need to call delete(obj)
+            if ~isempty(obj.listo) && isvalid(obj.listo)
+                delete(obj.listo);
+            end
+            if ~isempty(obj.ax) && isvalid(obj.ax)
+                delete(obj.ax);
+            end
+        end
         
         function pltVal(obj)
             try

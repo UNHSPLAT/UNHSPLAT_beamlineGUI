@@ -162,7 +162,6 @@ function vacControl_fHVcrossover(vacController)
 
     % Close monitor plot if it exists
     if ~isempty(monplot) && isvalid(monplot)
-        delete(monplot.ax);
         delete(monplot);
     end
 
@@ -172,7 +171,6 @@ function vacControl_fHVcrossover(vacController)
         % Close monitor plot if it exists
         display('Aborting HV Crossover process...');
         if ~isempty(monplot) && isvalid(monplot)
-            delete(monplot.ax);
             delete(monplot);
         end
     end
