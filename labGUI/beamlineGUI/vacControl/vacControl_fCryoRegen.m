@@ -6,7 +6,7 @@ function vacControl_fCryoRegen(vacController)
     cryoRoughV     = 1;  % valveState2 channel
     n2PurgeV       = 2;  % valveState2 channel
 
-    roughPressure = 1.0e-2;  % Rough vacuum threshold [T]
+    roughPressure = 5.0e-2;  % Rough vacuum threshold [T]
     purgePressure = 450;     % N2 purge target pressure [T]
 
     pressureMonitor = vacController.Monitors.pressureChamberRough1;  % Rough gauge covers full range
