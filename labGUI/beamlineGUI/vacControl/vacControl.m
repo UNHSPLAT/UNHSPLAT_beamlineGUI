@@ -34,8 +34,9 @@ classdef vacControl < matlab.apps.AppBase
         hRunButton        % Handle to the run button
         idleCol = [0.53,0.89,0.53]
         runningCol = [0.99,0.77,0.77]
-        hValveBoxes   = gobjects(0)  % Rectangle handles for valve state boxes
-        valveChannels = []            % Webpowerstrip channel index for each box
+        hValveBoxes    = gobjects(0)  % Rectangle handles for valve state boxes
+        valveChannels  = []            % Webpowerstrip channel index for each box
+        valveMonitors  = {}            % Monitor name (valveState1/valveState2) for each box
     end
 
     methods
@@ -263,20 +264,22 @@ classdef vacControl < matlab.apps.AppBase
 
 
             % --- Valve state indicators overlaid on layout diagram ---
-            % [label, webpowerstrip_channel, [x, y, w, h] in panSystem normalised coords]
+            % [label, webpowerstrip_channel, [x, y, w, h] in panSystem normalised coords, monitor name]
             valveOverlays = { ...
-                'Turbo1GV',       4, [0.20169672491121,0.241136123371813,0.080427354481729,0.023496820791407]; ...
-                'BeamRoughV',     1, [0.18912995077344,0.09,0.038538107355828,0.029371025989259]; ...
-                'Turbo2GV',       3, [0.471463476402009,0.326731684826224,0.097183053332088,0.031049370331502]; ...
-                'ChamberBeamGV',  6, [0.646560529388272,0.337640923050806,0.030160257930648,0.072]; ...
-                'BeamRoughV2',    2, [0.602157927434818,0.280577215414532,0.030160257930648,0.056224535465152]; ...
-                'Cryo1GV',        5, [0.659965088468561,0.23,0.203581741031875,0.031049370331502]; ...
-                'ChamberRoughV1', 8, [0.847628915592593,0.093,0.039,0.031049370331502]; ...
-                'ChamberRoughV2', 7, [0.645722744445754,0.195,0.039375892298346,0.031049370331502]; ...
+                'Turbo1GV',       4, [0.20169672491121,0.241136123371813,0.080427354481729,0.023496820791407], 'valveState1'; ...
+                'BeamRoughV',     1, [0.18912995077344,0.09,0.038538107355828,0.029371025989259], 'valveState1'; ...
+                'Turbo2GV',       3, [0.471463476402009,0.326731684826224,0.097183053332088,0.031049370331502], 'valveState1'; ...
+                'ChamberBeamGV',  6, [0.646560529388272,0.337640923050806,0.030160257930648,0.072], 'valveState1'; ...
+                'BeamRoughV2',    2, [0.602157927434818,0.280577215414532,0.030160257930648,0.056224535465152], 'valveState1'; ...
+                'Cryo1GV',        5, [0.659965088468561,0.23,0.203581741031875,0.031049370331502], 'valveState1'; ...
+                'ChamberRoughV1', 8, [0.847628915592593,0.093,0.039,0.031049370331502], 'valveState1'; ...
+                'ChamberRoughV2', 7, [0.645722744445754,0.195,0.039375892298346,0.031049370331502], 'valveState1'; ...
+                'Cryo1RoughV',    1, [0.7397,0.135,0.0515,0.0289], 'valveState2'; ...
             };
 
             obj.hValveBoxes   = gobjects(size(valveOverlays, 1), 1);
             obj.valveChannels = cell2mat(valveOverlays(:, 2));
+            obj.valveMonitors = valveOverlays(:, 4);
 
             for k = 1:size(valveOverlays, 1)
                 pos    = valveOverlays{k, 3};
@@ -292,6 +295,8 @@ classdef vacControl < matlab.apps.AppBase
             end
 
             obj.monitorListeners(end+1) = listener(obj.Monitors.valveState1, 'lastRead', 'PostSet', ...
+                @(~,~) obj.updateValveBoxes());
+            obj.monitorListeners(end+1) = listener(obj.Monitors.valveState2, 'lastRead', 'PostSet', ...
                 @(~,~) obj.updateValveBoxes());
         end
 
@@ -351,12 +356,12 @@ classdef vacControl < matlab.apps.AppBase
 
         function updateValveBoxes(obj)
             %UPDATEVALVEBOXES  Colour valve boxes green (open) / red (closed) / grey (unknown)
-            states     = obj.Monitors.valveState1.lastRead;
             colOpen    = [0.2 0.8 0.2];
             colClosed  = [0.9 0.2 0.2];
             colUnknown = [0.7 0.7 0.7];
             for i = 1:numel(obj.hValveBoxes)
-                ch = obj.valveChannels(i);
+                ch     = obj.valveChannels(i);
+                states = obj.Monitors.(obj.valveMonitors{i}).lastRead;
                 if ch <= numel(states) && ~isnan(states(ch))
                     if states(ch); col = colOpen; else; col = colClosed; end
                 else
