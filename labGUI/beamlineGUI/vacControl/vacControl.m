@@ -116,7 +116,29 @@ classdef vacControl < matlab.apps.AppBase
                 warning('Failed to display web page.');
             end
 
-            %% Tab 2 Process control
+            % Tab 2 — Power strip web interface
+            tabPowerStrip2 = uitab(tabGroup, 'Title', 'Power Strip 2');
+            pan_valveControl2 = uipanel(tabPowerStrip2, ...
+                'BorderType', 'none', ...
+                'Units',      'normalized', ...
+                'Position',   [0, 0, 1, 1]);
+
+            uicontrol(tabPowerStrip2, ...
+                'Style',      'pushbutton', ...
+                'String',     'Refresh', ...
+                'FontSize',   12, ...
+                'FontWeight', 'bold', ...
+                'Units',      'normalized', ...
+                'Position',   [0.01, 0.88, 0.1, 0.1], ...
+                'Callback',   @(~,~) displayWebPage('http://192.168.0.109/', pan_valveControl2));
+            try
+                displayWebPage('http://192.168.0.109/', pan_valveControl2);
+            catch
+                warning('Failed to display web page.');
+            end
+
+
+            %% Tab 3 Process control
             tabProcessControl = uitab(tabGroup, 'Title', 'Process Control');
             obj.processPanel = uipanel(tabProcessControl, ...
                 'Units',      'normalized', ...
@@ -173,7 +195,7 @@ classdef vacControl < matlab.apps.AppBase
             obj.processStatusListener = listener(obj, 'processRunning', 'PostSet', @obj.updateProcessStatus);
 
 
-            %% Tab 3 — Placeholder
+            %% Tab 4 — Interloc Placeholder
             uitab(tabGroup, 'Title', 'Interlocs');
 
             %% System layout diagram (top 60 %)
