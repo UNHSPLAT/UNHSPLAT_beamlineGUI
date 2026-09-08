@@ -291,7 +291,7 @@ classdef vacControl < matlab.apps.AppBase
                     'LineWidth', 2);
             end
 
-            obj.monitorListeners(end+1) = listener(obj.Monitors.valveState, 'lastRead', 'PostSet', ...
+            obj.monitorListeners(end+1) = listener(obj.Monitors.valveState1, 'lastRead', 'PostSet', ...
                 @(~,~) obj.updateValveBoxes());
         end
 
@@ -351,7 +351,7 @@ classdef vacControl < matlab.apps.AppBase
 
         function updateValveBoxes(obj)
             %UPDATEVALVEBOXES  Colour valve boxes green (open) / red (closed) / grey (unknown)
-            states     = obj.Monitors.valveState.lastRead;
+            states     = obj.Monitors.valveState1.lastRead;
             colOpen    = [0.2 0.8 0.2];
             colClosed  = [0.9 0.2 0.2];
             colUnknown = [0.7 0.7 0.7];
