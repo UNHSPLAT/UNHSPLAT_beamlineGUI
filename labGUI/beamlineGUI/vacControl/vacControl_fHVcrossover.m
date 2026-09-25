@@ -7,7 +7,7 @@ function vacControl_fHVcrossover(vacController)
 
     %% Verify all hardware is connected
     pressureHW = pressureMonitor.parent;
-    valveControlHW = vacController.Monitors.valveState.parent;
+    valveControlHW = vacController.Monitors.valveState1.parent;
     cryoTempHardware = vacController.Monitors.cryoTemp.parent;
     parents = [pressureHW, valveControlHW, cryoTempHardware];
 
@@ -33,10 +33,10 @@ function vacControl_fHVcrossover(vacController)
     end
 
     %% Verify valve state ready for HV crossover
-    cryoStatus = vacController.Monitors.valveState.lastRead(cryoOutlet);
-    chamberBeamStatus = vacController.Monitors.valveState.lastRead(6);
-    chamberRoughV2Status = vacController.Monitors.valveState.lastRead(7);
-    chamberRoughV1Status = vacController.Monitors.valveState.lastRead(8);
+    cryoStatus = vacController.Monitors.valveState1.lastRead(cryoOutlet);
+    chamberBeamStatus = vacController.Monitors.valveState1.lastRead(6);
+    chamberRoughV2Status = vacController.Monitors.valveState1.lastRead(7);
+    chamberRoughV1Status = vacController.Monitors.valveState1.lastRead(8);
 
     if cryoStatus ~= 0 || chamberBeamStatus ~= 0 || chamberRoughV2Status ~= 1 || chamberRoughV1Status ~= 1
         warning('One or more chamber valves are not in the correct state for HV crossover.');
@@ -71,7 +71,7 @@ function vacControl_fHVcrossover(vacController)
     set(monplot.ax, 'Position', [inset(1), inset(2), 1 - inset(1) - inset(3), 1 - inset(2) - inset(4)]);
 
     yline(monplot.ax,crossoverPressure, 'r--', 'Crossover Pressure');
-
+    set(monplot.ax, 'yscale','log');
     %% Crossover process dwell loop
     while pressureMonitor.lastRead > crossoverPressure 
         if ~vacController.processRunning
