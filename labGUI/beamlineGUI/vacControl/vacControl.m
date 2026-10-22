@@ -28,7 +28,7 @@ classdef vacControl < matlab.apps.AppBase
         monitorListeners=event.listener.empty  % Listener array keeping PostSet listeners alive
         processStatusListener = event.listener.empty  % Listener for process status changes
         
-        processes = {'HV Crossover', 'Cryo Regen'}  % List of available processes to run
+        processes = {'HV Crossover', 'Cryo Regen', 'Chamber Purge'}  % List of available processes to run
         hProcessText
         hProcessDropdown  % Handle to the process function dropdown menu
         hRunButton        % Handle to the run button
@@ -344,6 +344,10 @@ classdef vacControl < matlab.apps.AppBase
                     obj.processRunning = true;
                     disp('Running Cryo Regen process...');
                     vacControl_fCryoRegen(obj);
+                case 'Chamber Purge'
+                    obj.processRunning = true;
+                    disp('Running Chamber Purge process...');
+                    vacControl_fChamberPurge(obj);
                 otherwise
                     disp(['Cannot run: ' selectedFunction]);
             end
