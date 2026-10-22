@@ -164,6 +164,7 @@ function vacControl_fHVcrossover(vacController)
     if ~isempty(monplot) && isvalid(monplot)
         delete(monplot);
     end
+    vacController.processRunning = false;
 
     %% Utility Funcitons
     function abort()
