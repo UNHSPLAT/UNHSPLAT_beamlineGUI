@@ -5,7 +5,7 @@ function vacControl_fChamberPurge(vacController)
     chamberRoughV2 = 7;  % valveState1 channel
     n2PurgeV       = 2;  % valveState2 channel
 
-    pressureMonitor = vacController.Monitors.pressureChamberRough1;
+    pressureMonitor = vacController.Monitors.pressureChamberIG1;
     doorMonitor     = vacController.Monitors.doorState;
     monplot = [];  % Initialize monplot as empty to track if it's created
     purgeOpened = false;
@@ -50,11 +50,10 @@ function vacControl_fChamberPurge(vacController)
     end
 
     %% Confirm manual checklist with user
-    checklist = sprintf(['Confirm the following before purging:\n\n' ...
+    checklist = sprintf(['Confirm the system is configured for purge:\n\n' ...
         '1. The chamber doors are unlatched\n' ...
-        '2. The ion gauge and RGA are disabled\n' ...
-        '3. The N2 purge gas pressure is correct\n' ...
-        '4. The beamline N2 valve is closed, the roughline N2 valve is closed, and the chamber N2 valve is open']);
+        '2. Chamber Equiptment disabled\n' ...
+        '3. The N2 purge system is configured per chamber purge procedure']);
     selection = questdlg(checklist, 'Chamber Purge Confirmation', 'Confirm', 'Cancel', 'Cancel');
     if ~strcmp(selection, 'Confirm')
         display('User cancelled chamber purge process.');
