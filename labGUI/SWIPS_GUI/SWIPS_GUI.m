@@ -21,6 +21,7 @@ classdef SWIPS_GUI < labGUI
         caenMenu    % Handle to CAEN menu handler
         newportMenu % Handle to Newport stage menu
         OKMenu      % Handle to Opal Kelly menu handler
+        agilentMenu % Handle to Agilent E3634A menu
         % Override operator and acquisition lists
    end
 
@@ -45,6 +46,8 @@ classdef SWIPS_GUI < labGUI
 
             %create Opal Kelly menu handler
             obj.OKMenu = swips_ok_gui_menu(obj.Hardware.Opal_Kelly, obj.hHardwareMenu);
+
+            obj.agilentMenu = agilentE3634A_gui_menu(obj.Hardware.agilentLVPS, obj.hHardwareMenu);
 
             % pass the loggin info to opalkelly for PH logging
             obj.Hardware.Opal_Kelly.PH_DataDirectory = @(~,~) obj.DataDir;
